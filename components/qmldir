@@ -15,6 +15,3 @@ NotifItem 1.0 NotifItem.qml
 SliderRow 1.0 SliderRow.qml
 ClipRow 1.0 ClipRow.qml
 TabBtn 1.0 TabBtn.qml
-RoundBtn 1.0 RoundBtn.qml
-IconBtn 1.0 IconBtn.qml
-Chip 1.0 Chip.qml

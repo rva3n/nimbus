@@ -40,7 +40,7 @@ Singleton {
             id: id,
             type: line.slice(i + 1, j),
             preview: line.slice(j + 1),
-            thumb: Quickshell.cacheDir + "/clip/" + id + ".png"
+            thumb: Quickshell.env("HOME") + "/.cache/nimbus/clip/" + id + ".png"
         });
         c.items = arr;
     }

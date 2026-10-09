@@ -1,21 +1,82 @@
 import QtQuick
 import "../core"
 
-Rectangle {
+// Специализированный M3-чип таба (стиль ui/Chip): пилюля, выбранный —
+// accentContainer, иначе прозрачный корпус с бордером.
+Item {
     id: tabBtn
+
     property string label: ""
     property bool active: false
+
     signal clicked()
-    implicitWidth: tbText.implicitWidth + 22
-    implicitHeight: 30
-    radius: 15
-    color: tabBtn.active ? Theme.accent : Theme.surface
+
+    implicitWidth: tbText.implicitWidth + Theme.dp(24)
+    implicitHeight: Theme.dp(30)
+
+    Rectangle {
+        id: bg
+
+        anchors.fill: parent
+        radius: Theme.pill(height)
+        color: tabBtn.active ? Theme.accentContainer : "transparent"
+        border.width: tabBtn.active ? 0 : 1
+        border.color: Theme.divider
+
+        Behavior on color {
+            ColorAnimation {
+                duration: Theme.ms(120)
+                easing.type: Easing.Bezier
+                easing.bezierCurve: Theme.curveEffects
+            }
+        }
+
+        Behavior on border.color {
+            ColorAnimation {
+                duration: Theme.ms(120)
+                easing.type: Easing.Bezier
+                easing.bezierCurve: Theme.curveEffects
+            }
+        }
+
+        Rectangle { // hover/нажатие — state layer
+            anchors.fill: parent
+            radius: parent.radius
+            color: tabBtn.active ? Theme.fgAccentContainer : Theme.text
+            opacity: tbArea.pressed ? Theme.statePressed : (tbArea.containsMouse ? Theme.stateHover : 0)
+
+            Behavior on opacity {
+                NumberAnimation {
+                    duration: Theme.ms(120)
+                }
+            }
+        }
+    }
+
     Text {
         id: tbText
+
         anchors.centerIn: parent
-        font.family: Theme.font; font.pixelSize: 12
-        color: tabBtn.active ? Theme.bg : Theme.subtext
         text: tabBtn.label
+        color: tabBtn.active ? Theme.fgAccentContainer : Theme.subtext
+        font.family: Theme.textFont
+        font.pixelSize: Theme.typeSize("labelMedium")
+        font.weight: Theme.typeWeight("labelMedium")
+
+        Behavior on color {
+            ColorAnimation {
+                duration: Theme.ms(120)
+            }
+        }
     }
-    MouseArea { anchors.fill: parent; hoverEnabled: true; onClicked: tabBtn.clicked() }
+
+    MouseArea {
+        id: tbArea
+
+        anchors.fill: parent
+        anchors.margins: -Theme.dp(4)
+        hoverEnabled: true
+        cursorShape: Qt.PointingHandCursor
+        onClicked: tabBtn.clicked()
+    }
 }

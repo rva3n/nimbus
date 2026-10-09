@@ -255,10 +255,6 @@ Singleton {
     readonly property string textFontFallback: "Noto Sans"
     readonly property string iconFont: iconFontLoader.status === FontLoader.Ready ? iconFontLoader.name : "Material Symbols Rounded"
 
-    // legacy-токены (старый код Nimbus ещё на них)
-    readonly property string font: "JetBrainsMono Nerd Font"
-    readonly property int fontSize: 13
-
     readonly property real typeBaseline: 0.9
     readonly property real fontScale: root.typeBaseline * root.uiScale
 

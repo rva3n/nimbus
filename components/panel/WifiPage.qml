@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 import "../../core"
+import "../../ui"
 import ".."
 
 ColumnLayout {
@@ -8,32 +9,61 @@ ColumnLayout {
     property var win: null
     visible: win !== null && win.mode === "panel" && win.page === "wifi"
     Layout.fillWidth: true; spacing: 10
+
     ToggleRow {
         Layout.fillWidth: true
         label: "Wi-Fi"; sub: Sys.wifiEnabled ? "включён" : "выключен"
         active: Sys.wifiEnabled
         onToggled: { Sys.toggleWifi(); if (!Sys.wifiEnabled) Sys.refreshWifi(); }
     }
-    Text { font.family: Theme.font; font.pixelSize: 11; color: Theme.subtext; text: "Сети" }
+
+    // заголовок секции + обновление списка сетей
+    RowLayout {
+        Layout.fillWidth: true
+        Layout.topMargin: Theme.dp(2)
+        Text {
+            Layout.fillWidth: true
+            font.family: Theme.textFont; font.pixelSize: Theme.typeSize("labelMedium")
+            font.weight: Theme.typeWeight("labelMedium"); color: Theme.subtext
+            text: "Сети"
+        }
+        IconButton { icon: "refresh"; onClicked: Sys.refreshWifi() }
+    }
+
     ListView {
         Layout.fillWidth: true
         Layout.preferredHeight: win && win.wifiSel === "" ? 300 : 200
-        model: win ? win.wifiList : []; clip: true; spacing: 2
+        model: win ? win.wifiList : []; clip: true; spacing: Theme.dp(4)
         delegate: Rectangle {
             required property var modelData
-            width: ListView.view.width; height: 40; radius: 10
-            color: wifiMouse.containsMouse ? Theme.surfaceHi : Theme.surface
+            width: ListView.view.width; height: Theme.dp(48)
+            radius: Theme.radiusMd
+            color: win && win.wifiSel === modelData.ssid ? Theme.accentContainer
+                 : (netMouse.containsMouse ? Theme.bgHover : Theme.bgTile)
+            Behavior on color { ColorAnimation { duration: Theme.durDefaultEffects } }
             RowLayout {
-                anchors.fill: parent; anchors.leftMargin: 12; anchors.rightMargin: 12; spacing: 8
-                Text { font.family: Theme.font; font.pixelSize: 13; color: Theme.text; text: modelData.ssid; Layout.fillWidth: true; elide: Text.ElideRight }
+                anchors.fill: parent
+                anchors.leftMargin: Theme.dp(16); anchors.rightMargin: Theme.dp(16); spacing: Theme.dp(12)
+                Icon { name: "wifi"; size: Theme.dp(18); color: Theme.subtext }
                 Text {
-                    visible: modelData.security && modelData.security !== "--" && modelData.security !== ""
-                    font.family: Theme.font; font.pixelSize: 11; color: Theme.subtext; text: "\uf023"
+                    Layout.fillWidth: true; elide: Text.ElideRight
+                    font.family: Theme.textFont; font.pixelSize: Theme.typeSize("bodyLarge")
+                    font.weight: Theme.typeWeight("bodyLarge"); color: Theme.text
+                    text: modelData.ssid
                 }
-                Text { font.family: Theme.font; font.pixelSize: 11; color: Theme.subtext; text: modelData.signal + "%" }
+                Icon {
+                    visible: modelData.security && modelData.security !== "--" && modelData.security !== ""
+                    name: "lock"; size: Theme.dp(14); color: Theme.subtext
+                }
+                Text {
+                    font.family: Theme.textFont; font.pixelSize: Theme.typeSize("bodySmall")
+                    font.weight: Theme.typeWeight("bodySmall"); color: Theme.subtext
+                    text: modelData.signal + "%"
+                }
             }
             MouseArea {
-                id: wifiMouse; anchors.fill: parent; hoverEnabled: true
+                id: netMouse; anchors.fill: parent; hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
                 onClicked: {
                     const sec = modelData.security;
                     if (!sec || sec === "" || sec === "--") {
@@ -48,27 +78,22 @@ ColumnLayout {
             }
         }
     }
-    Rectangle {
+
+    // пароль выбранной сети
+    RowLayout {
         visible: win !== null && win.wifiSel !== ""
-        Layout.fillWidth: true; implicitHeight: 42; radius: 10
-        color: Theme.surface
-        RowLayout {
-            anchors.fill: parent; anchors.leftMargin: 12; anchors.rightMargin: 6; spacing: 8
-            TextInput {
-                id: wifiPassInput
-                Layout.fillWidth: true
-                font.family: Theme.font; font.pixelSize: 13; color: Theme.text
-                echoMode: TextInput.Password
-                clip: true; selectByMouse: true
-                onAccepted: win.submitWifi(text)
-                Text {
-                    anchors.verticalCenter: parent.verticalCenter
-                    visible: wifiPassInput.text === ""
-                    text: "Пароль: " + (win ? win.wifiSel : "")
-                    color: Theme.a(Theme.subtext, 0.5); font: wifiPassInput.font
-                }
-            }
-            IconBtn { glyph: "\uf00c"; onClicked: win.submitWifi(wifiPassInput.text) }
+        Layout.fillWidth: true
+        spacing: Theme.dp(8)
+        TextField {
+            id: wifiPassInput
+            Layout.fillWidth: true
+            placeholder: "Пароль: " + (win ? win.wifiSel : "")
+            echoMode: TextInput.Password
+            onAccepted: if (win) win.submitWifi(text)
+        }
+        IconButton {
+            icon: "check"; variant: "filled"
+            onClicked: if (win) win.submitWifi(wifiPassInput.text)
         }
     }
 }

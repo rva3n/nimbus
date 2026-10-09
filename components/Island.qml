@@ -23,7 +23,7 @@ PanelWindow {
     color: "transparent"
     anchors { top: true; left: true; right: true }
     exclusiveZone: 0
-    implicitHeight: 664
+    implicitHeight: Math.max(664, win.panelMax + Theme.dp(16))
     WlrLayershell.layer: WlrLayer.Overlay
     WlrLayershell.namespace: "nimbus-island"
     WlrLayershell.keyboardFocus: (view === "launcher" || view === "panel")
@@ -34,6 +34,9 @@ PanelWindow {
                                  : (Osd.visible && view === "idle") ? "osd" : view
     readonly property bool big: mode === "panel" || mode === "launcher"
     readonly property string page: win.shell ? win.shell.panelPage : ""
+    // Максимальная высота панели: 75% экрана, чтобы высокие страницы (обои,
+    // звук) помещались целиком, а не обрезались прежними жёсткими 652px.
+    readonly property real panelMax: Math.max(360, Math.round((win.screen ? win.screen.height : 1080) * 0.75))
 
     property date now: new Date()
     Timer { interval: 1000; running: true; repeat: true; onTriggered: win.now = new Date() }
@@ -77,7 +80,6 @@ PanelWindow {
         return out.slice(0, 8);
     }
 
-    function mediaIcon() { return (win.player && win.player.isPlaying) ? "\uf04c" : "\uf04b"; }
     function shq(s) { return "'" + String(s).replace(/'/g, "'\\''") + "'"; }
     // Copy the (short-lived) player art into a stable cache file with extension.
     property string artSrc: ""
@@ -110,7 +112,7 @@ PanelWindow {
         anchors.top: parent.top
         anchors.topMargin: Theme.dp(6)
         width: win.big ? Theme.dp(win.mode === "launcher" ? 470 : 404) : (idlePill.implicitWidth + Theme.pad * 2)
-        height: win.big ? Math.min(contentCol.implicitHeight + Theme.dp(32), Theme.dp(652)) : Theme.height
+        height: win.big ? Math.min(contentCol.implicitHeight + Theme.dp(32), win.panelMax) : Theme.height
         radius: win.big ? Theme.radiusXl : height / 2
         color: Theme.bg
         border.width: win.big ? 1 : 0

@@ -1,8 +1,10 @@
 import QtQuick
 import QtQuick.Layouts
 import "../core"
+import "../ui"
 
-// Idle / OSD / notification pill: compactRow + osdRow + notifRow.
+// Пилюля idle/OSD/уведомлений: строки compactRow + osdRow + notifRow.
+// Строки монтируются в Island; наружу отдаются implicitWidth/implicitHeight.
 Item {
     id: holder
     property string mode: "idle"
@@ -12,20 +14,37 @@ Item {
     implicitWidth: mode === "notif" ? notifRow.implicitWidth
                  : mode === "osd" ? osdRow.implicitWidth
                  : compactRow.implicitWidth
-    implicitHeight: 22
+    implicitHeight: Theme.dp(30)
 
+    // idle: воркспейсы + время + колокольчик панели
     RowLayout {
         id: compactRow
         visible: holder.mode === "idle"
         anchors.centerIn: parent
-        spacing: Theme.spacing
-        WorkspacesRow { output: holder.output }
+        spacing: Theme.dp(10)
+
+        WorkspacesRow {
+            Layout.alignment: Qt.AlignVCenter
+            output: holder.output
+        }
+
         Text {
-            font.family: Theme.font; font.pixelSize: Theme.fontSize; color: Theme.text
+            Layout.alignment: Qt.AlignVCenter
+            font.family: Theme.textFont
+            font.pixelSize: Theme.typeSize("titleSmall")
+            font.weight: Theme.typeWeight("titleSmall")
+            color: Theme.text
             text: Qt.formatDateTime(holder.now, "HH:mm")
         }
-        IconBtn { glyph: "\uf0f3"; onClicked: if (holder.shell) holder.shell.togglePanel() }
+
+        IconButton {
+            Layout.alignment: Qt.AlignVCenter
+            icon: "notifications"
+            size: "s"
+            onClicked: if (holder.shell) holder.shell.togglePanel()
+        }
     }
+
     OsdRow {
         id: osdRow
         visible: holder.mode === "osd"
@@ -34,6 +53,7 @@ Item {
         value: Osd.value
         muted: Osd.muted
     }
+
     NotifToastRow {
         id: notifRow
         visible: holder.mode === "notif"

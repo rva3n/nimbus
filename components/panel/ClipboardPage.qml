@@ -2,27 +2,65 @@ import QtQuick
 import QtQuick.Layouts
 import "../../core"
 import ".."
+import "../../ui"
 
+// Буфер обмена: история и закреплённые записи.
 ColumnLayout {
     id: clipboardPage
-    property var win: null
-    visible: win !== null && win.mode === "panel" && win.page === "clipboard"
-    Layout.fillWidth: true; spacing: 8
 
-    RowLayout {
+    property var win: null
+
+    visible: win !== null && win.mode === "panel" && win.page === "clipboard"
+    Layout.fillWidth: true
+    spacing: 8
+
+    RowLayout { // заголовок + действия
         Layout.fillWidth: true
-        Text { font.family: Theme.font; font.pixelSize: 12; color: Theme.subtext; Layout.fillWidth: true; text: "История" }
-        Text { visible: Clip.loading; font.family: Theme.font; font.pixelSize: 11; color: Theme.subtext; text: "загрузка…" }
-        IconBtn { glyph: "\uf021"; onClicked: Clip.refresh() }
-        IconBtn { glyph: "\uf1f8"; onClicked: Clip.wipe() }
+
+        Text {
+            Layout.fillWidth: true
+            text: "История"
+            color: Theme.subtext
+            font.family: Theme.textFont
+            font.pixelSize: Theme.typeSize("labelMedium")
+            font.weight: Theme.typeWeight("labelMedium")
+        }
+
+        Text {
+            visible: Clip.loading
+            Layout.alignment: Qt.AlignVCenter
+            text: "загрузка…"
+            color: Theme.subtext
+            font.family: Theme.textFont
+            font.pixelSize: Theme.typeSize("labelSmall")
+            font.weight: Theme.typeWeight("labelSmall")
+        }
+
+        IconButton {
+            icon: "refresh"
+            size: "s"
+            onClicked: Clip.refresh()
+        }
+
+        IconButton {
+            icon: "delete"
+            size: "s"
+            onClicked: Clip.wipe()
+        }
     }
 
     Text {
         visible: Clip.pins.length > 0
-        font.family: Theme.font; font.pixelSize: 11; color: Theme.subtext; text: "Закреплённые"
+        text: "Закреплённые"
+        color: Theme.subtext
+        font.family: Theme.textFont
+        font.pixelSize: Theme.typeSize("labelMedium")
+        font.weight: Theme.typeWeight("labelMedium")
     }
+
     Repeater {
         model: Clip.pins
+
         delegate: ClipRow {
             required property var modelData
             Layout.fillWidth: true
@@ -35,7 +73,9 @@ ColumnLayout {
         Layout.fillWidth: true
         Layout.preferredHeight: 360
         model: Clip.items
-        clip: true; spacing: 2
+        clip: true
+        spacing: 4
+
         delegate: ClipRow {
             required property var modelData
             width: ListView.view.width

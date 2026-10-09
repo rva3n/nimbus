@@ -1,32 +1,47 @@
 import QtQuick
 import QtQuick.Layouts
 import "../core"
+import "../ui"
 
+// M3 list item: label + sub слева, Switch справа.
 Rectangle {
     id: tr
     property string label: ""
     property string sub: ""
     property bool active: false
     signal toggled()
-    implicitHeight: 52
-    radius: 14
-    color: Theme.surface
+    implicitHeight: Theme.dp(56)
+    radius: Theme.radiusLg
+    color: Theme.bgTile
     RowLayout {
-        anchors.fill: parent; anchors.leftMargin: 14; anchors.rightMargin: 10; spacing: 10
+        anchors.fill: parent
+        anchors.leftMargin: Theme.dp(16)
+        anchors.rightMargin: Theme.dp(16)
+        spacing: Theme.dp(12)
         ColumnLayout {
-            Layout.fillWidth: true; spacing: 0
-            Text { font.family: Theme.font; font.pixelSize: 14; color: Theme.text; text: tr.label }
-            Text { font.family: Theme.font; font.pixelSize: 10; color: Theme.subtext; text: tr.sub }
-        }
-        Rectangle {
-            implicitWidth: 44; implicitHeight: 26; radius: 13
-            color: tr.active ? Theme.accent : Theme.surfaceHi
-            Rectangle {
-                width: 20; height: 20; radius: 10; color: Theme.bg
-                y: 3; x: tr.active ? 21 : 3
-                Behavior on x { NumberAnimation { duration: 140 } }
+            Layout.fillWidth: true
+            spacing: 0
+            Text {
+                Layout.fillWidth: true; elide: Text.ElideRight
+                font.family: Theme.textFont; font.pixelSize: Theme.typeSize("bodyLarge")
+                font.weight: Theme.typeWeight("bodyLarge"); color: Theme.text
+                text: tr.label
             }
-            MouseArea { anchors.fill: parent; onClicked: tr.toggled() }
+            Text {
+                Layout.fillWidth: true; elide: Text.ElideRight
+                visible: tr.sub !== ""
+                font.family: Theme.textFont; font.pixelSize: Theme.typeSize("bodySmall")
+                font.weight: Theme.typeWeight("bodySmall"); color: Theme.subtext
+                text: tr.sub
+            }
+        }
+        Switch {
+            id: sw
+            checked: tr.active
+            onToggled: tr.toggled()
         }
     }
+    // Switch при клике инвертирует checked сам (ломает биндинг) — подтягиваем
+    // состояние из active, когда оно меняется (в т.ч. опросом nmcli/bluetoothctl)
+    onActiveChanged: sw.checked = tr.active
 }

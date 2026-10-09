@@ -1,35 +1,92 @@
 import QtQuick
 import QtQuick.Layouts
 import "../core"
+import "../ui"
 
+// Карточка медиаплеера: артворк + название/исполнитель + транспорт.
 Rectangle {
     id: mc
     property string artFile: ""
     property string artUrl: ""
     property var player: null
-    implicitHeight: 68; radius: 16; color: Theme.surface
+    implicitHeight: Theme.dp(72)
+    radius: Theme.radiusLg
+    color: Theme.bgTile
+
     RowLayout {
-        anchors.fill: parent; anchors.margins: 10; spacing: 10
-        Rectangle {
-            Layout.preferredWidth: 48; Layout.preferredHeight: 48; radius: 10; color: Theme.surfaceHi; clip: true
+        anchors.fill: parent
+        anchors.margins: Theme.dp(10)
+        spacing: Theme.dp(10)
+
+        Rectangle { // артворк 52x52
+            Layout.alignment: Qt.AlignVCenter
+            Layout.preferredWidth: Theme.dp(52)
+            Layout.preferredHeight: Theme.dp(52)
+            radius: Theme.radiusMd
+            color: Theme.bgTrack
+            clip: true
+
             Image {
-                anchors.fill: parent; fillMode: Image.PreserveAspectCrop
+                anchors.fill: parent
+                fillMode: Image.PreserveAspectCrop
                 source: mc.artFile !== "" ? ("file://" + mc.artFile) : mc.artUrl
                 visible: (mc.artFile !== "" || mc.artUrl !== "")
             }
-            Text {
+
+            Icon { // заглушка без арта
                 anchors.centerIn: parent
                 visible: mc.artFile === "" && mc.artUrl === ""
-                font.family: Theme.font; font.pixelSize: 20; color: Theme.subtext; text: "\uf001"
+                name: "music_note"
+                size: Theme.dp(24)
+                color: Theme.subtext
             }
         }
-        ColumnLayout {
-            Layout.fillWidth: true; spacing: 0
-            Text { font.family: Theme.font; font.pixelSize: 13; color: Theme.text; text: mc.player ? mc.player.trackTitle : ""; elide: Text.ElideRight; Layout.fillWidth: true }
-            Text { font.family: Theme.font; font.pixelSize: 11; color: Theme.subtext; text: mc.player ? mc.player.trackArtist : ""; elide: Text.ElideRight; Layout.fillWidth: true }
+
+        ColumnLayout { // название и исполнитель
+            Layout.fillWidth: true
+            Layout.alignment: Qt.AlignVCenter
+            spacing: 0
+
+            Text {
+                font.family: Theme.textFont
+                font.pixelSize: Theme.typeSize("titleSmall")
+                font.weight: Theme.typeWeight("titleSmall")
+                color: Theme.text
+                text: mc.player ? mc.player.trackTitle : ""
+                elide: Text.ElideRight
+                Layout.fillWidth: true
+            }
+
+            Text {
+                font.family: Theme.textFont
+                font.pixelSize: Theme.typeSize("bodySmall")
+                font.weight: Theme.typeWeight("bodySmall")
+                color: Theme.subtext
+                text: mc.player ? mc.player.trackArtist : ""
+                elide: Text.ElideRight
+                Layout.fillWidth: true
+            }
         }
-        IconBtn { glyph: "\uf049"; btnEnabled: mc.player && mc.player.canGoPrevious; onClicked: mc.player.previous() }
-        IconBtn { glyph: (mc.player && mc.player.isPlaying) ? "\uf04c" : "\uf04b"; onClicked: if (mc.player) mc.player.togglePlaying() }
-        IconBtn { glyph: "\uf050"; btnEnabled: mc.player && mc.player.canGoNext; onClicked: mc.player.next() }
+
+        IconButton { // предыдущий трек
+            Layout.alignment: Qt.AlignVCenter
+            icon: "skip_previous"
+            disabled: !(mc.player && mc.player.canGoPrevious)
+            onClicked: mc.player.previous()
+        }
+
+        IconButton { // play / pause
+            Layout.alignment: Qt.AlignVCenter
+            icon: (mc.player && mc.player.isPlaying) ? "pause" : "play_arrow"
+            variant: "filled"
+            onClicked: if (mc.player) mc.player.togglePlaying()
+        }
+
+        IconButton { // следующий трек
+            Layout.alignment: Qt.AlignVCenter
+            icon: "skip_next"
+            disabled: !(mc.player && mc.player.canGoNext)
+            onClicked: mc.player.next()
+        }
     }
 }

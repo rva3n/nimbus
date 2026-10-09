@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Layouts
 import Quickshell
 import "../core"
+import "../ui"
 
 // Launcher block: search field, hidden-apps chip, application list.
 ColumnLayout {
@@ -11,7 +12,7 @@ ColumnLayout {
 
     visible: active
     Layout.fillWidth: true
-    spacing: 14
+    spacing: Theme.dp(14)
 
     property string query: ""
     property int sel: 0
@@ -42,70 +43,140 @@ ColumnLayout {
         Quickshell.execDetached(cmd);
         if (launcher.shell) launcher.shell.closeOverlays();
     }
-    onActiveChanged: if (active) { launcher.query = ""; launcher.sel = 0; }
+    onActiveChanged: {
+        if (active) {
+            launcher.query = "";
+            launcher.sel = 0;
+            searchField.text = ""; // не оставлять прошлый запрос в поле
+        }
+    }
 
-    TextInput {
-        id: search
-        visible: launcher.active
-        Layout.fillWidth: true; Layout.preferredHeight: 34
-        font.family: Theme.font; font.pixelSize: 18; color: Theme.text
-        clip: true; selectByMouse: true
+    // Поиск: M3-поле; навигация клавишами — как раньше
+    TextField {
+        id: searchField
+        Layout.fillWidth: true
         focus: launcher.active
-        onTextChanged: launcher.query = text
+        placeholder: "Поиск приложений…"
+        onTextChanged: launcher.query = searchField.text
+        onAccepted: launcher.launch(launcher.apps[launcher.sel])
         Keys.onEscapePressed: if (launcher.shell) launcher.shell.closeOverlays()
         Keys.onDownPressed: launcher.sel = Math.min(launcher.sel + 1, Math.max(0, launcher.apps.length - 1))
         Keys.onUpPressed: launcher.sel = Math.max(launcher.sel - 1, 0)
-        Keys.onReturnPressed: launcher.launch(launcher.apps[launcher.sel])
-        Keys.onEnterPressed: launcher.launch(launcher.apps[launcher.sel])
-        Text {
-            anchors.verticalCenter: parent.verticalCenter
-            visible: search.text === ""
-            text: "Поиск приложений…"; color: Theme.a(Theme.subtext, 0.5); font: search.font
-        }
     }
+
+    // Чип «Скрытые»: фильтр скрытых приложений
     RowLayout {
-        visible: launcher.active
         Layout.fillWidth: true
         Item { Layout.fillWidth: true }
         Chip {
             label: "Скрытые (" + Apps.hidden.length + ")"
-            active: Apps.showHidden
+            icon: "visibility"
+            selected: Apps.showHidden
             onClicked: Apps.showHidden = !Apps.showHidden
         }
     }
+
+    // Список приложений; закреплённые — сверху
     ListView {
         id: appList
-        visible: launcher.active
-        Layout.fillWidth: true; Layout.preferredHeight: 400
-        model: launcher.apps; clip: true; spacing: 2
+        Layout.fillWidth: true
+        Layout.preferredHeight: Theme.dp(400)
+        model: launcher.apps
+        clip: true
+        spacing: Theme.dp(2)
         delegate: Rectangle {
+            id: row
             required property var modelData
             required property int index
-            width: appList.width; height: 46; radius: 10
-            color: index === launcher.sel ? Theme.a(Theme.accent, 0.15) : "transparent"
+            width: appList.width
+            height: Theme.dp(52)
+            radius: Theme.radiusMd
+            color: index === launcher.sel ? Theme.accentContainer
+                                          : (rowMouse.containsMouse ? Theme.bgHover : "transparent")
+
+            Behavior on color {
+                ColorAnimation { duration: Theme.durQuick }
+            }
+
             MouseArea {
-                anchors.fill: parent; hoverEnabled: true
+                id: rowMouse
+                anchors.fill: parent
+                hoverEnabled: true
                 onEntered: launcher.sel = index
                 onClicked: launcher.launch(modelData)
             }
             RowLayout {
-                anchors.fill: parent; anchors.leftMargin: 10; anchors.rightMargin: 6; spacing: 10
-                Image {
-                    Layout.preferredWidth: 26; Layout.preferredHeight: 26
-                    sourceSize.width: 26; sourceSize.height: 26
-                    source: modelData.icon ? Quickshell.iconPath(modelData.icon, true) : ""
+                anchors.fill: parent
+                anchors.leftMargin: Theme.dp(8)
+                anchors.rightMargin: Theme.dp(6)
+                spacing: Theme.dp(10)
+
+                // иконка приложения в контейнере с M3-радиусом
+                Rectangle {
+                    Layout.alignment: Qt.AlignVCenter
+                    Layout.preferredWidth: Theme.dp(40)
+                    Layout.preferredHeight: Theme.dp(40)
+                    radius: Theme.radiusMd
+                    color: Theme.bgTile
+                    Image {
+                        anchors.centerIn: parent
+                        width: Theme.dp(30)
+                        height: Theme.dp(30)
+                        sourceSize.width: 30
+                        sourceSize.height: 30
+                        smooth: true
+                        source: modelData.icon ? Quickshell.iconPath(modelData.icon, true) : ""
+                    }
                 }
                 ColumnLayout {
-                    Layout.fillWidth: true; spacing: 0
-                    Text { text: modelData.name || ""; color: Theme.text; font.family: Theme.font; font.pixelSize: 14; elide: Text.ElideRight; Layout.fillWidth: true }
-                    Text { text: modelData.comment || ""; visible: text !== ""; color: Theme.subtext; font.family: Theme.font; font.pixelSize: 10; elide: Text.ElideRight; Layout.fillWidth: true }
+                    Layout.fillWidth: true
+                    Layout.alignment: Qt.AlignVCenter
+                    spacing: 0
+                    Text {
+                        Layout.fillWidth: true
+                        text: modelData.name || ""
+                        color: Theme.text
+                        font.family: Theme.textFont
+                        font.pixelSize: Theme.typeSize("bodyLarge")
+                        font.weight: Theme.typeWeight("bodyLarge")
+                        elide: Text.ElideRight
+                    }
+                    Text {
+                        Layout.fillWidth: true
+                        visible: text !== ""
+                        text: modelData.comment || ""
+                        color: Theme.subtext
+                        font.family: Theme.textFont
+                        font.pixelSize: Theme.typeSize("bodySmall")
+                        font.weight: Theme.typeWeight("bodySmall")
+                        elide: Text.ElideRight
+                    }
                 }
-                Text {
+
+                // метка закрепа
+                Icon {
+                    Layout.alignment: Qt.AlignVCenter
                     visible: Apps.isPinned(modelData)
-                    font.family: Theme.font; font.pixelSize: 11; color: Theme.accent; text: "\uf08d"
+                    name: "push_pin"
+                    size: Theme.dp(14)
+                    color: Theme.accent
                 }
-                RoundBtn { glyph: "\uf08d"; active: Apps.isPinned(modelData); onClicked: Apps.togglePin(modelData) }
-                RoundBtn { glyph: Apps.isHidden(modelData) ? "\uf06e" : "\uf070"; active: Apps.isHidden(modelData); onClicked: Apps.toggleHide(modelData) }
+
+                // закрепить/открепить
+                IconButton {
+                    Layout.alignment: Qt.AlignVCenter
+                    icon: "push_pin"
+                    variant: Apps.isPinned(modelData) ? "filled" : "standard"
+                    onClicked: Apps.togglePin(modelData)
+                }
+
+                // скрыть/показать
+                IconButton {
+                    Layout.alignment: Qt.AlignVCenter
+                    icon: Apps.isHidden(modelData) ? "visibility_off" : "visibility"
+                    variant: Apps.isHidden(modelData) ? "filled" : "standard"
+                    onClicked: Apps.toggleHide(modelData)
+                }
             }
         }
     }

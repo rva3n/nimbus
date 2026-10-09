@@ -113,6 +113,7 @@ PanelWindow {
         delegate: Rectangle {
             required property int index
 
+            visible: win.big
             width: pill.width + Theme.dp(6 + index * 7)
             height: pill.height + Theme.dp(6 + index * 7)
             x: pill.x + (pill.width - width) / 2
@@ -130,7 +131,7 @@ PanelWindow {
         width: win.big ? Theme.dp(win.mode === "launcher" ? 470 : 404) : (idlePill.implicitWidth + Theme.pad * 2)
         height: win.big ? Math.min(contentCol.implicitHeight + Theme.dp(32), win.panelMax) : Theme.height
         radius: win.big ? Theme.radiusXl : height / 2
-        color: Theme.bg
+        color: win.big ? Theme.bg : "transparent"
         border.width: win.big ? 1 : 0
         border.color: Theme.a(Theme.outline, 0.35)
         clip: true
@@ -210,22 +211,46 @@ PanelWindow {
                     }
                 }
 
+                // вкладки панели: управление / погода / система
+                RowLayout {
+                    Layout.fillWidth: true
+                    visible: win.mode === "panel" && win.page === ""
+                    spacing: Theme.dp(6)
+
+                    Chip {
+                        Layout.fillWidth: true
+                        label: "Панель"; icon: "tune"
+                        selected: win.shell ? win.shell.panelTab === "control" : false
+                        onClicked: if (win.shell) win.shell.setTab("control")
+                    }
+                    Chip {
+                        Layout.fillWidth: true
+                        label: "Погода"; icon: "sunny"
+                        selected: win.shell ? win.shell.panelTab === "weather" : false
+                        onClicked: if (win.shell) win.shell.setTab("weather")
+                    }
+                    Chip {
+                        Layout.fillWidth: true
+                        label: "Система"; icon: "monitor_heart"
+                        selected: win.shell ? win.shell.panelTab === "system" : false
+                        onClicked: if (win.shell) win.shell.setTab("system")
+                    }
+                }
+
                 RootPage { win: win }
                 WifiPage { win: win }
                 BtPage { win: win }
                 VolumePage { win: win }
                 BrightnessPage { win: win }
                 WallpapersPage { win: win }
-                ClipboardPage { win: win }
                 PowerPage { win: win }
                 WeatherPage { win: win }
                 SystemPage { win: win }
                 CalendarPage { win: win }
                 TimersPage { win: win }
-                EmojiPage { win: win }
                 SettingsPage { win: win }
 
-                Launcher { active: win.mode === "launcher"; shell: win.shell }
+                Launcher { active: win.mode === "launcher"; shell: win.shell; tab: win.shell ? win.shell.launcherTab : "apps" }
             }
         }
     }

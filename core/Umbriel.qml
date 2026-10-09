@@ -19,6 +19,20 @@ Singleton {
         return out;
     }
 
+    // уникальные приложения на воркспейсе (для иконок в точках воркспейсов)
+    function appsFor(workspaceId) {
+        const seen = {};
+        const out = [];
+        for (let i = 0; i < windows.length; i++) {
+            const w = windows[i];
+            if (w.workspace !== workspaceId || !w.app_id) continue;
+            if (seen[w.app_id]) continue;
+            seen[w.app_id] = true;
+            out.push({ app_id: w.app_id, title: w.title || "" });
+        }
+        return out;
+    }
+
     function _workspaces(line) {
         try {
             const m = JSON.parse(line);

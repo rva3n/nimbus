@@ -18,8 +18,16 @@ Singleton {
     property string host: ""
     property string kernel: ""
 
+    // GPU (amdgpu)
+    property real gpuBusy: 0      // 0..1
+    property real vramUsed: 0     // байты
+    property real vramTotal: 0
+    property real gpuTempC: -1
+    property real gpuPowerW: -1
+
     readonly property real memFrac: memTotal > 0 ? memUsed / memTotal : 0
     readonly property real diskFrac: diskTotal > 0 ? diskUsed / diskTotal : 0
+    readonly property real vramFrac: vramTotal > 0 ? vramUsed / vramTotal : 0
 
     property var _prevCpu: null
 
@@ -54,6 +62,18 @@ Singleton {
         } else if (line.startsWith("TEMP ")) {
             const t = +(line.slice(5));
             s.tempC = t > 1000 ? t / 1000 : t;
+        } else if (line.startsWith("GPUB ")) {
+            s.gpuBusy = Math.max(0, Math.min(1, (+line.slice(5)) / 100));
+        } else if (line.startsWith("VRAM ")) {
+            const p = line.split(/\s+/);
+            s.vramUsed = +p[1];
+            s.vramTotal = +p[2];
+        } else if (line.startsWith("GTEMP ")) {
+            const g = +(line.slice(6));
+            s.gpuTempC = g > 1000 ? g / 1000 : g;
+        } else if (line.startsWith("GPOW ")) {
+            const w = +(line.slice(5));
+            s.gpuPowerW = w > 0 ? w / 1000000 : -1;
         } else if (line.startsWith("UP "))
             s.uptime = +line.slice(3);
         else if (line.startsWith("HOST "))
@@ -71,7 +91,12 @@ Singleton {
             "echo \"UP $(cut -d. -f1 /proc/uptime)\"; " +
             "echo \"HOST $(uname -n)\"; " +
             "echo \"KERN $(uname -r)\"; " +
-            "T=$(for z in /sys/class/thermal/thermal_zone*/temp; do [ -r \"$z\" ] && cat \"$z\" && break; done); echo \"TEMP ${T:-0}\""]
+            "T=$(for z in /sys/class/thermal/thermal_zone*/temp; do [ -r \"$z\" ] && cat \"$z\" && break; done); echo \"TEMP ${T:-0}\"; " +
+            "B=$(for f in /sys/class/drm/card[0-9]*/device/gpu_busy_percent; do [ -r \"$f\" ] && cat \"$f\" && break; done); echo \"GPUB ${B:-0}\"; " +
+            "V=$(for f in /sys/class/drm/card[0-9]*/device/mem_info_vram_used; do [ -r \"$f\" ] && cat \"$f\" && break; done); " +
+            "V2=$(for f in /sys/class/drm/card[0-9]*/device/mem_info_vram_total; do [ -r \"$f\" ] && cat \"$f\" && break; done); echo \"VRAM ${V:-0} ${V2:-0}\"; " +
+            "GT=$(for f in /sys/class/drm/card[0-9]*/device/hwmon/hwmon*/temp1_input; do [ -r \"$f\" ] && cat \"$f\" && break; done); echo \"GTEMP ${GT:-0}\"; " +
+            "GP=$(for f in /sys/class/drm/card[0-9]*/device/hwmon/hwmon*/power1_average; do [ -r \"$f\" ] && cat \"$f\" && break; done); echo \"GPOW ${GP:-0}\""]
         stdout: SplitParser {
             onRead: line => s._line(line)
         }

@@ -29,6 +29,7 @@ sunny partly_cloudy_day partly_cloudy_night cloud foggy rainy weather_snowy thun
 umbrella bedtime grain memory storage developer_board device_thermostat thermostat monitor_heart
 hourglass_top flag timer_off calendar_month text_fields rounded_corner opacity mood
 queue_music album add_circle history content_paste edit_note snowing ac_unit sentiment_satisfied
+apps dashboard grid_view tune widgets
 """.split()
 
 

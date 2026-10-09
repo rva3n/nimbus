@@ -9,6 +9,8 @@ ColumnLayout {
     id: launcher
     property bool active: false
     property var shell: null
+    // вкладка лончера: apps | clipboard | emoji (заполняется в волне 3)
+    property string tab: "apps"
 
     visible: active
     Layout.fillWidth: true

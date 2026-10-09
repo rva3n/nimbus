@@ -12,6 +12,8 @@ ShellRoot {
 
     property string view: "idle"   // idle | panel | launcher
     property string panelPage: ""
+    property string panelTab: "control"    // control | weather | system (вкладки панели)
+    property string launcherTab: "apps"    // apps | clipboard | emoji (вкладки лончера)
     property bool locked: false
     property string pamError: ""
 
@@ -76,11 +78,14 @@ ShellRoot {
     }
 
     // ── Actions ──────────────────────────────────────────────────────
-    function togglePanel()    { if (root.view === "panel") { root.view = "idle"; root.panelPage = ""; } else { root.view = "panel"; root.panelPage = ""; } }
-    function toggleLauncher() { if (root.view === "launcher") { root.view = "idle"; } else { root.view = "launcher"; } }
+    function openPanel(tab)   { root.view = "panel"; root.panelPage = ""; root.panelTab = tab || "control"; }
+    function openLauncher(tab) { root.launcherTab = tab || "apps"; root.view = "launcher"; }
+    function togglePanel()    { if (root.view === "panel") { root.view = "idle"; root.panelPage = ""; } else { root.openPanel(root.panelTab); } }
+    function toggleLauncher() { if (root.view === "launcher") { root.view = "idle"; } else { root.openLauncher(root.launcherTab); } }
     function closeOverlays()  { root.view = "idle"; root.panelPage = ""; }
     function lock()           { root.view = "idle"; root.panelPage = ""; Quickshell.execDetached(["umbriel", "msg", "dpms-on"]); root.locked = true; }
     function setPage(p)       { root.panelPage = p; }
+    function setTab(t)        { root.openPanel(t); }
     function togglePage(p) {
         if (root.view === "panel" && root.panelPage === p) { root.view = "idle"; root.panelPage = ""; }
         else { root.view = "panel"; root.panelPage = p; }
@@ -118,15 +123,16 @@ ShellRoot {
         function pageVolume() { root.view = "panel"; root.panelPage = "volume"; }
         function pageBrightness() { root.view = "panel"; root.panelPage = "brightness"; }
         function pagePower() { root.view = "panel"; root.panelPage = "power"; }
-        function pageWeather() { root.view = "panel"; root.panelPage = "weather"; }
-        function pageSystem() { root.view = "panel"; root.panelPage = "system"; }
+        function pageWeather() { root.openPanel("weather"); }
+        function pageSystem() { root.openPanel("system"); }
+        function tab(name: string) { root.openPanel(name); }
         function pageCalendar() { root.view = "panel"; root.panelPage = "calendar"; }
         function pageTimers() { root.view = "panel"; root.panelPage = "timers"; }
-        function pageEmoji() { root.view = "panel"; root.panelPage = "emoji"; }
+        function emoji() { root.openLauncher("emoji"); }
         function pageSettings() { root.view = "panel"; root.panelPage = "settings"; }
         function weatherRefresh() { Weather.refresh(); }
         function wallpapers() { root.togglePage("wallpapers"); }
-        function clipboard() { root.togglePage("clipboard"); Clip.refresh(); }
+        function clipboard() { root.openLauncher("clipboard"); Clip.refresh(); }
         function screenshotRegion() {
             Quickshell.execDetached(["sh", "-c",
                 "mkdir -p \"$HOME/Pictures/Screenshots\"; f=\"$HOME/Pictures/Screenshots/$(date +%F_%H-%M-%S).png\"; " +

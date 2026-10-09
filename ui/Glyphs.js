@@ -143,4 +143,9 @@ var cp = {
     "snowing": 0xe80f,
     "ac_unit": 0xeb3b,
     "sentiment_satisfied": 0xe0ed,
+    "apps": 0xe5c3,
+    "dashboard": 0xe871,
+    "grid_view": 0xe9b0,
+    "tune": 0xe429,
+    "widgets": 0xe1bd,
 };

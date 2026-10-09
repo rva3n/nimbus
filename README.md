@@ -13,11 +13,11 @@ Nimbus не зависит ни от Lucid, ни от Hyprland, ни от `~/.co
 запускается по пути и владеет своим matugen-конфигом:
 
 ```sh
-qs -p ~/nimbus                # вручную (или quickshell -p /home/tony/nimbus)
+qs -p ~/nimbus                # вручную
 ```
 
-Автозапуск: `~/.config/umbriel/src/general.toml` → `/usr/bin/qs -p /home/tony/nimbus`.
-Кейбинды: `~/.config/umbriel/src/keybinds.toml` → `qs -p /home/tony/nimbus ipc call nimbus …`.
+Автозапуск: `~/.config/umbriel/src/general.toml` → `qs -p ~/nimbus`.
+Кейбинды: `~/.config/umbriel/src/keybinds.toml` → `qs -p ~/nimbus ipc call nimbus …`.
 
 Удалишь Hyprland, Lucid и `~/.config/quickshell` — Nimbus продолжит работать.
 
@@ -134,3 +134,16 @@ qs -p ~/nimbus ipc call nimbus screenshotRegion  # screenshotFull, wpMotion, wpW
 - Уведомление хранится снимком полей (живой D-Bus-объект в UI нестабилен).
 - Иконки — Material Symbols Rounded; карта кодпоинтов генерируется
   `tools/gen-glyphs.py` из бандленного шрифта.
+
+## Благодарности
+
+- **[Lucid](https://github.com/Sn3akyy1/lucid)** (MIT) — дизайн-язык и вдохновение:
+  оттуда адаптированы тоновая математика Material 3, часть примитивов и motion-кривых,
+  а также взяты `assets/emoji.json`, `assets/kaomoji.json` и `assets/cava.conf`.
+- **[Material Symbols Rounded](https://fonts.google.com/icons)** (Apache License 2.0) —
+  иконки; шрифт лежит в `assets/fonts`.
+- **[Quickshell](https://quickshell.org)** — платформа, на которой всё работает.
+
+## Лицензия
+
+MIT — см. [LICENSE](LICENSE).

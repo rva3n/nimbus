@@ -87,7 +87,7 @@ Singleton {
         command: ["sh", "-c",
             "echo \"CPU $(awk '/^cpu /{print $2,$3,$4,$5,$6,$7,$8,$9}' /proc/stat)\"; " +
             "echo \"MEM $(awk '/MemTotal/{t=$2}/MemAvailable/{a=$2}END{print t,a}' /proc/meminfo)\"; " +
-            "echo \"DISK $(df -B1 /home/tony | awk 'NR==2{print $2,$3}')\"; " +
+            "echo \"DISK $(df -B1 \"$HOME\" | awk 'NR==2{print $2,$3}')\"; " +
             "echo \"UP $(cut -d. -f1 /proc/uptime)\"; " +
             "echo \"HOST $(uname -n)\"; " +
             "echo \"KERN $(uname -r)\"; " +

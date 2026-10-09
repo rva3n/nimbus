@@ -10,7 +10,7 @@ import "../ui"
 // Lock screen UI. PAM lives in shell.qml and is passed in via `pam`.
 WlSessionLock {
     id: lock
-    property string username: "tony"
+    property string username: Quickshell.env("USER") || "user"
     property var pam: null
     property string errorText: ""
     property string typed: ""

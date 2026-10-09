@@ -19,7 +19,7 @@ ShellRoot {
 
     PamContext {
         id: pam
-        user: "tony"
+        user: Quickshell.env("USER") || "user"
         config: "login"
         onCompleted: (result) => {
             if (result === PamResult.Success) { root.pamError = ""; root.locked = false; }

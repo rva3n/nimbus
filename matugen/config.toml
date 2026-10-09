@@ -42,7 +42,7 @@ output_path = '~/.local/share/Steam/millennium/themes/Material-Theme/css/main/co
 
 [templates.zen]
 input_path = '~/nimbus/matugen/templates/zen-userchrome.css'
-output_path = '/home/tony/.config/zen/bww22tjf.Default (release)/chrome/userChrome.css'
+output_path = '~/.config/zen/bww22tjf.Default (release)/chrome/userChrome.css'
 
 [templates.starship]
 input_path = '~/nimbus/matugen/templates/starship-colors.toml'

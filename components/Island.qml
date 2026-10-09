@@ -8,6 +8,7 @@ import Quickshell.Services.Pipewire
 import Quickshell.Services.SystemTray
 import Quickshell.Services.UPower
 import "../core"
+import "../ui"
 import "panel"
 
 // Nimbus island. The Wayland surface is a fixed-size transparent band; the pill
@@ -107,17 +108,17 @@ PanelWindow {
         id: pill
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.top: parent.top
-        anchors.topMargin: 6
-        width: win.big ? (win.mode === "launcher" ? 470 : 404) : (idlePill.implicitWidth + Theme.pad * 2)
-        height: win.big ? Math.min(contentCol.implicitHeight + 32, 652) : Theme.height
-        radius: win.big ? 26 : height / 2
-        color: Theme.a(Theme.bg, 0.97)
-        border.width: 1
-        border.color: Theme.a(Theme.outline, 0.6)
+        anchors.topMargin: Theme.dp(6)
+        width: win.big ? Theme.dp(win.mode === "launcher" ? 470 : 404) : (idlePill.implicitWidth + Theme.pad * 2)
+        height: win.big ? Math.min(contentCol.implicitHeight + Theme.dp(32), Theme.dp(652)) : Theme.height
+        radius: win.big ? Theme.radiusXl : height / 2
+        color: Theme.bg
+        border.width: win.big ? 1 : 0
+        border.color: Theme.a(Theme.outline, 0.35)
         clip: true
-        Behavior on width { NumberAnimation { duration: 260; easing.type: Easing.OutCubic } }
-        Behavior on height { NumberAnimation { duration: 260; easing.type: Easing.OutCubic } }
-        Behavior on radius { NumberAnimation { duration: 260; easing.type: Easing.OutCubic } }
+        Behavior on width { NumberAnimation { duration: Theme.durMedium; easing.type: Easing.Bezier; easing.bezierCurve: Theme.curveDefaultSpatial } }
+        Behavior on height { NumberAnimation { duration: Theme.durMedium; easing.type: Easing.Bezier; easing.bezierCurve: Theme.curveDefaultSpatial } }
+        Behavior on radius { NumberAnimation { duration: Theme.durMedium; easing.type: Easing.Bezier; easing.bezierCurve: Theme.curveDefaultSpatial } }
 
         // ── IDLE / OSD / NOTIF ───────────────────────────────────────
         IdlePill {
@@ -143,31 +144,35 @@ PanelWindow {
             // header
             RowLayout {
                 Layout.fillWidth: true
-                IconBtn {
-                    glyph: "\uf060"; visible: win.mode === "panel" && win.page !== ""
+                IconButton {
+                    icon: "arrow_back"
+                    visible: win.mode === "panel" && win.page !== ""
                     onClicked: if (win.shell) win.shell.setPage("")
                 }
                 ColumnLayout {
                     spacing: 0
                     visible: win.mode === "panel" && win.page === ""
                     Text {
-                        font.family: Theme.font; font.pixelSize: 22; font.bold: true; color: Theme.text
+                        font.family: Theme.textFont; font.pixelSize: Theme.typeSize("headlineSmall")
+                        font.weight: Theme.typeWeight("headlineSmall"); color: Theme.text
                         text: Qt.formatDateTime(win.now, "HH:mm")
                     }
                     Text {
-                        font.family: Theme.font; font.pixelSize: 11; color: Theme.subtext
+                        font.family: Theme.textFont; font.pixelSize: Theme.typeSize("bodySmall")
+                        color: Theme.subtext
                         text: win.now.toLocaleDateString(Qt.locale("ru_RU"), "dddd, d MMMM")
                     }
                 }
                 Text {
                     visible: win.mode === "panel" && win.page !== ""
-                    font.family: Theme.font; font.pixelSize: 18; font.bold: true; color: Theme.text
+                    font.family: Theme.textFont; font.pixelSize: Theme.typeSize("titleLarge")
+                    font.weight: Theme.typeWeight("titleLarge"); color: Theme.text
                     text: win.pageTitle
                 }
                 Item { Layout.fillWidth: true }
-                IconBtn {
+                IconButton {
                     visible: win.mode === "panel"
-                    glyph: "\uf011"
+                    icon: "power_settings_new"
                     onClicked: if (win.shell) win.shell.setPage(win.page === "power" ? "" : "power")
                 }
             }

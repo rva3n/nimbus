@@ -23,6 +23,8 @@ graphic_eq smart_display slideshow folder edit tune mic system_update_alt speed
 timer schedule alarm calendar_today event today language translate info error warning star favorite
 download upload open_in_new link south east north west arrow_forward arrow_upward arrow_downward
 brightness_high brightness_low wb_sunny nightlight lightbulb power battery_full
+do_not_disturb_on photo_library clear_all sort animation public play_circle pause_circle smartphone
+brightness_auto wallpaper select_all deselect delete_sweep
 """.split()
 
 

@@ -40,22 +40,9 @@ ShellRoot {
         }
     }
 
-    // Wallpaper-derived color scheme (written by matugen).
-    Process {
-        id: colorsProc
-        command: ["cat", Quickshell.env("HOME") + "/.cache/nimbus/colors.json"]
-        running: true
-        stdout: SplitParser {
-            onRead: line => {
-                const s = line.trim();
-                if (s.length > 1) { try { Theme.applyScheme(JSON.parse(s)); } catch (e) {} }
-            }
-        }
-    }
-    Timer {
-        interval: 2500; running: true; repeat: true
-        onTriggered: { colorsProc.running = false; colorsProc.running = true; }
-    }
+    // Палитра читается самим Theme (FileView → ~/.cache/nimbus/colors.json).
+    // Здесь только прогреваем синглтон, чтобы он поднялся вместе с шеллом.
+    Component.onCompleted: { void Theme.paletteLoaded; }
 
     NotificationServer {
         id: notifServer

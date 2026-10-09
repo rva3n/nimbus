@@ -6,11 +6,6 @@ Dynamic Island, оформленный в **Material 3 Expressive**.
 **Всё взаимодействие — внутри одной пилюли** сверху по центру; отдельных панелей
 снаружи нет.
 
-## Живёт отдельно
-
-Nimbus не зависит ни от Lucid, ни от Hyprland, ни от `~/.config/quickshell`, ни от
-`~/.config/matugen`. Он лежит целиком в этом репозитории (по умолчанию `~/nimbus`),
-запускается по пути и владеет своим matugen-конфигом:
 
 ```sh
 qs -p ~/nimbus                # вручную
@@ -18,8 +13,6 @@ qs -p ~/nimbus                # вручную
 
 Автозапуск: `~/.config/umbriel/src/general.toml` → `qs -p ~/nimbus`.
 Кейбинды: `~/.config/umbriel/src/keybinds.toml` → `qs -p ~/nimbus ipc call nimbus …`.
-
-Удалишь Hyprland, Lucid и `~/.config/quickshell` — Nimbus продолжит работать.
 
 ## Пилюля
 
@@ -137,7 +130,7 @@ qs -p ~/nimbus ipc call nimbus screenshotRegion  # screenshotFull, wpMotion, wpW
 
 ## Благодарности
 
-- **[Lucid](https://github.com/Sn3akyy1/lucid)** (MIT) — дизайн-язык и вдохновение:
+- **[Lucid](https://github.com/Sn3akyy1/lucid)** (MIT) — вдохновение:
   оттуда адаптированы тоновая математика Material 3, часть примитивов и motion-кривых,
   а также взяты `assets/emoji.json`, `assets/kaomoji.json` и `assets/cava.conf`.
 - **[Material Symbols Rounded](https://fonts.google.com/icons)** (Apache License 2.0) —

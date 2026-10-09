@@ -23,10 +23,17 @@ qs -p ~/nimbus                # вручную (или quickshell -p /home/tony/
 
 ## Пилюля
 
-- **Покой:** воркспейсы · время · 🔔 (колокольчик открывает панель управления).
-- **Панель** (клик по 🔔 или `Mod+Escape`): часы/дата, плитки
-  Wi-Fi / Bluetooth / Звук / Яркость / DND / Обои, медиакарта,
-  список уведомлений, кнопки питания (сон/выход/перезагрузка/выключение).
+- **Покой:** воркспейсы · погода (иконка + градусы, Open-Meteo) · время · 🔔 (колокольчик открывает панель управления).
+- **Панель** (клик по 🔔 или `Mod+Escape`): часы/дата, погодная карточка, плитки
+  Wi-Fi / Bluetooth / Звук / Яркость / DND / Обои / Эмодзи / Система / Таймеры,
+  медиакарта с seek-баром, список уведомлений, кнопки настроек и питания.
+  Содержимое скроллится, если не влезает (Flickable).
+- **Страницы панели:** Wi-Fi, Bluetooth, Звук, Яркость, Обои (Фото/Видео/Motion/Wallhaven),
+  Буфер обмена, Питание, **Погода** (сейчас / по часам / 5 дней), **Система** (кольца CPU/RAM/диска
+  и справка), **Календарь** (месяц, «Сегодня»), **Таймеры** (таймер и секундомер с кругами),
+  **Эмодзи/Каомодзи** (1946 эмодзи, поиск, вставка через `wtype`),
+  **Настройки** (размер интерфейса, скругления, скорость анимаций, насыщенность акцента,
+  город погоды — авто по IP или вручную, сброс).
 - **Лончер** (`Mod+Space`): поиск и запуск приложений — тоже в пилюле.
 - **Обои** (`Mod+W`): вкладки **Фото / Видео / Motion / Wallhaven** (поиск, сортировка,
   категории, SFW/18+, разрешение, «Ещё», авто-смена). Ставятся через `awww` (фото/гиф) или
@@ -61,15 +68,19 @@ shell.qml                 корень: состояние (view), backdrop, о�
 core/
   qmldir
   Theme.qml               M3-движок: палитра, тональные рампы, типографика, motion, формы
+  Prefs.qml               ~/nimbus/prefs.json: масштаб/скругления/анимации/акцент/погода
   Umbriel.qml             воркспейсы/окна (umbriel subscribe)
   Osd.qml                 состояние OSD
   Notif.qml               история уведомлений + тост + DND
   Sys.qml                 Wi-Fi/Bluetooth/яркость(DDC)/питание
   Wallpaper.qml           локальные/видео/Wallhaven/MotionBGs + matugen-акцент
   Clip.qml, Apps.qml      история буфера и состояние лончера
+  Weather.qml             Open-Meteo: авто по IP или город; почасовка и 5 дней
+  SysStats.qml            CPU/RAM/диск/температура/uptime из /proc
+  Chrono.qml              таймер и секундомер (страница «Таймеры»)
 ui/                       M3-примитивы
   Icon.qml, Glyphs.js     иконки Material Symbols (кодпоинты из бандленного шрифта)
-  Button, IconButton, Slider, Switch, Chip, TextField, Divider, Badge
+  Button, IconButton, Slider, Switch, Chip, TextField, Divider, Badge, Card, Ring
 components/
   qmldir
   Island.qml              сборка пилюли: idle/панель/лончер
@@ -77,11 +88,14 @@ components/
   Launcher.qml, Lockscreen.qml, Backdrop.qml
   Tile, ToggleRow, DeviceRow, PowerRow, NotifItem, SliderRow, ClipRow, TabBtn
   panel/                  страницы панели: RootPage, WifiPage, BtPage, VolumePage,
-                          BrightnessPage, WallpapersPage, ClipboardPage, PowerPage
+                          BrightnessPage, WallpapersPage, ClipboardPage, PowerPage,
+                          WeatherPage, SystemPage, CalendarPage, TimersPage,
+                          EmojiPage, SettingsPage
 matugen/                  свой конфиг и шаблоны (matugen -c ~/nimbus/matugen/config.toml)
-assets/fonts/             MaterialSymbolsRounded.ttf (бандл, чтобы не зависеть от системы)
+assets/                   MaterialSymbolsRounded.ttf, emoji.json, kaomoji.json, cava.conf
 tools/gen-glyphs.py       генератор ui/Glyphs.js из шрифта
-scripts/                  clip-pin.sh, clip-unpin.sh
+tools/set-steam-launch.py параметры запуска Steam (например, gamescope) с бэкапом
+scripts/                  clip-pin.sh, clip-unpin.sh, geo.sh (IP-геолокация)
 ```
 
 ## Цвета
@@ -100,6 +114,8 @@ qs -p ~/nimbus ipc call nimbus lock
 qs -p ~/nimbus ipc call nimbus volumeUp     # volumeDown, volumeMute
 qs -p ~/nimbus ipc call nimbus brightnessUp # brightnessDown
 qs -p ~/nimbus ipc call nimbus pageWifi     # pageBluetooth, pageVolume, pageBrightness, pagePower
+qs -p ~/nimbus ipc call nimbus pageWeather  # pageSystem, pageCalendar, pageTimers, pageEmoji, pageSettings
+qs -p ~/nimbus ipc call nimbus weatherRefresh
 qs -p ~/nimbus ipc call nimbus wallpapers   # clipboard
 qs -p ~/nimbus ipc call nimbus screenshotRegion  # screenshotFull, wpMotion, wpWallhaven
 ```

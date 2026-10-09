@@ -3,8 +3,9 @@ import QtQuick.Layouts
 import "../core"
 import "../ui"
 
-// M3 list item: иконка в круглом контейнере, подпись, шеврон справа.
-// danger («Выключение») — error-тон иконки и контейнера.
+// M3 list item (строка внутри Card): прозрачная, hover — bgHover,
+// нажатие — bgActive. Ведущая иконка 40×40 в контейнере; danger —
+// error-тон контейнера и иконки («Выключение»).
 Item {
     id: pr
 
@@ -21,19 +22,11 @@ Item {
 
         anchors.fill: parent
         radius: Theme.radiusLg
-        color: Theme.bgTile
+        color: prArea.pressed ? Theme.bgActive : (prArea.containsMouse ? Theme.bgHover : "transparent")
 
-        Rectangle { // state layer (ховер/нажатие)
-            anchors.fill: parent
-            radius: bg.radius
-            color: Theme.text
-            opacity: prArea.pressed ? Theme.statePressed : (prArea.containsMouse ? Theme.stateHover : 0)
-
-            Behavior on opacity {
-                NumberAnimation {
-                    duration: Theme.ms(100)
-                    easing.type: Theme.easeStandard
-                }
+        Behavior on color {
+            ColorAnimation {
+                duration: Theme.durDefaultEffects
             }
         }
     }

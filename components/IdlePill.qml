@@ -16,7 +16,7 @@ Item {
                  : compactRow.implicitWidth
     implicitHeight: Theme.dp(30)
 
-    // idle: воркспейсы + время + колокольчик панели
+    // idle: воркспейсы + погода + время + колокольчик панели
     RowLayout {
         id: compactRow
         visible: holder.mode === "idle"
@@ -26,6 +26,28 @@ Item {
         WorkspacesRow {
             Layout.alignment: Qt.AlignVCenter
             output: holder.output
+        }
+
+        RowLayout { // погодный чип: иконка + температура, без места
+            visible: Weather.hasData
+            Layout.alignment: Qt.AlignVCenter
+            spacing: Theme.dp(4)
+
+            Icon {
+                Layout.alignment: Qt.AlignVCenter
+                name: Weather.icon
+                size: Theme.dp(14)
+                color: Theme.subtext
+            }
+
+            Text {
+                Layout.alignment: Qt.AlignVCenter
+                font.family: Theme.textFont
+                font.pixelSize: Theme.typeSize("labelSmall")
+                font.weight: Theme.typeWeight("labelSmall")
+                color: Theme.subtext
+                text: Math.round(Weather.temp) + "°"
+            }
         }
 
         Text {

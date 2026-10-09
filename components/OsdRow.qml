@@ -3,7 +3,7 @@ import QtQuick.Layouts
 import "../core"
 import "../ui"
 
-// OSD-строка: иконка источника + трек значения + процент/«mute».
+// OSD-строка: контейнер иконки источника + трек значения + процент/«mute».
 RowLayout {
     id: osdRow
     property string kind: "volume"
@@ -11,17 +11,25 @@ RowLayout {
     property bool muted: false
     spacing: Theme.dp(10)
 
-    Icon {
+    Rectangle { // контейнер иконки источника
         Layout.alignment: Qt.AlignVCenter
-        name: osdRow.kind === "volume" ? (osdRow.muted ? "volume_off" : "volume_up") : "brightness_6"
-        size: Theme.dp(18)
-        color: Theme.accent
+        implicitWidth: Theme.dp(26)
+        implicitHeight: Theme.dp(26)
+        radius: Theme.radiusPill
+        color: Theme.accentContainer
+
+        Icon {
+            anchors.centerIn: parent
+            name: osdRow.kind === "volume" ? (osdRow.muted ? "volume_off" : "volume_up") : "brightness_6"
+            size: Theme.dp(16)
+            color: Theme.fgAccentContainer
+        }
     }
 
     Rectangle { // трек
         Layout.alignment: Qt.AlignVCenter
         Layout.preferredWidth: Theme.dp(140)
-        Layout.preferredHeight: Theme.dp(8)
+        Layout.preferredHeight: Theme.dp(6)
         radius: Theme.radiusPill
         color: Theme.bgTrack
 

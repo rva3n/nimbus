@@ -3,28 +3,36 @@ import QtQuick.Layouts
 import "../core"
 import "../ui"
 
-// Тост уведомления: иконка + «appName · summary» и body (обе строки с elide).
+// Тост уведомления: контейнер иконки + «appName · summary» и body (обе строки с elide).
 RowLayout {
     id: notifRow
     property var current: null
     spacing: Theme.dp(10)
 
-    Icon {
+    Rectangle { // контейнер иконки
         Layout.alignment: Qt.AlignVCenter
-        name: "notifications"
-        size: Theme.dp(18)
-        color: Theme.accent
+        implicitWidth: Theme.dp(28)
+        implicitHeight: Theme.dp(28)
+        radius: Theme.radiusPill
+        color: Theme.accentContainer
+
+        Icon {
+            anchors.centerIn: parent
+            name: "notifications"
+            size: Theme.dp(16)
+            color: Theme.fgAccentContainer
+        }
     }
 
     ColumnLayout {
         Layout.alignment: Qt.AlignVCenter
         Layout.maximumWidth: Theme.dp(300)
-        spacing: 0
+        spacing: 1
 
         Text {
             font.family: Theme.textFont
-            font.pixelSize: Theme.typeSize("labelLarge")
-            font.weight: Theme.typeWeight("labelLarge")
+            font.pixelSize: Theme.typeSize("titleSmall")
+            font.weight: Theme.typeWeight("titleSmall")
             color: Theme.text
             text: notifRow.current ? ((notifRow.current.appName ? notifRow.current.appName + " · " : "") + (notifRow.current.summary || "")) : ""
             elide: Text.ElideRight
@@ -34,8 +42,8 @@ RowLayout {
         Text {
             visible: text !== ""
             font.family: Theme.textFont
-            font.pixelSize: Theme.typeSize("labelSmall")
-            font.weight: Theme.typeWeight("labelSmall")
+            font.pixelSize: Theme.typeSize("bodySmall")
+            font.weight: Theme.typeWeight("bodySmall")
             color: Theme.subtext
             text: notifRow.current ? (notifRow.current.body || "") : ""
             elide: Text.ElideRight

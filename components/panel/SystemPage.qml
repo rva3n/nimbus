@@ -5,11 +5,154 @@ import "../../core"
 import "../../ui"
 import ".."
 
-// Страница «Система» — наполняется в волне 2.
+// Страница «Система»: кольца CPU/RAM/диск из SysStats и справка «О системе».
 ColumnLayout {
     id: page
     property var win: null
     Layout.fillWidth: true
     spacing: Theme.dp(10)
     visible: win !== null && win.mode === "panel" && win.page === "system"
+
+    // байты → «N.N ГБ»
+    function fmtGb(bytes) {
+        if (!bytes || bytes <= 0) return "—";
+        return (bytes / 1073741824).toFixed(1) + " ГБ";
+    }
+    // секунды → «N ч M мин»
+    function fmtUptime(sec) {
+        const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60);
+        return h > 0 ? h + " ч " + m + " мин" : m + " мин";
+    }
+    // цвет кольца CPU по порогам нагрузки
+    function cpuColor(v) { return v > 0.8 ? Theme.error : (v > 0.6 ? Theme.warning : Theme.accent) }
+
+    // строка справки: ведущая иконка 40×40, подпись, значение
+    component InfoRow: Rectangle {
+        id: infoRow
+        property string icon: ""
+        property string label: ""
+        property string value: ""
+        implicitHeight: Theme.dp(48)
+        // строка растягивается по ширине карточки (иначе RowLayout схлопывается)
+        Layout.fillWidth: true
+        color: "transparent"
+
+        RowLayout {
+            anchors.fill: parent
+            anchors.leftMargin: Theme.dp(8); anchors.rightMargin: Theme.dp(8)
+            spacing: Theme.dp(8)
+
+            Rectangle { // ведущая иконка 40×40
+                implicitWidth: Theme.dp(40); implicitHeight: Theme.dp(40)
+                radius: Theme.radiusMd
+                color: Theme.bgTrack
+
+                Icon {
+                    anchors.centerIn: parent
+                    name: infoRow.icon
+                    size: Theme.dp(20)
+                    color: Theme.subtext
+                }
+            }
+            Text {
+                Layout.fillWidth: true; elide: Text.ElideRight
+                font.family: Theme.textFont; font.pixelSize: Theme.typeSize("bodyLarge")
+                font.weight: Theme.typeWeight("bodyLarge"); color: Theme.text
+                text: infoRow.label
+            }
+            Text {
+                font.family: Theme.textFont; font.pixelSize: Theme.typeSize("bodyMedium")
+                font.weight: Theme.typeWeight("bodyMedium"); color: Theme.subtext
+                text: infoRow.value
+            }
+        }
+    }
+
+    // верх: живые метрики, заголовок — имя хоста
+    Card {
+        Layout.fillWidth: true
+        title: SysStats.host
+
+        RowLayout { // кольца метрик
+            Layout.fillWidth: true
+            Layout.alignment: Qt.AlignHCenter
+            spacing: Theme.dp(16)
+
+            Item { Layout.fillWidth: true }
+
+            Ring {
+                value: SysStats.cpu
+                label: Math.round(SysStats.cpu * 100) + "%"
+                caption: "CPU"
+                color: page.cpuColor(SysStats.cpu)
+            }
+            Ring {
+                value: SysStats.memFrac
+                label: Math.round(SysStats.memFrac * 100) + "%"
+                caption: "RAM"
+            }
+            Ring {
+                value: SysStats.diskFrac
+                label: Math.round(SysStats.diskFrac * 100) + "%"
+                caption: "Диск"
+            }
+
+            Item { Layout.fillWidth: true }
+        }
+
+        // температура, если есть датчик
+        RowLayout {
+            Layout.fillWidth: true
+            Layout.topMargin: Theme.dp(2)
+            Layout.leftMargin: Theme.dp(8); Layout.rightMargin: Theme.dp(8)
+            visible: SysStats.tempC > 0
+            spacing: Theme.dp(8)
+
+            Rectangle { // ведущая иконка 40×40
+                implicitWidth: Theme.dp(40); implicitHeight: Theme.dp(40)
+                radius: Theme.radiusMd
+                color: Theme.bgTrack
+
+                Icon {
+                    anchors.centerIn: parent
+                    name: "device_thermostat"; size: Theme.dp(20)
+                    color: Theme.subtext
+                }
+            }
+            Text {
+                Layout.fillWidth: true
+                font.family: Theme.textFont; font.pixelSize: Theme.typeSize("bodyLarge")
+                font.weight: Theme.typeWeight("bodyLarge"); color: Theme.text
+                text: "Температура: " + Math.round(SysStats.tempC) + "°C"
+            }
+        }
+    }
+
+    // справка о системе
+    Card {
+        Layout.fillWidth: true
+        title: "О системе"
+
+        InfoRow { icon: "memory"; label: "Хост"; value: SysStats.host }
+        Divider { Layout.fillWidth: true; leftInset: Theme.dp(56) }
+        InfoRow { icon: "monitor_heart"; label: "Ядро"; value: SysStats.kernel }
+        Divider { Layout.fillWidth: true; leftInset: Theme.dp(56) }
+        InfoRow { icon: "hourglass_top"; label: "Время работы"; value: page.fmtUptime(SysStats.uptime) }
+        Divider { Layout.fillWidth: true; leftInset: Theme.dp(56); visible: SysStats.tempC > 0 }
+        InfoRow {
+            visible: SysStats.tempC > 0
+            icon: "device_thermostat"; label: "Температура"
+            value: Math.round(SysStats.tempC) + "°C"
+        }
+        Divider { Layout.fillWidth: true; leftInset: Theme.dp(56) }
+        InfoRow {
+            icon: "memory"; label: "Память"
+            value: page.fmtGb(SysStats.memUsed) + " / " + page.fmtGb(SysStats.memTotal)
+        }
+        Divider { Layout.fillWidth: true; leftInset: Theme.dp(56) }
+        InfoRow {
+            icon: "storage"; label: "Диск"
+            value: page.fmtGb(SysStats.diskUsed) + " / " + page.fmtGb(SysStats.diskTotal)
+        }
+    }
 }

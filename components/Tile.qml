@@ -4,7 +4,7 @@ import "../core"
 import "../ui"
 
 // M3-плитка быстрых настроек: иконка сверху, подпись снизу.
-// active — accentContainer, иначе bgTile; ховер — state layer.
+// active — accentContainer, обычная — bgTile; ховер — bgHover, нажатие — bgActive.
 Item {
     id: tile
 
@@ -31,25 +31,14 @@ Item {
 
         anchors.fill: parent
         radius: Theme.radiusLg
-        color: tile.active ? Theme.accentContainer : Theme.bgTile
+        color: tile.active ? Theme.accentContainer
+             : (area.pressed ? Theme.bgActive : (area.containsMouse ? Theme.bgHover : Theme.bgTile))
+        border.width: 1
+        border.color: Theme.a(Theme.outline, 0.25)
 
         Behavior on color {
             ColorAnimation {
                 duration: Theme.durDefaultEffects
-            }
-        }
-
-        Rectangle { // state layer (ховер/нажатие)
-            anchors.fill: parent
-            radius: bg.radius
-            color: tile.active ? Theme.fgAccentContainer : Theme.text
-            opacity: area.pressed ? Theme.statePressed : (area.containsMouse ? Theme.stateHover : 0)
-
-            Behavior on opacity {
-                NumberAnimation {
-                    duration: Theme.ms(100)
-                    easing.type: Theme.easeStandard
-                }
             }
         }
     }
@@ -61,7 +50,7 @@ Item {
         Icon {
             Layout.alignment: Qt.AlignHCenter
             name: tile.icon
-            size: Theme.dp(22)
+            size: Theme.dp(24)
             color: tile.active ? Theme.fgAccentContainer : Theme.subtext
 
             Behavior on color {

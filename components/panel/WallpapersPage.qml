@@ -163,13 +163,27 @@ ColumnLayout {
              : Wallpaper.results
 
         delegate: Rectangle {
+            id: cell
+
             required property var modelData
+
+            readonly property bool selected: Wallpaper.tab !== "wallhaven" && Wallpaper.tab !== "motion" && Wallpaper.currentPath === modelData.path
 
             width: 112
             height: 76
             radius: Theme.radiusMd
             color: Theme.bgTile
             clip: true
+            scale: cell.selected ? 1.06 : 1
+            z: cell.selected ? 2 : 0
+
+            Behavior on scale {
+                NumberAnimation {
+                    duration: Theme.durDefaultSpatial
+                    easing.type: Easing.Bezier
+                    easing.bezierCurve: Theme.curveDefaultSpatial
+                }
+            }
 
             Image {
                 anchors.fill: parent
@@ -206,13 +220,33 @@ ColumnLayout {
                 }
             }
 
-            Rectangle { // выбранное
-                visible: Wallpaper.tab !== "wallhaven" && Wallpaper.tab !== "motion" && Wallpaper.currentPath === modelData.path
+            Rectangle { // выбранное: рамка accent 2
+                visible: cell.selected
                 anchors.fill: parent
                 radius: parent.radius
                 color: "transparent"
                 border.width: 2
                 border.color: Theme.accent
+            }
+
+            Rectangle { // галочка выбранного в углу
+                visible: cell.selected
+                anchors.top: parent.top
+                anchors.right: parent.right
+                anchors.margins: Theme.dp(4)
+                width: Theme.dp(22)
+                height: Theme.dp(22)
+                radius: Theme.radiusPill
+                color: Theme.accentContainer
+                border.width: 1
+                border.color: Theme.a(Theme.accent, 0.45)
+
+                Ui.Icon {
+                    anchors.centerIn: parent
+                    name: "check"
+                    size: Theme.dp(14)
+                    color: Theme.fgAccentContainer
+                }
             }
 
             MouseArea {

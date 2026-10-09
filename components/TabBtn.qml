@@ -13,6 +13,15 @@ Item {
 
     implicitWidth: tbText.implicitWidth + Theme.dp(24)
     implicitHeight: Theme.dp(30)
+    scale: tbArea.pressed ? 0.96 : 1
+
+    Behavior on scale {
+        NumberAnimation {
+            duration: Theme.durQuick
+            easing.type: Easing.Bezier
+            easing.bezierCurve: Theme.curveEffects
+        }
+    }
 
     Rectangle {
         id: bg

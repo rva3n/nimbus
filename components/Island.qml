@@ -150,72 +150,83 @@ PanelWindow {
         }
 
         // ── PANEL ────────────────────────────────────────────────────
-        ColumnLayout {
-            id: contentCol
+        Flickable {
+            id: panelView
             visible: win.big
-            width: (win.mode === "launcher" ? 470 : 404) - 32
+            width: (win.mode === "launcher" ? Theme.dp(470) : Theme.dp(404)) - Theme.dp(32)
+            height: Math.min(contentCol.implicitHeight, win.panelMax - Theme.dp(32))
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.top: parent.top
-            anchors.topMargin: 16
-            spacing: 14
+            anchors.topMargin: Theme.dp(16)
+            contentWidth: width
+            contentHeight: contentCol.implicitHeight
+            clip: true
+            boundsBehavior: Flickable.StopAtBounds
+            flickableDirection: Flickable.VerticalFlick
 
-            // header
-            RowLayout {
-                Layout.fillWidth: true
-                IconButton {
-                    icon: "arrow_back"
-                    visible: win.mode === "panel" && win.page !== ""
-                    onClicked: if (win.shell) win.shell.setPage("")
-                }
-                ColumnLayout {
-                    spacing: 0
-                    visible: win.mode === "panel" && win.page === ""
-                    Text {
-                        font.family: Theme.textFont; font.pixelSize: Theme.typeSize("headlineSmall")
-                        font.weight: Theme.typeWeight("headlineSmall"); color: Theme.text
-                        text: Qt.formatDateTime(win.now, "HH:mm")
+            ColumnLayout {
+                id: contentCol
+                width: panelView.width
+                spacing: Theme.dp(14)
+
+                // header
+                RowLayout {
+                    Layout.fillWidth: true
+                    IconButton {
+                        icon: "arrow_back"
+                        visible: win.mode === "panel" && win.page !== ""
+                        onClicked: if (win.shell) win.shell.setPage("")
+                    }
+                    ColumnLayout {
+                        spacing: 0
+                        visible: win.mode === "panel" && win.page === ""
+                        Text {
+                            font.family: Theme.textFont; font.pixelSize: Theme.typeSize("headlineSmall")
+                            font.weight: Theme.typeWeight("headlineSmall"); color: Theme.text
+                            text: Qt.formatDateTime(win.now, "HH:mm")
+                        }
+                        Text {
+                            font.family: Theme.textFont; font.pixelSize: Theme.typeSize("bodySmall")
+                            color: Theme.subtext
+                            text: win.now.toLocaleDateString(Qt.locale("ru_RU"), "dddd, d MMMM")
+                        }
                     }
                     Text {
-                        font.family: Theme.textFont; font.pixelSize: Theme.typeSize("bodySmall")
-                        color: Theme.subtext
-                        text: win.now.toLocaleDateString(Qt.locale("ru_RU"), "dddd, d MMMM")
+                        visible: win.mode === "panel" && win.page !== ""
+                        font.family: Theme.textFont; font.pixelSize: Theme.typeSize("titleLarge")
+                        font.weight: Theme.typeWeight("titleLarge"); color: Theme.text
+                        text: win.pageTitle
+                    }
+                    Item { Layout.fillWidth: true }
+                    IconButton {
+                        visible: win.mode === "panel"
+                        icon: "settings"
+                        onClicked: if (win.shell) win.shell.setPage(win.page === "settings" ? "" : "settings")
+                    }
+                    IconButton {
+                        visible: win.mode === "panel"
+                        icon: "power_settings_new"
+                        onClicked: if (win.shell) win.shell.setPage(win.page === "power" ? "" : "power")
                     }
                 }
-                Text {
-                    visible: win.mode === "panel" && win.page !== ""
-                    font.family: Theme.textFont; font.pixelSize: Theme.typeSize("titleLarge")
-                    font.weight: Theme.typeWeight("titleLarge"); color: Theme.text
-                    text: win.pageTitle
-                }
-                Item { Layout.fillWidth: true }
-                IconButton {
-                    visible: win.mode === "panel"
-                    icon: "settings"
-                    onClicked: if (win.shell) win.shell.setPage(win.page === "settings" ? "" : "settings")
-                }
-                IconButton {
-                    visible: win.mode === "panel"
-                    icon: "power_settings_new"
-                    onClicked: if (win.shell) win.shell.setPage(win.page === "power" ? "" : "power")
-                }
+
+                RootPage { win: win }
+                WifiPage { win: win }
+                BtPage { win: win }
+                VolumePage { win: win }
+                BrightnessPage { win: win }
+                WallpapersPage { win: win }
+                ClipboardPage { win: win }
+                PowerPage { win: win }
+                WeatherPage { win: win }
+                SystemPage { win: win }
+                CalendarPage { win: win }
+                TimersPage { win: win }
+                EmojiPage { win: win }
+                SettingsPage { win: win }
+
+                Launcher { active: win.mode === "launcher"; shell: win.shell }
             }
-
-            RootPage { win: win }
-            WifiPage { win: win }
-            BtPage { win: win }
-            VolumePage { win: win }
-            BrightnessPage { win: win }
-            WallpapersPage { win: win }
-            ClipboardPage { win: win }
-            PowerPage { win: win }
-            WeatherPage { win: win }
-            SystemPage { win: win }
-            CalendarPage { win: win }
-            TimersPage { win: win }
-            EmojiPage { win: win }
-            SettingsPage { win: win }
-
-            Launcher { active: win.mode === "launcher"; shell: win.shell }
         }
     }
 

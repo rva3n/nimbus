@@ -4,7 +4,8 @@ import "../../core"
 import ".."
 import "../../ui"
 
-// Буфер обмена: история и закреплённые записи.
+// Буфер обмена: закреплённые и история — сгруппированы в Card,
+// строки прозрачные с разделителями, очистка — danger-строка.
 ColumnLayout {
     id: clipboardPage
 
@@ -12,74 +13,143 @@ ColumnLayout {
 
     visible: win !== null && win.mode === "panel" && win.page === "clipboard"
     Layout.fillWidth: true
-    spacing: 8
+    spacing: Theme.dp(10)
 
-    RowLayout { // заголовок + действия
+    // ── Закреплённые ──────────────────────────────────────────────────
+    Card {
+        visible: Clip.pins.length > 0
         Layout.fillWidth: true
+        title: "Закреплённые"
 
-        Text {
+        ColumnLayout {
             Layout.fillWidth: true
-            text: "История"
-            color: Theme.subtext
-            font.family: Theme.textFont
-            font.pixelSize: Theme.typeSize("labelMedium")
-            font.weight: Theme.typeWeight("labelMedium")
+            spacing: 0
+
+            Repeater {
+                model: Clip.pins
+
+                delegate: ColumnLayout {
+                    required property var modelData
+                    required property int index
+                    Layout.fillWidth: true
+                    spacing: 0
+
+                    Divider {
+                        visible: index > 0
+                        Layout.fillWidth: true
+                        leftInset: Theme.dp(56)
+                    }
+
+                    ClipRow {
+                        Layout.fillWidth: true
+                        item: modelData
+                        pinned: true
+                    }
+                }
+            }
         }
+    }
+
+    // ── История ───────────────────────────────────────────────────────
+    Card {
+        Layout.fillWidth: true
+        title: "История"
+        actionIcon: "refresh"
+        onActionClicked: Clip.refresh()
 
         Text {
             visible: Clip.loading
-            Layout.alignment: Qt.AlignVCenter
+            Layout.fillWidth: true
             text: "загрузка…"
             color: Theme.subtext
             font.family: Theme.textFont
-            font.pixelSize: Theme.typeSize("labelSmall")
-            font.weight: Theme.typeWeight("labelSmall")
+            font.pixelSize: Theme.typeSize("bodySmall")
+            font.weight: Theme.typeWeight("bodySmall")
         }
 
-        IconButton {
-            icon: "refresh"
-            size: "s"
-            onClicked: Clip.refresh()
-        }
-
-        IconButton {
-            icon: "delete"
-            size: "s"
-            onClicked: Clip.wipe()
-        }
-    }
-
-    Text {
-        visible: Clip.pins.length > 0
-        text: "Закреплённые"
-        color: Theme.subtext
-        font.family: Theme.textFont
-        font.pixelSize: Theme.typeSize("labelMedium")
-        font.weight: Theme.typeWeight("labelMedium")
-    }
-
-    Repeater {
-        model: Clip.pins
-
-        delegate: ClipRow {
-            required property var modelData
+        ListView {
             Layout.fillWidth: true
-            item: modelData
-            pinned: true
+            Layout.preferredHeight: 320
+            model: Clip.items
+            clip: true
+            spacing: 0
+
+            delegate: ColumnLayout {
+                required property var modelData
+                required property int index
+                width: ListView.view.width
+                spacing: 0
+
+                Divider {
+                    visible: index > 0
+                    Layout.fillWidth: true
+                    leftInset: Theme.dp(56)
+                }
+
+                ClipRow {
+                    Layout.fillWidth: true
+                    item: modelData
+                }
+            }
         }
-    }
 
-    ListView {
-        Layout.fillWidth: true
-        Layout.preferredHeight: 360
-        model: Clip.items
-        clip: true
-        spacing: 4
+        Item { // опасная строка: очистить всю историю
+            Layout.fillWidth: true
+            implicitHeight: Theme.dp(48)
 
-        delegate: ClipRow {
-            required property var modelData
-            width: ListView.view.width
-            item: modelData
+            Rectangle {
+                anchors.fill: parent
+                radius: Theme.radiusLg
+                color: wipeArea.pressed ? Theme.bgActive : (wipeArea.containsMouse ? Theme.bgHover : "transparent")
+
+                Behavior on color {
+                    ColorAnimation {
+                        duration: Theme.durDefaultEffects
+                    }
+                }
+            }
+
+            RowLayout {
+                anchors.fill: parent
+                anchors.leftMargin: Theme.dp(8)
+                anchors.rightMargin: Theme.dp(16)
+                spacing: Theme.dp(12)
+
+                Rectangle { // контейнер иконки в error-тоне
+                    Layout.alignment: Qt.AlignVCenter
+                    implicitWidth: Theme.dp(40)
+                    implicitHeight: Theme.dp(40)
+                    radius: Theme.radiusPill
+                    color: Theme.errorContainer
+
+                    Icon {
+                        anchors.centerIn: parent
+                        name: "delete_sweep"
+                        size: Theme.dp(20)
+                        color: Theme.fgErrorContainer
+                    }
+                }
+
+                Text {
+                    Layout.fillWidth: true
+                    Layout.alignment: Qt.AlignVCenter
+                    text: "Очистить историю"
+                    color: Theme.text
+                    elide: Text.ElideRight
+                    font.family: Theme.textFont
+                    font.pixelSize: Theme.typeSize("bodyLarge")
+                    font.weight: Theme.typeWeight("bodyLarge")
+                }
+            }
+
+            MouseArea {
+                id: wipeArea
+
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingCursor
+                onClicked: Clip.wipe()
+            }
         }
     }
 }

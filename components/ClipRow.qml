@@ -3,39 +3,28 @@ import QtQuick.Layouts
 import "../core"
 import "../ui"
 
-// M3-строка буфера обмена: превью/иконка, текст в две строки, pin и delete.
+// M3-строка буфера обмена внутри Card: прозрачная, hover — bgHover,
+// закреплённая (selected) — accentContainer. Слева превью/иконка 40×40,
+// справа pin и delete (delete — в error-тоне).
 Item {
     id: cr
 
     property var item: null
     property bool pinned: false
 
-    implicitHeight: Math.max(Theme.dp(52), crLayout.implicitHeight + Theme.dp(20))
+    implicitHeight: Math.max(Theme.dp(56), crLayout.implicitHeight + Theme.dp(20))
 
     Rectangle {
         id: bg
 
         anchors.fill: parent
         radius: Theme.radiusLg
-        color: cr.pinned ? Theme.accentContainer : Theme.bgTile
+        color: cr.pinned ? Theme.accentContainer
+             : (crArea.pressed ? Theme.bgActive : (crArea.containsMouse ? Theme.bgHover : "transparent"))
 
         Behavior on color {
             ColorAnimation {
                 duration: Theme.durDefaultEffects
-            }
-        }
-
-        Rectangle { // state layer (ховер/нажатие)
-            anchors.fill: parent
-            radius: bg.radius
-            color: cr.pinned ? Theme.fgAccentContainer : Theme.text
-            opacity: crArea.pressed ? Theme.statePressed : (crArea.containsMouse ? Theme.stateHover : 0)
-
-            Behavior on opacity {
-                NumberAnimation {
-                    duration: Theme.ms(100)
-                    easing.type: Theme.easeStandard
-                }
             }
         }
     }
@@ -56,10 +45,10 @@ Item {
         anchors.margins: Theme.dp(10)
         spacing: Theme.dp(10)
 
-        Item { // превью-картинка либо иконка
+        Item { // превью-картинка либо контейнер иконки 40×40
             Layout.alignment: Qt.AlignVCenter
             implicitWidth: Theme.dp(44)
-            implicitHeight: Theme.dp(32)
+            implicitHeight: Theme.dp(40)
 
             Rectangle {
                 anchors.fill: parent
@@ -75,12 +64,20 @@ Item {
                 }
             }
 
-            Icon {
+            Rectangle { // контейнер иконки
                 anchors.centerIn: parent
                 visible: !cr.item || cr.item.type !== "image"
-                name: "description"
-                size: Theme.dp(20)
-                color: cr.pinned ? Theme.fgAccentContainer : Theme.subtext
+                implicitWidth: Theme.dp(40)
+                implicitHeight: Theme.dp(40)
+                radius: Theme.radiusPill
+                color: cr.pinned ? Theme.accentContainer : Theme.bgTrack
+
+                Icon {
+                    anchors.centerIn: parent
+                    name: "description"
+                    size: Theme.dp(20)
+                    color: cr.pinned ? Theme.fgAccentContainer : Theme.subtext
+                }
             }
         }
 
@@ -115,13 +112,11 @@ Item {
             Rectangle {
                 anchors.fill: parent
                 radius: Theme.radiusPill
-                color: Theme.error
-                opacity: delArea.pressed ? Theme.statePressed : (delArea.containsMouse ? Theme.stateHover : 0)
+                color: delArea.containsMouse || delArea.pressed ? Theme.errorContainer : "transparent"
 
-                Behavior on opacity {
-                    NumberAnimation {
-                        duration: Theme.ms(100)
-                        easing.type: Theme.easeStandard
+                Behavior on color {
+                    ColorAnimation {
+                        duration: Theme.durDefaultEffects
                     }
                 }
             }
@@ -129,8 +124,14 @@ Item {
             Icon {
                 anchors.centerIn: parent
                 name: "delete"
-                size: Math.round(Theme.dp(32) * 0.55)
-                color: Theme.error
+                size: Theme.dp(18)
+                color: delArea.containsMouse ? Theme.fgErrorContainer : Theme.error
+
+                Behavior on color {
+                    ColorAnimation {
+                        duration: Theme.durDefaultEffects
+                    }
+                }
             }
 
             MouseArea {

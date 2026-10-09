@@ -4,68 +4,105 @@ import "../../core"
 import "../../ui"
 import ".."
 
+// Bluetooth: карточка-переключатель радио и карточка найденных устройств.
 ColumnLayout {
     id: btPage
     property var win: null
     visible: win !== null && win.mode === "panel" && win.page === "bluetooth"
     Layout.fillWidth: true; spacing: 10
 
-    ToggleRow {
+    // переключатель модуля
+    Card {
         Layout.fillWidth: true
-        label: "Bluetooth"; sub: Sys.btEnabled ? "включён" : "выключен"
-        active: Sys.btEnabled
-        onToggled: { Sys.toggleBt(); if (!Sys.btEnabled) Sys.refreshBt(); }
-    }
+        pad: Theme.dp(6)
 
-    // заголовок секции + повторное сканирование
-    RowLayout {
-        Layout.fillWidth: true
-        Layout.topMargin: Theme.dp(2)
-        Text {
+        ToggleRow {
             Layout.fillWidth: true
-            font.family: Theme.textFont; font.pixelSize: Theme.typeSize("labelMedium")
-            font.weight: Theme.typeWeight("labelMedium"); color: Theme.subtext
-            text: "Устройства"
+            icon: "bluetooth"
+            label: "Bluetooth"; sub: Sys.btEnabled ? "включён" : "выключен"
+            active: Sys.btEnabled
+            onToggled: { Sys.toggleBt(); if (!Sys.btEnabled) Sys.refreshBt(); }
         }
-        IconButton { icon: "refresh"; onClicked: Sys.startBtScan() }
     }
 
-    ListView {
-        Layout.fillWidth: true; Layout.preferredHeight: 260
-        model: Sys.btDevices; clip: true; spacing: Theme.dp(4)
-        delegate: Rectangle {
-            required property var modelData
-            width: ListView.view.width; height: Theme.dp(56)
-            radius: Theme.radiusMd
-            color: Theme.bgTile
-            RowLayout {
-                anchors.fill: parent
-                anchors.leftMargin: Theme.dp(16); anchors.rightMargin: Theme.dp(16); spacing: Theme.dp(12)
-                Icon { name: "bluetooth"; size: Theme.dp(20); color: Theme.accent }
-                ColumnLayout {
-                    Layout.fillWidth: true
-                    spacing: 0
-                    Text {
-                        Layout.fillWidth: true; elide: Text.ElideRight
-                        font.family: Theme.textFont; font.pixelSize: Theme.typeSize("bodyLarge")
-                        font.weight: Theme.typeWeight("bodyLarge"); color: Theme.text
-                        text: modelData.name
+    // устройства: заголовок секции и сканирование — в шапке Card
+    Card {
+        Layout.fillWidth: true
+        title: "Устройства"
+        actionIcon: "refresh"
+        onActionClicked: Sys.startBtScan()
+
+        ListView {
+            Layout.fillWidth: true; Layout.preferredHeight: 260
+            model: Sys.btDevices
+            clip: true; spacing: 0
+
+            delegate: Rectangle {
+                id: btRow
+                required property var modelData
+                required property int index
+                width: ListView.view.width; height: Theme.dp(56)
+                radius: Theme.radiusMd
+                color: btMouse.containsMouse ? Theme.bgHover : "transparent"
+                Behavior on color { ColorAnimation { duration: Theme.durDefaultEffects } }
+
+                Divider {
+                    anchors.top: parent.top
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    visible: btRow.index > 0
+                    leftInset: Theme.dp(56)
+                }
+
+                RowLayout {
+                    anchors.fill: parent
+                    anchors.leftMargin: Theme.dp(8); anchors.rightMargin: Theme.dp(8)
+                    spacing: Theme.dp(8)
+
+                    Rectangle { // ведущая иконка 40×40
+                        implicitWidth: Theme.dp(40); implicitHeight: Theme.dp(40)
+                        radius: Theme.radiusMd
+                        color: Theme.bgTrack
+
+                        Icon {
+                            anchors.centerIn: parent
+                            name: "bluetooth"; size: Theme.dp(20)
+                            color: Theme.subtext
+                        }
                     }
-                    Text {
-                        Layout.fillWidth: true; elide: Text.ElideRight
-                        font.family: Theme.textFont; font.pixelSize: Theme.typeSize("bodySmall")
-                        font.weight: Theme.typeWeight("bodySmall"); color: Theme.subtext
-                        text: modelData.mac
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        spacing: 0
+                        Text {
+                            Layout.fillWidth: true; elide: Text.ElideRight
+                            font.family: Theme.textFont; font.pixelSize: Theme.typeSize("bodyLarge")
+                            font.weight: Theme.typeWeight("bodyLarge"); color: Theme.text
+                            text: btRow.modelData.name
+                        }
+                        Text {
+                            Layout.fillWidth: true; elide: Text.ElideRight
+                            font.family: Theme.textFont; font.pixelSize: Theme.typeSize("bodySmall")
+                            font.weight: Theme.typeWeight("bodySmall"); color: Theme.subtext
+                            text: btRow.modelData.mac
+                        }
                     }
+                }
+
+                MouseArea {
+                    id: btMouse
+                    anchors.fill: parent; hoverEnabled: true
                 }
             }
         }
-    }
 
-    Text {
-        visible: Sys.btDevices.length === 0
-        font.family: Theme.textFont; font.pixelSize: Theme.typeSize("bodySmall")
-        font.weight: Theme.typeWeight("bodySmall"); color: Theme.subtext
-        text: "Устройств не найдено"
+        Text {
+            visible: Sys.btDevices.length === 0
+            Layout.fillWidth: true
+            Layout.leftMargin: Theme.dp(8)
+            Layout.bottomMargin: Theme.dp(4)
+            font.family: Theme.textFont; font.pixelSize: Theme.typeSize("bodySmall")
+            font.weight: Theme.typeWeight("bodySmall"); color: Theme.subtext
+            text: "Устройств не найдено"
+        }
     }
 }

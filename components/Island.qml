@@ -106,6 +106,22 @@ PanelWindow {
         return u;
     }
 
+    // мягкая тень под пилюлей: несколько слоёв low-alpha вместо блюра
+    Repeater {
+        model: 3
+
+        delegate: Rectangle {
+            required property int index
+
+            width: pill.width + Theme.dp(6 + index * 7)
+            height: pill.height + Theme.dp(6 + index * 7)
+            x: pill.x + (pill.width - width) / 2
+            y: pill.y + (pill.height - height) / 2 + Theme.dp(5)
+            radius: pill.radius + Theme.dp(3 + index * 3)
+            color: Theme.a(Theme.scrim, 0.12 - index * 0.035)
+        }
+    }
+
     Rectangle {
         id: pill
         anchors.horizontalCenter: parent.horizontalCenter
@@ -174,6 +190,11 @@ PanelWindow {
                 Item { Layout.fillWidth: true }
                 IconButton {
                     visible: win.mode === "panel"
+                    icon: "settings"
+                    onClicked: if (win.shell) win.shell.setPage(win.page === "settings" ? "" : "settings")
+                }
+                IconButton {
+                    visible: win.mode === "panel"
                     icon: "power_settings_new"
                     onClicked: if (win.shell) win.shell.setPage(win.page === "power" ? "" : "power")
                 }
@@ -187,6 +208,12 @@ PanelWindow {
             WallpapersPage { win: win }
             ClipboardPage { win: win }
             PowerPage { win: win }
+            WeatherPage { win: win }
+            SystemPage { win: win }
+            CalendarPage { win: win }
+            TimersPage { win: win }
+            EmojiPage { win: win }
+            SettingsPage { win: win }
 
             Launcher { active: win.mode === "launcher"; shell: win.shell }
         }
@@ -198,7 +225,13 @@ PanelWindow {
                                       : page === "brightness" ? "Яркость"
                                       : page === "power" ? "Питание"
                                       : page === "wallpapers" ? "Обои"
-                                      : page === "clipboard" ? "Буфер обмена" : ""
+                                      : page === "clipboard" ? "Буфер обмена"
+                                      : page === "weather" ? "Погода"
+                                      : page === "system" ? "Система"
+                                      : page === "calendar" ? "Календарь"
+                                      : page === "timers" ? "Таймеры"
+                                      : page === "emoji" ? "Эмодзи"
+                                      : page === "settings" ? "Настройки" : ""
 
     property string wifiSel: ""
     property bool showAuto: false

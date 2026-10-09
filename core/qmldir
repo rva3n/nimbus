@@ -1,4 +1,5 @@
 singleton Theme 1.0 Theme.qml
+singleton Prefs 1.0 Prefs.qml
 singleton Umbriel 1.0 Umbriel.qml
 singleton Osd 1.0 Osd.qml
 singleton Notif 1.0 Notif.qml
@@ -6,3 +7,6 @@ singleton Sys 1.0 Sys.qml
 singleton Wallpaper 1.0 Wallpaper.qml
 singleton Clip 1.0 Clip.qml
 singleton Apps 1.0 Apps.qml
+singleton Weather 1.0 Weather.qml
+singleton SysStats 1.0 SysStats.qml
+singleton Chrono 1.0 Chrono.qml

@@ -41,8 +41,13 @@ ShellRoot {
     }
 
     // Палитра читается самим Theme (FileView → ~/.cache/nimbus/colors.json).
-    // Здесь только прогреваем синглтон, чтобы он поднялся вместе с шеллом.
-    Component.onCompleted: { void Theme.paletteLoaded; }
+    // Прогреваем синглтоны, чтобы они поднялись вместе с шеллом (они ленивые).
+    Component.onCompleted: {
+        void Theme.paletteLoaded;
+        void Prefs.ready;
+        void Weather.place;
+        void SysStats.cpu;
+    }
 
     NotificationServer {
         id: notifServer
@@ -113,6 +118,13 @@ ShellRoot {
         function pageVolume() { root.view = "panel"; root.panelPage = "volume"; }
         function pageBrightness() { root.view = "panel"; root.panelPage = "brightness"; }
         function pagePower() { root.view = "panel"; root.panelPage = "power"; }
+        function pageWeather() { root.view = "panel"; root.panelPage = "weather"; }
+        function pageSystem() { root.view = "panel"; root.panelPage = "system"; }
+        function pageCalendar() { root.view = "panel"; root.panelPage = "calendar"; }
+        function pageTimers() { root.view = "panel"; root.panelPage = "timers"; }
+        function pageEmoji() { root.view = "panel"; root.panelPage = "emoji"; }
+        function pageSettings() { root.view = "panel"; root.panelPage = "settings"; }
+        function weatherRefresh() { Weather.refresh(); }
         function wallpapers() { root.togglePage("wallpapers"); }
         function clipboard() { root.togglePage("clipboard"); Clip.refresh(); }
         function screenshotRegion() {

@@ -23,8 +23,12 @@ graphic_eq smart_display slideshow folder edit tune mic system_update_alt speed
 timer schedule alarm calendar_today event today language translate info error warning star favorite
 download upload open_in_new link south east north west arrow_forward arrow_upward arrow_downward
 brightness_high brightness_low wb_sunny nightlight lightbulb power battery_full
-do_not_disturb_on photo_library clear_all sort animation public play_circle pause_circle smartphone
+do_not_disturb_on photo_library clear_all sort animation public play_circle pause_circle
 brightness_auto wallpaper select_all deselect delete_sweep
+sunny partly_cloudy_day partly_cloudy_night cloud foggy rainy weather_snowy thunderstorm water_drop air
+umbrella bedtime grain memory storage developer_board device_thermostat thermostat monitor_heart
+hourglass_top flag timer_off calendar_month text_fields rounded_corner opacity mood
+queue_music album add_circle history content_paste edit_note snowing ac_unit sentiment_satisfied
 """.split()
 
 

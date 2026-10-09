@@ -63,17 +63,17 @@ Singleton {
 
     readonly property bool paletteLoaded: paletteFile.loaded
 
-    // ── Настройки вида (позже переедут в prefs.json) ──────────────────
-    readonly property real uiScale: 1
-    readonly property real cornerScale: 1
-    readonly property real motionScale: 1
-    // 0 = непрозрачные панели, 1 = максимальное стекло
-    property real blurAmount: 0
+    // ── Настройки вида из ~/nimbus/prefs.json ─────────────────────────
+    readonly property real uiScale: Math.max(0.7, Math.min(1.3, Prefs.uiScale || 1))
+    readonly property real cornerScale: Math.max(0, Math.min(1.5, Prefs.cornerScale === undefined ? 1 : Prefs.cornerScale))
+    readonly property real motionScale: Math.max(0.5, Math.min(1.5, Prefs.motionScale || 1))
+    // 0 = непрозрачные панели, 1 = максимальное стекло (в Umbriel 0.1 блюра слоёв нет)
+    readonly property real blurAmount: Prefs.blurAmount
     // акцент: 1 = как даёт палитра, >1 — ярче, <1 — тише
-    property real accentPunch: 1
+    readonly property real accentPunch: Prefs.accentPunch
     // тени поверхностей: -1 = авто по теме
-    property real surfaceDarkness: -1
-    property real surfaceTintSetting: -1
+    readonly property real surfaceDarkness: Prefs.surfaceDarkness
+    readonly property real surfaceTintSetting: Prefs.surfaceTint
 
     readonly property bool isLight: root.toneOf(root.cSurface) > 50
     readonly property int _dir: root.isLight ? -1 : 1

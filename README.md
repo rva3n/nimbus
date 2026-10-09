@@ -23,18 +23,19 @@ qs -p ~/nimbus                # вручную (или quickshell -p /home/tony/
 
 ## Пилюля
 
-- **Покой:** воркспейсы · погода (иконка + градусы, Open-Meteo) · время · 🔔 (колокольчик открывает панель управления).
-- **Панель** (клик по 🔔 или `Mod+Escape`): часы/дата, погодная карточка, плитки
-  Wi-Fi / Bluetooth / Звук / Яркость / DND / Обои / Эмодзи / Система / Таймеры,
-  медиакарта с seek-баром, список уведомлений, кнопки настроек и питания.
-  Содержимое скроллится, если не влезает (Flickable).
-- **Страницы панели:** Wi-Fi, Bluetooth, Звук, Яркость, Обои (Фото/Видео/Motion/Wallhaven),
-  Буфер обмена, Питание, **Погода** (сейчас / по часам / 5 дней), **Система** (кольца CPU/RAM/диска
-  и справка), **Календарь** (месяц, «Сегодня»), **Таймеры** (таймер и секундомер с кругами),
-  **Эмодзи/Каомодзи** (1946 эмодзи, поиск, вставка через `wtype`),
-  **Настройки** (размер интерфейса, скругления, скорость анимаций, насыщенность акцента,
-  город погоды — авто по IP или вручную, сброс).
-- **Лончер** (`Mod+Space`): поиск и запуск приложений — тоже в пилюле.
+- **Покой:** три раздельные пилюли — воркспейсы (с иконками приложений, клик переключает
+  воркспейс) · погода (клик открывает вкладку «Погода») · часы (клик открывает панель).
+- **Панель** (`Mod+Escape` или клик по часам): вкладки **Панель / Погода / Система**.
+  Панель: погодная карточка, плитки (Wi-Fi, Bluetooth, Звук, Яркость, DND, Обои, Эмодзи,
+  Система, Таймеры), медиакарта с seek-баром, уведомления, настройки и питание.
+  Погода: сейчас / по часам / 5 дней. Система: кольца CPU/RAM/GPU/диска, VRAM,
+  температуры и мощность GPU.
+- **Лончер** (`Mod+Space`): одна поверхность с вкладками **Приложения / Буфер / Эмодзи**.
+  `Mod+V` сразу открывает буфер обмена, `Super + .` — эмодзи (1946 эмодзи и каомодзи,
+  поиск, вставка через `wtype`).
+- **Другие страницы панели:** Wi-Fi, Bluetooth, Звук, Яркость, Обои (Фото/Видео/Motion/Wallhaven),
+  Питание, Календарь (месяц, «Сегодня»), Таймеры (таймер и секундомер с кругами),
+  Настройки (разделы: интерфейс, погода, о шелле, сброс).
 - **Обои** (`Mod+W`): вкладки **Фото / Видео / Motion / Wallhaven** (поиск, сортировка,
   категории, SFW/18+, разрешение, «Ещё», авто-смена). Ставятся через `awww` (фото/гиф) или
   `mpvpaper` (видео); выбор сохраняется.
@@ -49,10 +50,11 @@ qs -p ~/nimbus                # вручную (или quickshell -p /home/tony/
 
 | Клавиши | Действие |
 | --- | --- |
-| `Mod+Space` | Лончер приложений (закреп/скрытие приложений) |
-| `Mod+Escape` | Панель управления |
+| `Mod+Space` | Лончер (вкладки: приложения / буфер / эмодзи) |
+| `Mod+Escape` | Панель управления (вкладки: панель / погода / система) |
 | `Mod+W` | Обои (Фото / Видео / Motion / Wallhaven, авто-смена) |
-| `Mod+V` | Буфер обмена (текст+изображения, закрепление) |
+| `Mod+V` | Буфер обмена (вкладка лончера) |
+| `Mod+.` | Эмодзи (вкладка лончера) |
 | `Print` | Скриншот области |
 | `Shift+Print` | Скриншот всего экрана |
 | `Mod+L` | Блокировка экрана |
@@ -85,12 +87,14 @@ components/
   qmldir
   Island.qml              сборка пилюли: idle/панель/лончер
   IdlePill, OsdRow, NotifToastRow, MediaCard, WorkspacesRow
-  Launcher.qml, Lockscreen.qml, Backdrop.qml
+  Launcher.qml + launcher/{AppsTab,ClipboardTab,EmojiTab}.qml
+  Lockscreen.qml, Backdrop.qml
   Tile, ToggleRow, DeviceRow, PowerRow, NotifItem, SliderRow, ClipRow, TabBtn
   panel/                  страницы панели: RootPage, WifiPage, BtPage, VolumePage,
-                          BrightnessPage, WallpapersPage, ClipboardPage, PowerPage,
+                          BrightnessPage, WallpapersPage, PowerPage,
                           WeatherPage, SystemPage, CalendarPage, TimersPage,
-                          EmojiPage, SettingsPage
+                          SettingsPage
+  launcher/               вкладки лончера: AppsTab, ClipboardTab, EmojiTab
 matugen/                  свой конфиг и шаблоны (matugen -c ~/nimbus/matugen/config.toml)
 assets/                   MaterialSymbolsRounded.ttf, emoji.json, kaomoji.json, cava.conf
 tools/gen-glyphs.py       генератор ui/Glyphs.js из шрифта
@@ -114,9 +118,10 @@ qs -p ~/nimbus ipc call nimbus lock
 qs -p ~/nimbus ipc call nimbus volumeUp     # volumeDown, volumeMute
 qs -p ~/nimbus ipc call nimbus brightnessUp # brightnessDown
 qs -p ~/nimbus ipc call nimbus pageWifi     # pageBluetooth, pageVolume, pageBrightness, pagePower
-qs -p ~/nimbus ipc call nimbus pageWeather  # pageSystem, pageCalendar, pageTimers, pageEmoji, pageSettings
+qs -p ~/nimbus ipc call nimbus tab weather  # tab system; pageWeather/pageSystem тоже открывают вкладки
+qs -p ~/nimbus ipc call nimbus pageCalendar # pageTimers, pageSettings
 qs -p ~/nimbus ipc call nimbus weatherRefresh
-qs -p ~/nimbus ipc call nimbus wallpapers   # clipboard
+qs -p ~/nimbus ipc call nimbus clipboard    # вкладка буфера; emoji — вкладка эмодзи
 qs -p ~/nimbus ipc call nimbus screenshotRegion  # screenshotFull, wpMotion, wpWallhaven
 ```
 `qs -p ~/nimbus ipc show` — список функций.

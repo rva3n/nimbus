@@ -13,5 +13,4 @@ DeviceRow 1.0 DeviceRow.qml
 PowerRow 1.0 PowerRow.qml
 NotifItem 1.0 NotifItem.qml
 SliderRow 1.0 SliderRow.qml
-ClipRow 1.0 ClipRow.qml
 TabBtn 1.0 TabBtn.qml

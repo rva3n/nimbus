@@ -11,7 +11,7 @@ ColumnLayout {
 
     property var win: null
 
-    visible: win !== null && win.mode === "panel" && win.page === ""
+    visible: win !== null && win.mode === "panel" && win.page === "" && win.shell && win.shell.panelTab === "control"
     Layout.fillWidth: true
     spacing: 14
 
@@ -102,7 +102,7 @@ ColumnLayout {
                 anchors.fill: parent
                 hoverEnabled: true
                 cursorShape: Qt.PointingCursor
-                onClicked: if (rootPage.win && rootPage.win.shell) rootPage.win.shell.setPage("weather")
+                onClicked: if (rootPage.win && rootPage.win.shell) rootPage.win.shell.setTab("weather")
             }
         }
     }
@@ -190,8 +190,8 @@ ColumnLayout {
         Tile { icon: "brightness_6"; label: "Яркость"; onTapped: if (win.shell) win.shell.togglePage("brightness") }
         Tile { icon: "do_not_disturb_on"; label: "DND"; active: Notif.dnd; onTapped: Notif.dnd = !Notif.dnd }
         Tile { icon: "image"; label: "Обои"; onTapped: if (win.shell) win.shell.togglePage("wallpapers") }
-        Tile { icon: "mood"; label: "Эмодзи"; onTapped: if (win.shell) win.shell.togglePage("emoji") }
-        Tile { icon: "monitor_heart"; label: "Система"; onTapped: if (win.shell) win.shell.togglePage("system") }
+        Tile { icon: "mood"; label: "Эмодзи"; onTapped: if (win.shell) win.shell.openLauncher("emoji") }
+        Tile { icon: "monitor_heart"; label: "Система"; onTapped: if (win.shell) win.shell.setTab("system") }
         Tile { icon: "timer"; label: "Таймеры"; onTapped: if (win.shell) win.shell.togglePage("timers") }
     }
 

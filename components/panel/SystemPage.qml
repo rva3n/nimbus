@@ -5,13 +5,13 @@ import "../../core"
 import "../../ui"
 import ".."
 
-// Страница «Система»: кольца CPU/RAM/диск из SysStats и справка «О системе».
+// Страница «Система»: кольца CPU/RAM/GPU/диск из SysStats и справка «О системе».
 ColumnLayout {
     id: page
     property var win: null
     Layout.fillWidth: true
     spacing: Theme.dp(10)
-    visible: win !== null && win.mode === "panel" && win.page === "system"
+    visible: win !== null && win.mode === "panel" && win.page === "" && win.shell && win.shell.panelTab === "system"
 
     // байты → «N.N ГБ»
     function fmtGb(bytes) {
@@ -23,7 +23,7 @@ ColumnLayout {
         const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60);
         return h > 0 ? h + " ч " + m + " мин" : m + " мин";
     }
-    // цвет кольца CPU по порогам нагрузки
+    // цвет кольца по порогам нагрузки (CPU/GPU)
     function cpuColor(v) { return v > 0.8 ? Theme.error : (v > 0.6 ? Theme.warning : Theme.accent) }
 
     // строка справки: ведущая иконка 40×40, подпись, значение
@@ -73,25 +73,39 @@ ColumnLayout {
         Layout.fillWidth: true
         title: SysStats.host
 
-        RowLayout { // кольца метрик
+        RowLayout { // кольца метрик: 4 уменьшены до 76px, чтобы влезли в ряд
             Layout.fillWidth: true
             Layout.alignment: Qt.AlignHCenter
-            spacing: Theme.dp(16)
+            spacing: Theme.dp(10)
 
             Item { Layout.fillWidth: true }
 
             Ring {
+                Layout.preferredWidth: Theme.dp(76)
+                Layout.preferredHeight: Theme.dp(76)
                 value: SysStats.cpu
                 label: Math.round(SysStats.cpu * 100) + "%"
                 caption: "CPU"
                 color: page.cpuColor(SysStats.cpu)
             }
             Ring {
+                Layout.preferredWidth: Theme.dp(76)
+                Layout.preferredHeight: Theme.dp(76)
                 value: SysStats.memFrac
                 label: Math.round(SysStats.memFrac * 100) + "%"
                 caption: "RAM"
             }
             Ring {
+                Layout.preferredWidth: Theme.dp(76)
+                Layout.preferredHeight: Theme.dp(76)
+                value: SysStats.gpuBusy
+                label: Math.round(SysStats.gpuBusy * 100) + "%"
+                caption: "GPU"
+                color: page.cpuColor(SysStats.gpuBusy)
+            }
+            Ring {
+                Layout.preferredWidth: Theme.dp(76)
+                Layout.preferredHeight: Theme.dp(76)
                 value: SysStats.diskFrac
                 label: Math.round(SysStats.diskFrac * 100) + "%"
                 caption: "Диск"
@@ -153,6 +167,24 @@ ColumnLayout {
         InfoRow {
             icon: "storage"; label: "Диск"
             value: page.fmtGb(SysStats.diskUsed) + " / " + page.fmtGb(SysStats.diskTotal)
+        }
+        Divider { Layout.fillWidth: true; leftInset: Theme.dp(56); visible: SysStats.vramTotal > 0 }
+        InfoRow {
+            visible: SysStats.vramTotal > 0
+            icon: "developer_board"; label: "VRAM"
+            value: page.fmtGb(SysStats.vramUsed) + " / " + page.fmtGb(SysStats.vramTotal)
+        }
+        Divider { Layout.fillWidth: true; leftInset: Theme.dp(56); visible: SysStats.gpuTempC > 0 }
+        InfoRow {
+            visible: SysStats.gpuTempC > 0
+            icon: "device_thermostat"; label: "GPU-темп."
+            value: Math.round(SysStats.gpuTempC) + " °C"
+        }
+        Divider { Layout.fillWidth: true; leftInset: Theme.dp(56); visible: SysStats.gpuPowerW >= 0 }
+        InfoRow {
+            visible: SysStats.gpuPowerW >= 0
+            icon: "power"; label: "GPU"
+            value: Math.round(SysStats.gpuPowerW) + " Вт"
         }
     }
 }

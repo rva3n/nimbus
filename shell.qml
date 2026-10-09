@@ -113,7 +113,7 @@ ShellRoot {
     // ── IPC (compositor keybinds) ────────────────────────────────────
     IpcHandler {
         target: "nimbus"
-        function launcher() { root.toggleLauncher() }
+        function launcher() { if (root.view === "launcher") { root.closeOverlays(); } else { root.openLauncher("apps"); } }
         function panel() { root.togglePanel() }
         function quicksettings() { root.togglePanel() }
         function page(name: string) { root.view = "panel"; root.panelPage = name; }

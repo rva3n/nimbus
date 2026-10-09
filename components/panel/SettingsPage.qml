@@ -5,8 +5,8 @@ import "../../core"
 import "../../ui"
 import ".."
 
-// Страница «Настройки»: внешний вид (пишет в Prefs → ~/nimbus/prefs.json),
-// погода (авто по IP или город) и сброс к значениям по умолчанию.
+// Страница «Настройки» — четыре раздела: «Интерфейс», «Погода»,
+// «О шелле» и «Сброс». Внешний вид и погода пишут в Prefs → ~/nimbus/prefs.json.
 ColumnLayout {
     id: page
 
@@ -32,7 +32,42 @@ ColumnLayout {
         Prefs.set("weatherCity", "");
     }
 
-    // строка параметра: подпись + значение, ниже слайдер 0..1 (min..max)
+    // ── локальные компоненты ──────────────────────────────────────────
+
+    // заголовок раздела: крупный title + пояснение, с воздухом сверху
+    component SectionHeader: ColumnLayout {
+        id: sh
+
+        property string title: ""
+        property string caption: ""
+
+        Layout.fillWidth: true
+        Layout.topMargin: Theme.dp(4)
+        spacing: Theme.dp(2)
+
+        Text {
+            Layout.fillWidth: true
+            text: sh.title
+            color: Theme.text
+            elide: Text.ElideRight
+            font.family: Theme.textFont
+            font.pixelSize: Theme.typeSize("titleMedium")
+            font.weight: Theme.typeWeight("titleMedium")
+        }
+
+        Text {
+            Layout.fillWidth: true
+            visible: sh.caption !== ""
+            text: sh.caption
+            color: Theme.subtext
+            wrapMode: Text.WordWrap
+            font.family: Theme.textFont
+            font.pixelSize: Theme.typeSize("bodySmall")
+            font.weight: Theme.typeWeight("bodySmall")
+        }
+    }
+
+    // строка параметра: подпись + значение, ниже слайдер min..max
     component ParamRow: ColumnLayout {
         id: pr
 
@@ -76,9 +111,64 @@ ColumnLayout {
         }
     }
 
-    Card { // ── внешний вид
+    // строка-инфо: иконка 40×40 на подложке, подпись слева, значение справа
+    component InfoRow: RowLayout {
+        id: ir
+
+        property string icon: "info"
+        property string label: ""
+        property string value: ""
+
         Layout.fillWidth: true
-        title: "Внешний вид"
+        Layout.topMargin: Theme.dp(6)
+        Layout.bottomMargin: Theme.dp(6)
+        spacing: Theme.dp(12)
+
+        Rectangle {
+            Layout.alignment: Qt.AlignVCenter
+            implicitWidth: Theme.dp(40)
+            implicitHeight: Theme.dp(40)
+            radius: Theme.radiusPill
+            color: Theme.bgTrack
+
+            Icon {
+                anchors.centerIn: parent
+                name: ir.icon
+                size: Theme.dp(20)
+                color: Theme.subtext
+            }
+        }
+
+        Text {
+            Layout.fillWidth: true
+            Layout.alignment: Qt.AlignVCenter
+            text: ir.label
+            color: Theme.text
+            elide: Text.ElideRight
+            font.family: Theme.textFont
+            font.pixelSize: Theme.typeSize("bodyLarge")
+            font.weight: Theme.typeWeight("bodyLarge")
+        }
+
+        Text {
+            Layout.alignment: Qt.AlignVCenter
+            text: ir.value
+            color: Theme.subtext
+            font.family: Theme.textFont
+            font.pixelSize: Theme.typeSize("bodyMedium")
+            font.weight: Theme.typeWeight("bodyMedium")
+        }
+    }
+
+    // ── 1. Интерфейс ──────────────────────────────────────────────────
+    SectionHeader {
+        title: "Интерфейс"
+        caption: "Размер, форма и движение элементов"
+    }
+
+    Card { // масштаб
+        Layout.fillWidth: true
+        title: "Масштаб"
 
         ParamRow {
             label: "Размер интерфейса"
@@ -94,6 +184,12 @@ ColumnLayout {
             value: Prefs.cornerScale
             onCommitted: (v) => Prefs.set("cornerScale", v)
         }
+    }
+
+    Card { // движение и цвет
+        Layout.fillWidth: true
+        title: "Движение и цвет"
+
         ParamRow {
             label: "Скорость анимаций"
             min: 0.5
@@ -116,16 +212,19 @@ ColumnLayout {
             color: Theme.subtextDim
             wrapMode: Text.WordWrap
             font.family: Theme.textFont
-            font.pixelSize: Theme.typeSize("labelSmall")
-            font.weight: Theme.typeWeight("labelSmall")
+            font.pixelSize: Theme.typeSize("bodySmall")
+            font.weight: Theme.typeWeight("bodySmall")
         }
     }
 
-    Card { // ── погода
-        Layout.fillWidth: true
+    // ── 2. Погода ─────────────────────────────────────────────────────
+    SectionHeader {
         title: "Погода"
-        actionIcon: "refresh"
-        onActionClicked: Weather.refresh()
+        caption: "Автоопределение или ручной выбор города"
+    }
+
+    Card {
+        Layout.fillWidth: true
 
         RowLayout { // авто-определение города
             Layout.fillWidth: true
@@ -186,12 +285,19 @@ ColumnLayout {
             }
         }
 
+        Divider { // место — отдельно от ввода города
+            Layout.fillWidth: true
+            Layout.topMargin: Theme.dp(4)
+            leftInset: Theme.dp(56)
+        }
+
         RowLayout { // текущее место
             Layout.fillWidth: true
             Layout.topMargin: Theme.dp(4)
             spacing: Theme.dp(12)
 
             Rectangle {
+                Layout.alignment: Qt.AlignVCenter
                 implicitWidth: Theme.dp(40)
                 implicitHeight: Theme.dp(40)
                 radius: Theme.radiusPill
@@ -207,6 +313,7 @@ ColumnLayout {
 
             ColumnLayout {
                 Layout.fillWidth: true
+                Layout.alignment: Qt.AlignVCenter
                 spacing: 0
 
                 Text {
@@ -242,6 +349,7 @@ ColumnLayout {
             }
 
             IconButton {
+                Layout.alignment: Qt.AlignVCenter
                 icon: "refresh"
                 disabled: Weather.loading
                 onClicked: Weather.refresh()
@@ -249,9 +357,53 @@ ColumnLayout {
         }
     }
 
-    Card { // ── сброс
+    // ── 3. О шелле ────────────────────────────────────────────────────
+    SectionHeader {
+        title: "О шелле"
+        caption: "Версия, композитор и конфиг"
+    }
+
+    Card {
         Layout.fillWidth: true
+
+        ColumnLayout {
+            Layout.fillWidth: true
+            spacing: 0
+
+            InfoRow {
+                icon: "info"
+                label: "Nimbus"
+                value: "2.0 (волна 3)"
+            }
+            Divider {
+                Layout.fillWidth: true
+                leftInset: Theme.dp(56)
+            }
+            InfoRow {
+                icon: "monitor"
+                label: "Композитор"
+                value: "Umbriel"
+            }
+            Divider {
+                Layout.fillWidth: true
+                leftInset: Theme.dp(56)
+            }
+            InfoRow {
+                icon: "folder"
+                label: "Конфиг"
+                value: "~/nimbus"
+            }
+        }
+    }
+
+    // ── 4. Сброс ──────────────────────────────────────────────────────
+    SectionHeader {
         title: "Сброс"
+        caption: "Значения по умолчанию"
+    }
+
+    Card {
+        Layout.fillWidth: true
 
         Text {
             Layout.fillWidth: true
@@ -259,8 +411,8 @@ ColumnLayout {
             color: Theme.subtext
             wrapMode: Text.WordWrap
             font.family: Theme.textFont
-            font.pixelSize: Theme.typeSize("bodyMedium")
-            font.weight: Theme.typeWeight("bodyMedium")
+            font.pixelSize: Theme.typeSize("bodySmall")
+            font.weight: Theme.typeWeight("bodySmall")
         }
 
         Button {

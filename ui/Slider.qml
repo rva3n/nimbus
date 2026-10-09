@@ -64,13 +64,15 @@ Item {
         color: Theme.accent
     }
 
-    // гало — state layer поверх трека, собранный через Theme.layer:
-    // левая половина лежит на заливке, правая — на пустой части
-    Item {
+    // гало — круглая state-layer вокруг ручки (как в M3: полупрозрачный
+    // акцент), а не двухцветный колпак: тот давал тёмную «выемку» справа
+    Rectangle {
         id: halo
         anchors.centerIn: handle
         width: Theme.dp(32)
         height: width
+        radius: width / 2
+        color: Theme.alpha(Theme.accent, area.pressed ? 0.16 : 0.12)
         opacity: root.hot ? 1 : 0
 
         Behavior on opacity {
@@ -79,24 +81,6 @@ Item {
                 easing.type: Easing.Bezier
                 easing.bezierCurve: Theme.curveEffects
             }
-        }
-
-        Rectangle {
-            anchors.left: parent.left
-            width: parent.width / 2
-            height: parent.height
-            topLeftRadius: width
-            bottomLeftRadius: width
-            color: Theme.layer(Theme.accent, Theme.text, area.pressed ? Theme.statePressed : Theme.stateHover)
-        }
-
-        Rectangle {
-            anchors.right: parent.right
-            width: parent.width / 2
-            height: parent.height
-            topRightRadius: width
-            bottomRightRadius: width
-            color: Theme.layer(Theme.bgTrack, Theme.accent, area.pressed ? Theme.statePressed : Theme.stateHover)
         }
     }
 

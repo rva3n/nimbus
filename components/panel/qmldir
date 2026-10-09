@@ -1,0 +1,8 @@
+RootPage 1.0 RootPage.qml
+WifiPage 1.0 WifiPage.qml
+BtPage 1.0 BtPage.qml
+VolumePage 1.0 VolumePage.qml
+BrightnessPage 1.0 BrightnessPage.qml
+WallpapersPage 1.0 WallpapersPage.qml
+ClipboardPage 1.0 ClipboardPage.qml
+PowerPage 1.0 PowerPage.qml

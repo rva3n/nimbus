@@ -4,7 +4,7 @@ import Quickshell
 import Quickshell.Io
 
 // System controls + data: Wi-Fi, Bluetooth, brightness (DDC/CI), audio devices,
-// DND, power.
+// power.
 Singleton {
     id: s
 
@@ -35,16 +35,62 @@ Singleton {
         }
     }
     function refreshWifi() { s.wifiNetworks = []; wifiListProc.running = false; wifiListProc.running = true; }
+
+    // Тост об ошибке внешней команды (прямая реакция на действие пользователя,
+    // поэтому не глушится DND — как и OSD).
+    function _fail(msg) { Notif.push({ appName: "Nimbus", summary: "Ошибка", body: msg }); }
+    // Мгновенно перечитать живой статус, не дожидаясь 5-секундного таймера.
+    function _refreshLink() { linkProc.running = false; linkProc.running = true; }
+
+    Process {
+        id: wifiToggleProc
+        property bool queued: false       // новая цель, пока предыдущая команда ещё выполняется
+        property bool queuedValue: false
+        onExited: (code) => {
+            if (code !== 0) s._fail("Не удалось переключить Wi-Fi");
+            if (wifiToggleProc.queued) {  // без убийства: просто догоняем последней целью
+                wifiToggleProc.queued = false;
+                wifiToggleProc.command = ["timeout", "8", "nmcli", "radio", "wifi", wifiToggleProc.queuedValue ? "on" : "off"];
+                wifiToggleProc.running = true;
+                return;
+            }
+            s._refreshLink();
+        }
+    }
     function toggleWifi() {
         const next = !s.wifiEnabled;
-        Quickshell.execDetached(["nmcli", "radio", "wifi", next ? "on" : "off"]);
         s.wifiEnabled = next;
+        if (wifiToggleProc.running) { wifiToggleProc.queued = true; wifiToggleProc.queuedValue = next; return; }
+        wifiToggleProc.command = ["timeout", "8", "nmcli", "radio", "wifi", next ? "on" : "off"];
+        wifiToggleProc.running = true;
+    }
+    Process {
+        id: wifiConnectProc
+        property string targetSsid: ""
+        property var queued: null         // { ssid, password } следующего запроса подключения
+        onExited: (code) => {
+            if (code !== 0) s._fail("Не удалось подключиться к «" + targetSsid + "»");
+            if (wifiConnectProc.queued) {
+                const q = wifiConnectProc.queued;
+                wifiConnectProc.queued = null;
+                s._startConnect(q.ssid, q.password);
+                return;
+            }
+            s._refreshLink();
+            s.refreshWifi();
+        }
+    }
+    function _startConnect(ssid, password) {
+        // timeout: зависший вызов прервётся и разблокирует очередь (код 124 → тост)
+        const cmd = ["timeout", "30", "nmcli", "dev", "wifi", "connect", ssid];
+        if (password && password.length > 0) cmd.push("password", password);
+        wifiConnectProc.targetSsid = ssid;
+        wifiConnectProc.command = cmd;
+        wifiConnectProc.running = true;
     }
     function connectWifi(ssid, password) {
-        if (password && password.length > 0)
-            Quickshell.execDetached(["nmcli", "dev", "wifi", "connect", ssid, "password", password]);
-        else
-            Quickshell.execDetached(["nmcli", "dev", "wifi", "connect", ssid]);
+        if (wifiConnectProc.running) { wifiConnectProc.queued = { ssid: ssid, password: password }; return; }
+        s._startConnect(ssid, password);
     }
 
     // ── Живой статус соединений (большие карточки панели) ─────────────
@@ -129,10 +175,27 @@ Singleton {
         onExited: s.refreshBt()
     }
     function startBtScan() { s.btDevices = []; btScanProc.running = false; btScanProc.running = true; }
+    Process {
+        id: btToggleProc
+        property bool queued: false
+        property bool queuedValue: false
+        onExited: (code) => {
+            if (code !== 0) s._fail("Не удалось переключить Bluetooth");
+            if (btToggleProc.queued) {
+                btToggleProc.queued = false;
+                btToggleProc.command = ["timeout", "8", "bluetoothctl", "power", btToggleProc.queuedValue ? "on" : "off"];
+                btToggleProc.running = true;
+                return;
+            }
+            s._refreshLink();
+        }
+    }
     function toggleBt() {
         const next = !s.btEnabled;
-        Quickshell.execDetached(["bluetoothctl", "power", next ? "on" : "off"]);
         s.btEnabled = next;
+        if (btToggleProc.running) { btToggleProc.queued = true; btToggleProc.queuedValue = next; return; }
+        btToggleProc.command = ["timeout", "8", "bluetoothctl", "power", next ? "on" : "off"];
+        btToggleProc.running = true;
     }
 
     // ── Brightness (DDC/CI, external monitor) ──────────────────────────
@@ -154,10 +217,32 @@ Singleton {
         }
     }
     function refreshBrightness() { brProc.running = false; brProc.running = true; }
+    Process {
+        id: brSetProc
+        property int pending: -1          // последнее желаемое значение (key-repeat), -1 = нет
+        onExited: (code) => {
+            if (code !== 0) s._fail("Не удалось изменить яркость (ddcutil)");
+            if (brSetProc.pending >= 0) { // пока писалось, яркость крутили дальше — догоняем последним значением
+                const v = brSetProc.pending;
+                brSetProc.pending = -1;
+                brSetProc.command = ["timeout", "8", "ddcutil", "setvcp", "10", String(v)];
+                brSetProc.running = true;
+                return;
+            }
+            brVerifyTimer.restart();
+        }
+    }
+    Timer { // сверка фактического значения после записи: s.brightness не должен врать
+        id: brVerifyTimer
+        interval: 800
+        onTriggered: s.refreshBrightness()
+    }
     function setBrightnessPct(pct) {
         const v = Math.max(0, Math.min(100, Math.round(pct)));
         s.brightness = v;
-        Quickshell.execDetached(["ddcutil", "setvcp", "10", String(v)]);
+        if (brSetProc.running) { brSetProc.pending = v; return; }
+        brSetProc.command = ["timeout", "8", "ddcutil", "setvcp", "10", String(v)];
+        brSetProc.running = true;
     }
     readonly property real brightnessFraction: brightnessMax > 0 ? brightness / brightnessMax : 0
 
@@ -166,9 +251,6 @@ Singleton {
     function setStreamVolume(nodeId, v) {
         Quickshell.execDetached(["wpctl", "set-volume", String(nodeId), Math.round(Math.max(0, Math.min(1, v)) * 100) + "%"]);
     }
-
-    // ── Do Not Disturb ─────────────────────────────────────────────────
-    property bool dnd: false
 
     // ── Power ──────────────────────────────────────────────────────────
     function suspend()  { Quickshell.execDetached(["systemctl", "suspend"]); }

@@ -1,10 +1,10 @@
 #!/bin/sh
 # Тема из обоев через matugen с нашим конфигом.
-# Тонкость: даже из почти бесцветного источника (ч/б обои) схема tonal-spot
-# генерирует чуть синеватый акцент, а при полном отсутствии цвета matugen
-# подставляет свой гугло-синий fallback. Поэтому если найденный источник
-# малозвучный (низкая насыщенность) — строим палитру схемой scheme-content:
-# она даёт честный нейтральный (чёрно-белый) акцент.
+# Нюанс: даже почти бесцветный источник matugen склонен окрашивать в синеву
+# (tonal-spot усиливает лёгкий цветовой каст серого). Поэтому основная схема —
+# scheme-smart: цветные обои дают прежний vivid-акцент, серые и холодно-серые
+# (ч/б) — честную нейтральную палитру. Для совсем бесцветного источника
+# (сработал fallback) страховочно строим scheme-content.
 IMG="${1:?path to image}"
 CONF="${NIMBUS_MATUGEN_CONF:-$HOME/nimbus/matugen/config.toml}"
 FB="#9a9a9a"
@@ -12,7 +12,7 @@ FB="#9a9a9a"
 SRC=$(matugen image -c "$CONF" --prefer saturation --fallback-color "$FB" -j hex --dry-run "$IMG" 2>/dev/null \
       | jq -r '.colors.source_color.default.color // empty' 2>/dev/null)
 
-TYPE=scheme-tonal-spot
+TYPE=scheme-smart
 if [ "$SRC" = "$FB" ] || [ -z "$SRC" ]; then
     TYPE=scheme-content
 else

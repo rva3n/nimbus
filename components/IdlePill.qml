@@ -51,7 +51,7 @@ Item {
 
         Rectangle { // чип погоды: клик → вкладка «погода»
             id: weatherChip
-            visible: Weather.hasData
+            visible: Weather.hasData && isFinite(Weather.temp)
             anchors.verticalCenter: parent.verticalCenter
             implicitWidth: weatherRow.implicitWidth + Theme.dp(16)
             implicitHeight: Theme.dp(22)

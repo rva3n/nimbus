@@ -47,7 +47,8 @@ Singleton {
 
     Process {
         id: pinsProc
-        command: ["sh", "-c", "cat " + shq(Quickshell.env("HOME") + "/.local/state/nimbus/pins.json") + " 2>/dev/null"]
+        // jq -c: файл пишется многострочным, а SplitParser читает по строкам
+        command: ["sh", "-c", "cat " + shq(Quickshell.env("HOME") + "/.local/state/nimbus/pins.json") + " 2>/dev/null | jq -c . 2>/dev/null"]
         stdout: SplitParser { onRead: line => { try { c.pins = JSON.parse(line); } catch (e) { c.pins = []; } } }
     }
     function loadPins() { pinsProc.running = false; pinsProc.running = true; }

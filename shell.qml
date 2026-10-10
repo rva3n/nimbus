@@ -10,9 +10,8 @@ import "components"
 ShellRoot {
     id: root
 
-    property string view: "idle"   // idle | panel | launcher
+    property string view: "idle"   // idle | panel | launcher | taskman
     property string panelPage: ""
-    property string panelTab: "control"    // control | weather | system (вкладки панели)
     property string launcherTab: "apps"    // apps | clipboard | emoji (вкладки лончера)
     property bool locked: false
     property string pamError: ""
@@ -78,14 +77,23 @@ ShellRoot {
     }
 
     // ── Actions ──────────────────────────────────────────────────────
-    function openPanel(tab)   { root.view = "panel"; root.panelPage = ""; root.panelTab = tab || "control"; }
+    function openPanel()      { root.view = "panel"; root.panelPage = ""; }
     function openLauncher(tab) { root.launcherTab = tab || "apps"; root.view = "launcher"; }
-    function togglePanel()    { if (root.view === "panel") { root.view = "idle"; root.panelPage = ""; } else { root.openPanel(root.panelTab); } }
+    function togglePanel()    { if (root.view === "panel") { root.view = "idle"; root.panelPage = ""; } else { root.openPanel(); } }
     function toggleLauncher() { if (root.view === "launcher") { root.view = "idle"; } else { root.openLauncher(root.launcherTab); } }
+    function taskman()        { if (root.view === "taskman") { root.view = "idle"; } else { root.view = "taskman"; root.panelPage = ""; } }
     function closeOverlays()  { root.view = "idle"; root.panelPage = ""; }
     function lock()           { root.view = "idle"; root.panelPage = ""; Quickshell.execDetached(["umbriel", "msg", "dpms-on"]); root.locked = true; }
     function setPage(p)       { root.panelPage = p; }
-    function setTab(t)        { root.openPanel(t); }
+    // совместимость с чипами острова: weather — страница, system — диспетчер
+    function setTab(t) {
+        if (t === "weather")
+            root.togglePage("weather");
+        else if (t === "system")
+            root.taskman();
+        else
+            root.openPanel();
+    }
     function togglePage(p) {
         if (root.view === "panel" && root.panelPage === p) { root.view = "idle"; root.panelPage = ""; }
         else { root.view = "panel"; root.panelPage = p; }
@@ -123,9 +131,10 @@ ShellRoot {
         function pageVolume() { root.view = "panel"; root.panelPage = "volume"; }
         function pageBrightness() { root.view = "panel"; root.panelPage = "brightness"; }
         function pagePower() { root.view = "panel"; root.panelPage = "power"; }
-        function pageWeather() { root.openPanel("weather"); }
-        function pageSystem() { root.openPanel("system"); }
-        function tab(name: string) { root.openPanel(name); }
+        function pageWeather() { root.view = "panel"; root.panelPage = "weather"; }
+        function pageSystem() { root.view = "taskman"; root.panelPage = ""; }
+        function taskman() { root.view = "taskman"; root.panelPage = ""; }
+        function tab(name: string) { root.setTab(name); }
         function pageCalendar() { root.view = "panel"; root.panelPage = "calendar"; }
         function pageTimers() { root.view = "panel"; root.panelPage = "timers"; }
         function emoji() { root.openLauncher("emoji"); }

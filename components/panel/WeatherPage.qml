@@ -12,7 +12,7 @@ ColumnLayout {
 
     Layout.fillWidth: true
     spacing: Theme.dp(10)
-    visible: win !== null && win.mode === "panel" && win.page === "" && win.shell && win.shell.panelTab === "weather"
+    visible: win !== null && win.mode === "panel" && win.page === "weather"
 
     // влажность/ветер могут отсутствовать (тогда приходит NaN) — чип пропускаем
     readonly property bool hasHumidity: !isNaN(Weather.humidity)

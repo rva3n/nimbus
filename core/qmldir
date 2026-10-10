@@ -10,3 +10,4 @@ singleton Apps 1.0 Apps.qml
 singleton Weather 1.0 Weather.qml
 singleton SysStats 1.0 SysStats.qml
 singleton Chrono 1.0 Chrono.qml
+singleton ProcList 1.0 ProcList.qml

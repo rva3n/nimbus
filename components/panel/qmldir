@@ -6,7 +6,6 @@ BrightnessPage 1.0 BrightnessPage.qml
 WallpapersPage 1.0 WallpapersPage.qml
 PowerPage 1.0 PowerPage.qml
 WeatherPage 1.0 WeatherPage.qml
-SystemPage 1.0 SystemPage.qml
 CalendarPage 1.0 CalendarPage.qml
 TimersPage 1.0 TimersPage.qml
 SettingsPage 1.0 SettingsPage.qml

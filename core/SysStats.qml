@@ -35,6 +35,13 @@ Singleton {
     property int cpuMaxMhz: 0
     property int gpuSclkMhz: 0
     property int gpuFanRpm: 0
+    // для диспетчера задач
+    property int cores: 0
+    property string cpuModel: ""
+    property string gpuModel: ""
+    property string distro: ""
+    property var temps: []   // [{name, label, c}]
+    property var disks: []   // [{mount, used, total}]
 
     readonly property real memFrac: memTotal > 0 ? memUsed / memTotal : 0
     readonly property real diskFrac: diskTotal > 0 ? diskUsed / diskTotal : 0
@@ -104,6 +111,22 @@ Singleton {
             s.gpuSclkMhz = +line.slice(5);
         } else if (line.startsWith("GFAN ")) {
             s.gpuFanRpm = +line.slice(5);
+        } else if (line.startsWith("CORES ")) {
+            s.cores = +line.slice(6);
+        } else if (line.startsWith("DISKS ")) {
+            const parts = line.slice(6).split("|");
+            const out = [];
+            for (let i = 0; i + 2 < parts.length; i += 3)
+                out.push({ mount: parts[i], total: +parts[i + 1], used: +parts[i + 2] });
+            s.disks = out;
+        } else if (line.startsWith("TEMP ")) {
+            const p = line.slice(5).split("|");
+            let v = +p[2];
+            if (v > 1000) v /= 1000;
+            const arr = s.temps.slice();
+            // у одного hwmon несколько датчиков: имя с подписью, если есть
+            arr.push({ name: p[0] || "", label: p[1] || "", c: v });
+            s.temps = arr;
         } else if (line.startsWith("UP "))
             s.uptime = +line.slice(3);
         else if (line.startsWith("HOST "))
@@ -132,10 +155,35 @@ Singleton {
             "SW=$(awk '/SwapTotal/{t=$2}/SwapFree/{f=$2}END{print t,f}' /proc/meminfo); echo \"SWAP $SW\"; " +
             "CF=$(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq 2>/dev/null || echo 0); CM=$(cat /sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq 2>/dev/null || echo 0); echo \"CPUF ${CF:-0} ${CM:-0}\"; " +
             "GS=$(for f in /sys/class/drm/card[0-9]*/device/pp_dpm_sclk; do [ -r \"$f\" ] && awk '/[*]/{print $2; exit}' \"$f\" && break; done | tr -dc 0-9); echo \"GCLK ${GS:-0}\"; " +
-            "GF=$(for f in /sys/class/drm/card[0-9]*/device/hwmon/hwmon*/fan1_input; do [ -r \"$f\" ] && cat \"$f\" && break; done); echo \"GFAN ${GF:-0}\""]
+            "GF=$(for f in /sys/class/drm/card[0-9]*/device/hwmon/hwmon*/fan1_input; do [ -r \"$f\" ] && cat \"$f\" && break; done); echo \"GFAN ${GF:-0}\"; " +
+            "echo \"CORES $(nproc 2>/dev/null || echo 0)\"; " +
+            "echo \"DISKS $(df -B1 -x tmpfs -x devtmpfs -x squashfs -x efivarfs -x overlay --output=target,size,used 2>/dev/null | tail -n +2 | grep '^/' | paste -sd'|' -)\"; " +
+            "for d in /sys/class/hwmon/hwmon*; do n=$(cat \"$d/name\" 2>/dev/null); for f in \"$d\"/temp*_input; do [ -r \"$f\" ] || continue; l=\"${f%_input}_label\"; lab=''; [ -r \"$l\" ] && lab=$(cat \"$l\" 2>/dev/null); printf 'TEMP %s|%s|%s\\n' \"$n\" \"$lab\" \"$(cat \"$f\")\"; done; done"]
         stdout: SplitParser {
             onRead: line => s._line(line)
         }
+    }
+
+    // Статичная информация о железе и системе (для «О системе» диспетчера)
+    Process {
+        id: staticProc
+        running: true
+        command: ["sh", "-c",
+            "echo \"DISTRO $(. /etc/os-release 2>/dev/null; printf '%s' \"$PRETTY_NAME\")\"; " +
+            "echo \"CPU $(awk -F: '/model name/{gsub(/^ +/,\"\",$2); print $2; exit}' /proc/cpuinfo 2>/dev/null)\"; " +
+            "G=$(lspci 2>/dev/null | grep -iE 'vga|3d controller' | head -1 | cut -d: -f3- | sed 's/^ //'); echo \"GPU ${G:-}\""]
+        stdout: SplitParser {
+            onRead: line => s._staticLine(line)
+        }
+    }
+
+    function _staticLine(line) {
+        if (line.startsWith("DISTRO "))
+            s.distro = line.slice(7).trim();
+        else if (line.startsWith("CPU "))
+            s.cpuModel = line.slice(4).trim();
+        else if (line.startsWith("GPU "))
+            s.gpuModel = line.slice(4).trim();
     }
 
     Timer {

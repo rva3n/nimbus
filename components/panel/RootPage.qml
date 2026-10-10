@@ -11,7 +11,7 @@ ColumnLayout {
 
     property var win: null
 
-    visible: win !== null && win.mode === "panel" && win.page === "" && win.shell && win.shell.panelTab === "control"
+    visible: win !== null && win.mode === "panel" && win.page === ""
     Layout.fillWidth: true
     spacing: 14
 

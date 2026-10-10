@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
+import QtQuick.Effects
 import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
@@ -10,6 +11,7 @@ import Quickshell.Services.UPower
 import "../core"
 import "../ui"
 import "panel"
+import "taskman"
 
 // Nimbus island. The Wayland surface is a fixed-size transparent band; the pill
 // inside it is animated in QML (smooth). Input is limited to the pill via mask.
@@ -29,16 +31,18 @@ PanelWindow {
     implicitHeight: Math.max(664, win.panelMax + Theme.dp(16))
     WlrLayershell.layer: WlrLayer.Overlay
     WlrLayershell.namespace: "nimbus-island"
-    WlrLayershell.keyboardFocus: (view === "launcher" || view === "panel")
+    WlrLayershell.keyboardFocus: (view === "launcher" || view === "panel" || view === "taskman")
         ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
     mask: Region { item: pill; radius: pill.radius }
 
     readonly property string mode: (Notif.visible && view === "idle") ? "notif"
                                  : (Osd.visible && view === "idle") ? "osd" : view
-    readonly property bool big: mode === "panel" || mode === "launcher"
+    readonly property bool big: mode === "panel" || mode === "launcher" || mode === "taskman"
     readonly property string page: win.shell ? win.shell.panelPage : ""
-    // ширина панели: лончер 470, настройки 620 (двухколоночные), остальное 404
-    readonly property int panelW: win.mode === "launcher" ? 470 : (win.page === "settings" ? 620 : 404)
+    // ширина панели: лончер 470, настройки 620, диспетчер 920, остальное 404
+    readonly property int panelW: win.mode === "launcher" ? 470
+        : (win.page === "settings" ? 620
+        : (win.mode === "taskman" ? 920 : 404))
     // активное окно во весь экран на этом output → остров уступает игрушке
     readonly property bool fullscreenActive: win.screen
         ? Umbriel.fullscreenFor(win.screen.name, win.screen.width, win.screen.height) : false
@@ -116,28 +120,34 @@ PanelWindow {
         return u;
     }
 
-    // тень под капсулой (тени остаются тенями; низ полоски не резервируем)
-    Repeater {
-        model: 3
+    // Настоящая тень: обёртка с запасом, layer.effect рисует капсулу
+    // с гауссовой тенью (в Umbriel теней слоёв нет — делаем сами).
+    Item {
+        id: shadowHost
+        readonly property int padH: Theme.dp(30)
+        readonly property int padTop: Theme.dp(10)
+        readonly property int padBottom: Theme.dp(24)
 
-        delegate: Rectangle {
-            required property int index
-
-            width: pill.width + Theme.dp(6 + index * 7)
-            height: pill.height + Theme.dp(6 + index * 7)
-            x: pill.x + (pill.width - width) / 2
-            y: pill.y + (pill.height - height) / 2 + Theme.dp(5)
-            radius: pill.radius + Theme.dp(3 + index * 3)
-            color: Theme.a(Theme.scrim, 0.12 - index * 0.035)
+        x: Math.round((parent.width - width) / 2)
+        y: Theme.dp(6) - padTop
+        width: pill.width + padH * 2
+        height: pill.height + padTop + padBottom
+        layer.enabled: true
+        layer.effect: MultiEffect {
+            shadowEnabled: true
+            // альфа тени ниже порога blur_ignore_alpha (0.72), чтобы композитор
+            // не размывал фон под тенью — только под самой капсулой
+            shadowColor: Theme.a(Theme.scrim, 0.68)
+            shadowBlur: 0.9
+            shadowVerticalOffset: Theme.dp(7)
+            shadowOpacity: 1
         }
-    }
 
-    Rectangle {
-        id: pill
-        anchors.horizontalCenter: parent.horizontalCenter
-        anchors.top: parent.top
-        anchors.topMargin: Theme.dp(6)
-        width: win.big ? Theme.dp(win.panelW) : (idlePill.implicitWidth + Theme.pad * 2)
+        Rectangle {
+            id: pill
+            x: shadowHost.padH
+            y: shadowHost.padTop
+            width: win.big ? Theme.dp(win.panelW) : (idlePill.implicitWidth + Theme.pad * 2)
         height: win.big ? Math.min(contentCol.implicitHeight + Theme.dp(32), win.panelMax) : Math.max(Theme.height, idlePill.implicitHeight + Theme.dp(6))
         radius: win.big ? Theme.radiusXl : height / 2
         color: Theme.bg
@@ -209,7 +219,7 @@ PanelWindow {
                     }
                     Item { Layout.fillWidth: true }
                     IconButton {
-                        visible: win.mode === "panel" && win.page === "" && win.shell && win.shell.panelTab === "control"
+                        visible: win.mode === "panel" && win.page === ""
                         icon: "settings"
                         onClicked: if (win.shell) win.shell.setPage(win.page === "settings" ? "" : "settings")
                     }
@@ -217,32 +227,6 @@ PanelWindow {
                         visible: win.mode === "panel"
                         icon: "power_settings_new"
                         onClicked: if (win.shell) win.shell.setPage(win.page === "power" ? "" : "power")
-                    }
-                }
-
-                // вкладки панели: управление / погода / система
-                RowLayout {
-                    Layout.fillWidth: true
-                    visible: win.mode === "panel" && win.page === ""
-                    spacing: Theme.dp(6)
-
-                    Chip {
-                        Layout.fillWidth: true
-                        label: "Панель"; icon: "tune"
-                        selected: win.shell ? win.shell.panelTab === "control" : false
-                        onClicked: if (win.shell) win.shell.setTab("control")
-                    }
-                    Chip {
-                        Layout.fillWidth: true
-                        label: "Погода"; icon: "sunny"
-                        selected: win.shell ? win.shell.panelTab === "weather" : false
-                        onClicked: if (win.shell) win.shell.setTab("weather")
-                    }
-                    Chip {
-                        Layout.fillWidth: true
-                        label: "Система"; icon: "monitor_heart"
-                        selected: win.shell ? win.shell.panelTab === "system" : false
-                        onClicked: if (win.shell) win.shell.setTab("system")
                     }
                 }
 
@@ -254,13 +238,15 @@ PanelWindow {
                 WallpapersPage { win: win }
                 PowerPage { win: win }
                 WeatherPage { win: win }
-                SystemPage { win: win }
                 CalendarPage { win: win }
                 TimersPage { win: win }
                 SettingsPage { win: win }
 
+                TaskManager { visible: win.mode === "taskman"; shell: win.shell }
+
                 Launcher { active: win.mode === "launcher"; shell: win.shell; tab: win.shell ? win.shell.launcherTab : "apps" }
             }
+        }
         }
     }
 

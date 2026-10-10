@@ -61,7 +61,7 @@ ColumnLayout {
         font.weight: Theme.typeWeight("labelMedium")
     }
 
-    ColumnLayout {
+    Column { // пины: обычный позиционер надёжнее лэйаута с Repeater
         visible: tab.fPins.length > 0
         Layout.fillWidth: true
         spacing: 0
@@ -188,14 +188,21 @@ ColumnLayout {
 
         readonly property int rowIndex: ci.baseIndex + ci.index
         readonly property bool isImage: !!ci.modelData && ci.modelData.type === "image"
+        // в cliphist иногда попадает текст с NUL и управляющими байтами — чистим
+        function clean(s) {
+            return String(s === undefined || s === null ? "" : s)
+                .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "");
+        }
         readonly property string label: {
             if (!ci.modelData) return "";
             if (ci.modelData.type === "image") return "Изображение";
-            const t = ci.modelData.text;
-            if (t !== undefined && t !== "") return String(t);
-            return String(ci.modelData.preview || "");
+            const t = ci.clean(ci.modelData.text);
+            if (t !== "") return t;
+            return ci.clean(ci.modelData.preview);
         }
 
+        // в Column ширина задаётся позиционером, в ListView — вью
+        width: parent ? parent.width : implicitWidth
         Layout.fillWidth: true
         spacing: 0
 

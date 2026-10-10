@@ -36,9 +36,9 @@ Item {
             implicitHeight: Theme.dp(24)
             radius: Theme.radiusPill
             // фон accentContainer + state layer композитом (Theme.layer)
-            color: Theme.layer(Theme.accentContainer, Theme.fgAccentContainer,
+            color: Theme.alpha(Theme.layer(Theme.accentContainer, Theme.fgAccentContainer,
                                weatherArea.pressed ? Theme.statePressed
-                                                   : (weatherArea.containsMouse ? Theme.stateHover : 0))
+                                                   : (weatherArea.containsMouse ? Theme.stateHover : 0)), 0.88)
             scale: weatherArea.pressed ? 0.97 : 1
 
             Behavior on color { ColorAnimation { duration: Theme.ms(120) } }
@@ -95,9 +95,9 @@ Item {
             implicitHeight: Theme.dp(24)
             radius: Theme.radiusPill
             // фон accentContainer + state layer композитом (Theme.layer)
-            color: Theme.layer(Theme.accentContainer, Theme.fgAccentContainer,
+            color: Theme.alpha(Theme.layer(Theme.accentContainer, Theme.fgAccentContainer,
                                clockArea.pressed ? Theme.statePressed
-                                                 : (clockArea.containsMouse ? Theme.stateHover : 0))
+                                                 : (clockArea.containsMouse ? Theme.stateHover : 0)), 0.88)
             scale: clockArea.pressed ? 0.97 : 1
 
             Behavior on color { ColorAnimation { duration: Theme.ms(120) } }

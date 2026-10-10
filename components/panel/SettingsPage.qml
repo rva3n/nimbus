@@ -34,8 +34,8 @@ RowLayout {
         Prefs.set("accentPunch", 1);
         Prefs.set("surfaceDarkness", -1);
         Prefs.set("surfaceTint", -1);
-        Prefs.set("blurRadius", 10);
-        Quickshell.execDetached(["sh", Quickshell.env("HOME") + "/nimbus/scripts/set-blur.sh", "10"]);
+        Prefs.set("blurAmount", 45);
+        Quickshell.execDetached(["sh", Quickshell.env("HOME") + "/nimbus/scripts/set-blur.sh", "45"]);
         Prefs.set("weatherAuto", true);
         Prefs.set("weatherCity", "");
     }
@@ -347,12 +347,12 @@ RowLayout {
                     label: "Размытие фона"
                     min: 0
                     max: 100
-                    value: Prefs.blurRadius
+                    value: Prefs.blurAmount
                     displayMul: 1
                     suffix: "%"
                     onCommitted: (v) => {
                         const r = Math.round(v);
-                        Prefs.set("blurRadius", r);
+                        Prefs.set("blurAmount", r);
                         Quickshell.execDetached(["sh", Quickshell.env("HOME") + "/nimbus/scripts/set-blur.sh", String(r)]);
                     }
                 }
@@ -360,7 +360,7 @@ RowLayout {
                 Text { // пояснение к ползунку размытия
                     Layout.fillWidth: true
                     Layout.topMargin: Theme.dp(2)
-                    text: "Интенсивность размытия фона (радиус Umbriel; влияет и на окна). Прозрачность не меняется."
+                    text: "Интенсивность размытия фона (радиус Umbriel; влияет и на окна). Прозрачность фиксированная; всегда есть лёгкий мороз."
                     color: Theme.subtextDim
                     wrapMode: Text.WordWrap
                     font.family: Theme.textFont

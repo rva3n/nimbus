@@ -90,7 +90,7 @@ Row {
             Rectangle { // фон-пилюля: активный — accentContainer
                 anchors.fill: parent
                 radius: Theme.radiusPill
-                color: wsPill.active ? Theme.accentContainer : "transparent"
+                color: wsPill.active ? Theme.a(Theme.accentContainer, 0.88) : "transparent"
 
                 Behavior on color {
                     ColorAnimation {

@@ -2,15 +2,15 @@ import QtQuick
 import QtQuick.Effects
 import "../core"
 
-// Иконка приложения, окрашиваемая по палитре matugen (моно-tint):
-// силуэт сохраняется, цвет берётся из темы (MultiEffect-колоризация —
-// тот же приём, что у трай-иконок в Lucid).
-//   AppIcon { source: path; tint: Theme.subtext; size: 13 }
+// Иконка приложения, окрашиваемая в акцент палитры matugen
+// (MultiEffect-колоризация: узнаваемое лого приложения, но в цвете темы;
+// у ч/б палитры акцент нейтральный — иконки тоже нейтральные).
+//   AppIcon { source: path; tint: Theme.accentIcon; size: 13 }
 Item {
     id: root
 
     property string source: ""
-    property color tint: Theme.subtext
+    property color tint: Theme.accentIcon
     property bool tinted: true
     property real size: 13   // сторона, dp
 

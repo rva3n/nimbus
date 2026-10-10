@@ -6,6 +6,8 @@ import "../../ui"
 
 // Вкладка «Буфер»: закреплённые сверху, затем история cliphist. Клик/Enter —
 // копирование, pin/delete — как в ClipRow. Индексы: сначала pins, затем items.
+// Единый ритм строк (как в AppsTab): строка 48, превью 44×32, divider с
+// отступом от превью (52), кнопки справа у края (margin 4, spacing 4).
 ColumnLayout {
     id: tab
 
@@ -50,12 +52,13 @@ ColumnLayout {
     Text {
         visible: tab.fPins.length > 0
         Layout.fillWidth: true
+        Layout.leftMargin: Theme.dp(8)
         Layout.bottomMargin: Theme.dp(2)
         text: "Закреплённые"
         color: Theme.subtext
         font.family: Theme.textFont
-        font.pixelSize: Theme.typeSize("labelLarge")
-        font.weight: Theme.typeWeight("labelLarge")
+        font.pixelSize: Theme.typeSize("labelMedium")
+        font.weight: Theme.typeWeight("labelMedium")
     }
 
     ColumnLayout {
@@ -66,7 +69,7 @@ ColumnLayout {
         Repeater {
             model: tab.fPins
 
-            delegate: ClipItem {
+            delegate: ClipRow {
                 baseIndex: 0
                 pinned: true
                 selected: tab.sel === rowIndex
@@ -88,7 +91,7 @@ ColumnLayout {
         spacing: 0
         boundsBehavior: Flickable.StopAtBounds
 
-        delegate: ClipItem {
+        delegate: ClipRow {
             baseIndex: tab.fPins.length
             selected: tab.sel === rowIndex
             onHovered: (i) => tab.hovered(i)
@@ -104,7 +107,7 @@ ColumnLayout {
         Text {
             anchors.centerIn: parent
             text: tab.query.trim() !== "" ? "Ничего не найдено"
-                : (Clip.loading ? "загрузка…" : "Буфер пуст")
+                : (Clip.loading ? "Загрузка…" : "Буфер пуст")
             color: Theme.subtext
             font.family: Theme.textFont
             font.pixelSize: Theme.typeSize("bodyMedium")
@@ -112,39 +115,39 @@ ColumnLayout {
         }
     }
 
-    Item { // опасная строка: очистить всю историю
+    // ── Очистить историю: обычная строка-кнопка, тот же ритм ──────────
+    Item {
         visible: Clip.items.length > 0
         Layout.fillWidth: true
-        implicitHeight: Theme.dp(48)
+        implicitHeight: Theme.dp(44)
 
         Rectangle {
             anchors.fill: parent
-            radius: Theme.radiusLg
-            color: wipeArea.pressed ? Theme.bgActive : (wipeArea.containsMouse ? Theme.bgHover : "transparent")
+            radius: Theme.radiusMd
+            color: wipeArea.pressed ? Theme.a(Theme.errorContainer, 0.3)
+                 : (wipeArea.containsMouse ? Theme.a(Theme.errorContainer, 0.2) : "transparent")
 
             Behavior on color {
-                ColorAnimation { duration: Theme.durDefaultEffects }
+                ColorAnimation { duration: Theme.durQuick }
             }
         }
 
         RowLayout {
             anchors.fill: parent
-            anchors.leftMargin: Theme.dp(8)
-            anchors.rightMargin: Theme.dp(16)
-            spacing: Theme.dp(12)
+            anchors.leftMargin: Theme.dp(4)
+            anchors.rightMargin: Theme.dp(4)
+            spacing: Theme.dp(4)
 
-            Rectangle { // контейнер иконки в error-тоне
+            Item { // слот превью — иконка в error-тоне по центру
                 Layout.alignment: Qt.AlignVCenter
-                implicitWidth: Theme.dp(40)
-                implicitHeight: Theme.dp(40)
-                radius: Theme.radiusPill
-                color: Theme.errorContainer
+                implicitWidth: Theme.dp(44)
+                implicitHeight: Theme.dp(32)
 
                 Icon {
                     anchors.centerIn: parent
                     name: "delete_sweep"
-                    size: Theme.dp(20)
-                    color: Theme.fgErrorContainer
+                    size: Theme.dp(16)
+                    color: Theme.error
                 }
             }
 
@@ -152,11 +155,11 @@ ColumnLayout {
                 Layout.fillWidth: true
                 Layout.alignment: Qt.AlignVCenter
                 text: "Очистить историю"
-                color: Theme.text
+                color: Theme.error
                 elide: Text.ElideRight
                 font.family: Theme.textFont
-                font.pixelSize: Theme.typeSize("bodyLarge")
-                font.weight: Theme.typeWeight("bodyLarge")
+                font.pixelSize: Theme.typeSize("bodySmall")
+                font.weight: Theme.typeWeight("bodySmall")
             }
         }
 
@@ -169,8 +172,8 @@ ColumnLayout {
         }
     }
 
-    // ── строка буфера: превью/иконка, текст в 2 строки, pin и delete ──
-    component ClipItem: ColumnLayout {
+    // ── строка буфера: превью 44×32, текст, pin и delete справа ───────
+    component ClipRow: ColumnLayout {
         id: ci
 
         required property var modelData
@@ -184,36 +187,43 @@ ColumnLayout {
         signal activated(int rowIndex)
 
         readonly property int rowIndex: ci.baseIndex + ci.index
+        readonly property bool isImage: !!ci.modelData && ci.modelData.type === "image"
+        readonly property string label: {
+            if (!ci.modelData) return "";
+            if (ci.modelData.type === "image") return "Изображение";
+            const t = ci.modelData.text;
+            if (t !== undefined && t !== "") return String(t);
+            return String(ci.modelData.preview || "");
+        }
 
         Layout.fillWidth: true
         spacing: 0
 
-        Divider {
+        Divider { // между строками, кроме первой (верхней)
             visible: ci.rowIndex > 0
             Layout.fillWidth: true
-            leftInset: Theme.dp(56)
+            leftInset: Theme.dp(52)
         }
 
         Item {
+            id: rowItem
+
             Layout.fillWidth: true
-            implicitHeight: Math.max(Theme.dp(56), rowLayout.implicitHeight + Theme.dp(20))
+            implicitHeight: Theme.dp(48)
 
             Rectangle {
-                id: bg
                 anchors.fill: parent
                 radius: Theme.radiusMd
-                color: (ci.selected || ci.pinned) ? Theme.accentContainer
-                     : (clipArea.pressed ? Theme.bgActive : (clipArea.containsMouse ? Theme.bgHover : "transparent"))
-                border.width: ci.selected ? 1 : 0
-                border.color: Theme.accentBorder
+                color: ci.selected ? Theme.accentContainer
+                     : (rowArea.containsMouse ? Theme.bgHover : "transparent")
 
                 Behavior on color {
-                    ColorAnimation { duration: Theme.durDefaultEffects }
+                    ColorAnimation { duration: Theme.durQuick }
                 }
             }
 
             MouseArea {
-                id: clipArea
+                id: rowArea
                 anchors.fill: parent
                 hoverEnabled: true
                 cursorShape: Qt.PointingHandCursor
@@ -222,46 +232,43 @@ ColumnLayout {
             }
 
             RowLayout {
-                id: rowLayout
                 anchors.fill: parent
-                anchors.margins: Theme.dp(10)
-                spacing: Theme.dp(10)
+                anchors.leftMargin: Theme.dp(4)
+                anchors.rightMargin: Theme.dp(4)
+                spacing: Theme.dp(4)
 
-                Item { // превью-картинка 44×32 либо контейнер иконки 40×40
+                Item { // превью: картинка 44×32 либо просто иконка текста 16
                     Layout.alignment: Qt.AlignVCenter
                     implicitWidth: Theme.dp(44)
-                    implicitHeight: Theme.dp(40)
+                    implicitHeight: Theme.dp(32)
 
                     Rectangle {
-                        anchors.centerIn: parent
-                        visible: ci.modelData && ci.modelData.type === "image"
-                        implicitWidth: Theme.dp(44)
-                        implicitHeight: Theme.dp(32)
-                        radius: Theme.radiusMd
-                        color: Theme.bgTrack
+                        anchors.fill: parent
+                        visible: ci.isImage
+                        radius: Theme.radiusSm
+                        color: Theme.bgTile
                         clip: true
 
                         Image {
                             anchors.fill: parent
                             fillMode: Image.PreserveAspectCrop
-                            // items кладут thumb, pins — file
-                            source: visible ? ("file://" + (ci.modelData.thumb || ci.modelData.file || "")) : ""
+                            // items кладут thumb (кэш по id), pins — file
+                            source: ci.isImage && (ci.modelData.thumb || ci.modelData.file)
+                                    ? "file://" + (ci.modelData.thumb || ci.modelData.file) : ""
                         }
                     }
 
-                    Rectangle {
+                    Item { // текст: без контейнера, иконка по центру области 24
                         anchors.centerIn: parent
-                        visible: !(ci.modelData && ci.modelData.type === "image")
-                        implicitWidth: Theme.dp(40)
-                        implicitHeight: Theme.dp(40)
-                        radius: Theme.radiusPill
-                        color: ci.pinned ? Theme.accentContainer : Theme.bgTrack
+                        visible: !ci.isImage
+                        implicitWidth: Theme.dp(24)
+                        implicitHeight: Theme.dp(24)
 
                         Icon {
                             anchors.centerIn: parent
                             name: "description"
-                            size: Theme.dp(20)
-                            color: ci.pinned ? Theme.fgAccentContainer : Theme.subtext
+                            size: Theme.dp(16)
+                            color: Theme.subtext
                         }
                     }
                 }
@@ -269,15 +276,15 @@ ColumnLayout {
                 Text {
                     Layout.fillWidth: true
                     Layout.alignment: Qt.AlignVCenter
-                    color: (ci.selected || ci.pinned) ? Theme.fgAccentContainer : Theme.text
+                    text: ci.label
+                    color: ci.selected ? Theme.fgAccentContainer : Theme.text
+                    // pins и короткие — одна строка, длинные — максимум две
                     elide: Text.ElideRight
-                    maximumLineCount: 2
-                    wrapMode: Text.Wrap
+                    wrapMode: ci.pinned ? Text.NoWrap : Text.Wrap
+                    maximumLineCount: ci.pinned ? 1 : 2
                     font.family: Theme.textFont
                     font.pixelSize: Theme.typeSize("bodySmall")
                     font.weight: Theme.typeWeight("bodySmall")
-                    text: ci.modelData ? (ci.modelData.type === "image" ? "Изображение"
-                          : (ci.modelData.text !== undefined && ci.modelData.text !== "" ? ci.modelData.text : ci.modelData.preview)) : ""
                 }
 
                 IconButton { // pin: закреплённая строка — filled
@@ -291,8 +298,8 @@ ColumnLayout {
                 Item { // delete в error-тоне (у ui/IconButton нет error-варианта)
                     Layout.alignment: Qt.AlignVCenter
                     visible: !ci.pinned
-                    implicitWidth: Theme.dp(32)
-                    implicitHeight: Theme.dp(32)
+                    implicitWidth: Theme.dp(28)
+                    implicitHeight: Theme.dp(28)
 
                     Rectangle {
                         anchors.fill: parent
@@ -307,7 +314,7 @@ ColumnLayout {
                     Icon {
                         anchors.centerIn: parent
                         name: "delete"
-                        size: Theme.dp(18)
+                        size: Theme.dp(16)
                         color: delArea.containsMouse ? Theme.fgErrorContainer : Theme.error
 
                         Behavior on color {

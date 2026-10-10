@@ -33,6 +33,17 @@ Singleton {
         return out;
     }
 
+    // Активное окно во весь экран (для авто-скрытия острова): отдельного поля
+    // у Umbriel нет, поэтому смотрим геометрию активного окна на этом output.
+    function fullscreenFor(output, w, h) {
+        const a = activeWindow;
+        if (!output || !a)
+            return false;
+        if (String(a.workspace || "").indexOf(output + ":") !== 0)
+            return false;
+        return a.w >= w - 2 && a.h >= h - 2 && a.x <= 2 && a.y <= 2;
+    }
+
     function _workspaces(line) {
         try {
             const m = JSON.parse(line);

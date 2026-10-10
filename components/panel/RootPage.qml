@@ -4,8 +4,8 @@ import "../../core"
 import ".."
 import "../../ui"
 
-// Корневая страница панели: сводка погоды, плитки быстрых настроек,
-// медиа-карточка и уведомления. Группы — в ui/Card.
+// Корневая страница панели: карточки Wi-Fi/Bluetooth со статусом,
+// плитки быстрых настроек, медиа-карточка и уведомления.
 ColumnLayout {
     id: rootPage
 
@@ -15,183 +15,176 @@ ColumnLayout {
     Layout.fillWidth: true
     spacing: 14
 
-    // ── Погода: сводка целиком кликабельна, ведёт на страницу «Погода» ─
-    Card {
-        id: weatherCard
+    // Большая карточка состояния сети: иконка в контейнере 40, заголовок и
+    // живой статус. active — лёгкий accentContainer-оттенок и акцентная рамка.
+    component NetCard: Item {
+        id: netCard
 
-        visible: Weather.hasData
+        property string icon: ""
+        property string title: ""
+        property string status: ""
+        property bool active: false
+
+        signal tapped()
+
         Layout.fillWidth: true
+        implicitHeight: Theme.dp(76)
+        scale: netArea.pressed ? 0.98 : 1
 
-        Item {
-            Layout.fillWidth: true
-            implicitHeight: wpRow.implicitHeight
-
-            Rectangle { // state layer
-                anchors.fill: parent
-                radius: Theme.radiusLg
-                color: Theme.text
-                opacity: wpArea.containsMouse ? Theme.stateHover : 0
-
-                Behavior on opacity {
-                    NumberAnimation {
-                        duration: Theme.ms(100)
-                        easing.type: Theme.easeStandard
-                    }
-                }
-            }
-
-            RowLayout {
-                id: wpRow
-
-                anchors.fill: parent
-                spacing: Theme.dp(12)
-
-                Icon {
-                    Layout.alignment: Qt.AlignVCenter
-                    name: Weather.icon
-                    size: Theme.dp(28)
-                    color: Theme.accent
-                }
-
-                Text {
-                    Layout.alignment: Qt.AlignVCenter
-                    text: Math.round(Weather.temp) + "°"
-                    color: Theme.text
-                    font.family: Theme.textFont
-                    font.pixelSize: Theme.typeSize("headlineSmall")
-                    font.weight: Theme.typeWeight("headlineSmall")
-                }
-
-                ColumnLayout {
-                    Layout.fillWidth: true
-                    Layout.alignment: Qt.AlignVCenter
-                    spacing: 0
-
-                    Text {
-                        Layout.fillWidth: true
-                        text: Weather.desc
-                        color: Theme.subtext
-                        elide: Text.ElideRight
-                        font.family: Theme.textFont
-                        font.pixelSize: Theme.typeSize("bodySmall")
-                        font.weight: Theme.typeWeight("bodySmall")
-                    }
-
-                    Text {
-                        Layout.fillWidth: true
-                        text: Weather.place
-                        color: Theme.subtextDim
-                        elide: Text.ElideRight
-                        font.family: Theme.textFont
-                        font.pixelSize: Theme.typeSize("labelSmall")
-                        font.weight: Theme.typeWeight("labelSmall")
-                    }
-                }
-
-                Icon {
-                    Layout.alignment: Qt.AlignVCenter
-                    name: "chevron_right"
-                    size: Theme.dp(20)
-                    color: Theme.subtextDim
-                }
-            }
-
-            MouseArea {
-                id: wpArea
-
-                anchors.fill: parent
-                hoverEnabled: true
-                cursorShape: Qt.PointingCursor
-                onClicked: if (rootPage.win && rootPage.win.shell) rootPage.win.shell.setTab("weather")
+        Behavior on scale {
+            NumberAnimation {
+                duration: Theme.durQuick
+                easing.type: Easing.Bezier
+                easing.bezierCurve: Theme.curveEffects
             }
         }
-    }
 
-    // ── Ошибка погоды: компактная строка + обновление ─────────────────
-    Rectangle {
-        visible: Weather.error !== ""
-        Layout.fillWidth: true
-        implicitHeight: Theme.dp(44)
-        radius: Theme.radiusLg
-        color: Theme.errorContainer
+        Rectangle {
+            id: netBg
+
+            anchors.fill: parent
+            radius: Theme.radiusLg
+            color: netCard.active ? Theme.layer(Theme.bgTile, Theme.accentContainer, 0.18) : Theme.bgTile
+            border.width: 1
+            border.color: netCard.active ? Theme.accentBorder : Theme.a(Theme.outline, 0.25)
+
+            Behavior on color {
+                ColorAnimation {
+                    duration: Theme.durDefaultEffects
+                }
+            }
+        }
+
+        Rectangle { // state layer
+            anchors.fill: netBg
+            radius: netBg.radius
+            color: Theme.text
+            opacity: netArea.pressed ? Theme.statePressed : (netArea.containsMouse ? Theme.stateHover : 0)
+
+            Behavior on opacity {
+                NumberAnimation {
+                    duration: Theme.ms(100)
+                    easing.type: Theme.easeStandard
+                }
+            }
+        }
 
         RowLayout {
             anchors.fill: parent
-            anchors.leftMargin: Theme.dp(12)
-            anchors.rightMargin: Theme.dp(6)
-            spacing: Theme.dp(8)
+            anchors.leftMargin: Theme.dp(14)
+            anchors.rightMargin: Theme.dp(14)
+            spacing: Theme.dp(12)
 
-            Icon {
+            Rectangle { // контейнер иконки 40×40
                 Layout.alignment: Qt.AlignVCenter
-                name: "error"
-                size: Theme.dp(18)
-                color: Theme.fgErrorContainer
-            }
+                implicitWidth: Theme.dp(40)
+                implicitHeight: Theme.dp(40)
+                radius: Theme.radiusMd
+                color: netCard.active ? Theme.accentContainer : Theme.bgTrack
 
-            Text {
-                Layout.fillWidth: true
-                Layout.alignment: Qt.AlignVCenter
-                text: Weather.error
-                color: Theme.fgErrorContainer
-                elide: Text.ElideRight
-                font.family: Theme.textFont
-                font.pixelSize: Theme.typeSize("bodySmall")
-                font.weight: Theme.typeWeight("bodySmall")
-            }
-
-            Item { // кнопка «обновить» в error-тоне
-                Layout.alignment: Qt.AlignVCenter
-                implicitWidth: Theme.dp(32)
-                implicitHeight: Theme.dp(32)
-
-                Rectangle {
-                    anchors.fill: parent
-                    radius: Theme.radiusPill
-                    color: Theme.fgErrorContainer
-                    opacity: errArea.pressed ? Theme.statePressed : (errArea.containsMouse ? Theme.stateHover : 0)
-
-                    Behavior on opacity {
-                        NumberAnimation {
-                            duration: Theme.ms(100)
-                            easing.type: Theme.easeStandard
-                        }
+                Behavior on color {
+                    ColorAnimation {
+                        duration: Theme.durDefaultEffects
                     }
                 }
 
                 Icon {
                     anchors.centerIn: parent
-                    name: "refresh"
-                    size: Theme.dp(18)
-                    color: Theme.fgErrorContainer
+                    name: netCard.icon
+                    size: Theme.dp(20)
+                    color: netCard.active ? Theme.fgAccentContainer : Theme.subtext
+
+                    Behavior on color {
+                        ColorAnimation {
+                            duration: Theme.durDefaultEffects
+                        }
+                    }
+                }
+            }
+
+            ColumnLayout {
+                Layout.fillWidth: true
+                Layout.alignment: Qt.AlignVCenter
+                spacing: Theme.dp(2)
+
+                Text {
+                    Layout.fillWidth: true
+                    text: netCard.title
+                    color: Theme.text
+                    elide: Text.ElideRight
+                    font.family: Theme.textFont
+                    font.pixelSize: Theme.typeSize("titleSmall")
+                    font.weight: Theme.typeWeight("titleSmall")
                 }
 
-                MouseArea {
-                    id: errArea
+                Text {
+                    Layout.fillWidth: true
+                    text: netCard.status
+                    color: Theme.subtext
+                    elide: Text.ElideRight
+                    font.family: Theme.textFont
+                    font.pixelSize: Theme.typeSize("bodySmall")
+                    font.weight: Theme.typeWeight("bodySmall")
+                }
+            }
+        }
 
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    cursorShape: Qt.PointingCursor
-                    onClicked: Weather.refresh()
+        MouseArea {
+            id: netArea
+
+            anchors.fill: parent
+            hoverEnabled: true
+            cursorShape: Qt.PointingCursor
+            onClicked: netCard.tapped()
+        }
+    }
+
+    // ── Wi-Fi и Bluetooth: живое состояние без открытия страниц ───────
+    RowLayout {
+        Layout.fillWidth: true
+        spacing: 8
+
+        NetCard {
+            icon: "wifi"
+            title: "Wi-Fi"
+            active: Sys.wifiEnabled
+            status: !Sys.wifiEnabled ? "Выключен"
+                  : (Sys.activeSsid !== "" ? "Подключено: " + Sys.activeSsid : "Нет подключения")
+            onTapped: {
+                if (rootPage.win && rootPage.win.shell) {
+                    Sys.refreshWifi();
+                    rootPage.win.shell.togglePage("wifi");
+                }
+            }
+        }
+
+        NetCard {
+            icon: "bluetooth"
+            title: "Bluetooth"
+            active: Sys.btEnabled
+            status: !Sys.btEnabled ? "Выключен"
+                  : (Sys.btConnected.length > 0
+                     ? Sys.btConnected[0] + (Sys.btConnected.length > 1 ? " +" + (Sys.btConnected.length - 1) : "")
+                     : "Включён")
+            onTapped: {
+                if (rootPage.win && rootPage.win.shell) {
+                    Sys.startBtScan();
+                    rootPage.win.shell.togglePage("bluetooth");
                 }
             }
         }
     }
 
-    // ── Плитки быстрых настроек (3 в ряд) ─────────────────────────────
+    // ── Плитки быстрых настроек (4 в ряд) ─────────────────────────────
     GridLayout {
         Layout.fillWidth: true
-        columns: 3
+        columns: 4
         columnSpacing: 8
         rowSpacing: 8
 
-        Tile { icon: "wifi"; label: "Wi-Fi"; active: Sys.wifiEnabled; onTapped: if (win.shell) { Sys.refreshWifi(); win.shell.togglePage("wifi"); } }
-        Tile { icon: "bluetooth"; label: "Bluetooth"; active: Sys.btEnabled; onTapped: if (win.shell) { Sys.startBtScan(); win.shell.togglePage("bluetooth"); } }
         Tile { icon: "volume_up"; label: "Звук"; onTapped: if (win.shell) win.shell.togglePage("volume") }
         Tile { icon: "brightness_6"; label: "Яркость"; onTapped: if (win.shell) win.shell.togglePage("brightness") }
         Tile { icon: "do_not_disturb_on"; label: "DND"; active: Notif.dnd; onTapped: Notif.dnd = !Notif.dnd }
-        Tile { icon: "image"; label: "Обои"; onTapped: if (win.shell) win.shell.togglePage("wallpapers") }
-        Tile { icon: "mood"; label: "Эмодзи"; onTapped: if (win.shell) win.shell.openLauncher("emoji") }
-        Tile { icon: "monitor_heart"; label: "Система"; onTapped: if (win.shell) win.shell.setTab("system") }
         Tile { icon: "timer"; label: "Таймеры"; onTapped: if (win.shell) win.shell.togglePage("timers") }
     }
 

@@ -11,7 +11,7 @@ import "../core"
 Row {
     id: wsRow
     property string output: ""
-    spacing: Theme.dp(6)
+    spacing: Theme.dp(5)
 
     readonly property var items: Umbriel.workspacesFor(output)
 

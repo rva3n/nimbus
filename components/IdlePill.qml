@@ -2,9 +2,10 @@ import QtQuick
 import "../core"
 import "../ui"
 
-// Idle/OSD/уведомления: в idle — три раздельные пилюли (воркспейсы, погода,
-// часы), OSD и тост — внутри одной пилюли того же вида. Фон рисуем сами:
-// контейнер острова в idle прозрачный. API: mode/now/output/shell.
+// Содержимое острова для idle/osd/notif. Внешнюю капсулу (фон Theme.bg,
+// рамку, радиус) рисует сам Island, поэтому своего общего фона здесь нет:
+// idle — один ряд [чип погоды][воркспейсы][чип часов], osd/notif — строки.
+// API: mode/now/output/shell.
 Item {
     id: holder
     property string mode: "idle"
@@ -12,47 +13,35 @@ Item {
     property string output: ""
     property var shell: null
 
-    implicitWidth: mode === "notif" ? notifPill.implicitWidth
-                 : mode === "osd" ? osdPill.implicitWidth
+    implicitWidth: mode === "notif" ? notifRow.implicitWidth
+                 : mode === "osd" ? osdRow.implicitWidth
                  : idleRow.implicitWidth
-    implicitHeight: Theme.dp(30)
+    // notif ≥40 — тосту не тесно; osd 34, idle 28 (остров = +6)
+    implicitHeight: mode === "notif" ? Math.max(Theme.dp(40), notifRow.implicitHeight)
+                  : mode === "osd" ? Theme.dp(34)
+                  : Theme.dp(28)
 
-    // ── idle: воркспейсы + погода + часы, каждая в своей пилюле ───────
+    // ── idle: погода + воркспейсы + часы в одном ряду ─────────────────
     Row {
         id: idleRow
         visible: holder.mode === "idle"
         anchors.centerIn: parent
-        spacing: Theme.dp(6)
+        spacing: Theme.dp(12)
 
-        Rectangle { // воркспейсы Umbriel
-            id: wsPill
-            visible: wsRow.items.length > 0
-            anchors.verticalCenter: parent.verticalCenter
-            implicitWidth: wsRow.implicitWidth + Theme.dp(20)
-            implicitHeight: Theme.dp(30)
-            radius: Theme.radiusPill
-            color: Theme.bgOpaque
-            border.width: 1
-            border.color: Theme.a(Theme.outline, 0.25)
-
-            WorkspacesRow {
-                id: wsRow
-                anchors.centerIn: parent
-                output: holder.output
-            }
-        }
-
-        Rectangle { // погода: клик → панель на вкладке «погода»
-            id: weatherPill
+        Rectangle { // чип погоды: клик → вкладка «погода»
+            id: weatherChip
             visible: Weather.hasData
             anchors.verticalCenter: parent.verticalCenter
             implicitWidth: weatherRow.implicitWidth + Theme.dp(20)
-            implicitHeight: Theme.dp(30)
+            implicitHeight: Theme.dp(24)
             radius: Theme.radiusPill
-            color: Theme.bgOpaque
-            border.width: 1
-            border.color: Theme.a(Theme.outline, 0.25)
-            scale: weatherArea.pressed ? 0.98 : 1
+            // фон accentContainer + state layer композитом (Theme.layer)
+            color: Theme.layer(Theme.accentContainer, Theme.fgAccentContainer,
+                               weatherArea.pressed ? Theme.statePressed
+                                                   : (weatherArea.containsMouse ? Theme.stateHover : 0))
+            scale: weatherArea.pressed ? 0.97 : 1
+
+            Behavior on color { ColorAnimation { duration: Theme.ms(120) } }
 
             Behavior on scale {
                 NumberAnimation {
@@ -60,15 +49,6 @@ Item {
                     easing.type: Easing.Bezier
                     easing.bezierCurve: Theme.curveEffects
                 }
-            }
-
-            Rectangle { // hover/нажатие — state layer
-                anchors.fill: parent
-                radius: parent.radius
-                color: Theme.text
-                opacity: weatherArea.pressed ? Theme.statePressed : (weatherArea.containsMouse ? Theme.stateHover : 0)
-
-                Behavior on opacity { NumberAnimation { duration: Theme.ms(120) } }
             }
 
             Row {
@@ -79,16 +59,16 @@ Item {
                 Icon {
                     anchors.verticalCenter: parent.verticalCenter
                     name: Weather.icon
-                    size: Theme.dp(14)
-                    color: Theme.subtext
+                    size: Theme.dp(13)
+                    color: Theme.fgAccentContainer
                 }
 
                 Text {
                     anchors.verticalCenter: parent.verticalCenter
                     font.family: Theme.textFont
-                    font.pixelSize: Theme.typeSize("labelSmall")
-                    font.weight: Theme.typeWeight("labelSmall")
-                    color: Theme.subtext
+                    font.pixelSize: Theme.typeSize("titleSmall")
+                    font.weight: Theme.typeWeight("titleSmall")
+                    color: Theme.fgAccentContainer
                     text: Math.round(Weather.temp) + "°"
                 }
             }
@@ -102,16 +82,25 @@ Item {
             }
         }
 
-        Rectangle { // часы: клик → панель на вкладке «управление»
-            id: clockPill
+        WorkspacesRow { // воркспейсы — между чипами
+            id: wsRow
+            anchors.verticalCenter: parent.verticalCenter
+            output: holder.output
+        }
+
+        Rectangle { // чип часов с секундами: клик → вкладка «управление»
+            id: clockChip
             anchors.verticalCenter: parent.verticalCenter
             implicitWidth: clockText.implicitWidth + Theme.dp(20)
-            implicitHeight: Theme.dp(30)
+            implicitHeight: Theme.dp(24)
             radius: Theme.radiusPill
-            color: Theme.bgOpaque
-            border.width: 1
-            border.color: Theme.a(Theme.outline, 0.25)
-            scale: clockArea.pressed ? 0.98 : 1
+            // фон accentContainer + state layer композитом (Theme.layer)
+            color: Theme.layer(Theme.accentContainer, Theme.fgAccentContainer,
+                               clockArea.pressed ? Theme.statePressed
+                                                 : (clockArea.containsMouse ? Theme.stateHover : 0))
+            scale: clockArea.pressed ? 0.97 : 1
+
+            Behavior on color { ColorAnimation { duration: Theme.ms(120) } }
 
             Behavior on scale {
                 NumberAnimation {
@@ -121,23 +110,14 @@ Item {
                 }
             }
 
-            Rectangle { // hover/нажатие — state layer
-                anchors.fill: parent
-                radius: parent.radius
-                color: Theme.text
-                opacity: clockArea.pressed ? Theme.statePressed : (clockArea.containsMouse ? Theme.stateHover : 0)
-
-                Behavior on opacity { NumberAnimation { duration: Theme.ms(120) } }
-            }
-
             Text {
                 id: clockText
                 anchors.centerIn: parent
                 font.family: Theme.textFont
                 font.pixelSize: Theme.typeSize("titleSmall")
                 font.weight: Theme.typeWeight("titleSmall")
-                color: Theme.text
-                text: Qt.formatDateTime(holder.now, "HH:mm")
+                color: Theme.fgAccentContainer
+                text: Qt.formatDateTime(holder.now, "HH:mm:ss")
             }
 
             MouseArea {
@@ -150,43 +130,21 @@ Item {
         }
     }
 
-    // ── OSD: одна пилюля ──────────────────────────────────────────────
-    Rectangle {
-        id: osdPill
+    // ── OSD: только содержимое, фон рисует Island ─────────────────────
+    OsdRow {
+        id: osdRow
         visible: holder.mode === "osd"
         anchors.centerIn: parent
-        implicitWidth: osdRow.implicitWidth + Theme.dp(20)
-        implicitHeight: Theme.dp(30)
-        radius: Theme.radiusPill
-        color: Theme.bgOpaque
-        border.width: 1
-        border.color: Theme.a(Theme.outline, 0.25)
-
-        OsdRow {
-            id: osdRow
-            anchors.centerIn: parent
-            kind: Osd.kind
-            value: Osd.value
-            muted: Osd.muted
-        }
+        kind: Osd.kind
+        value: Osd.value
+        muted: Osd.muted
     }
 
-    // ── Уведомление: одна пилюля ──────────────────────────────────────
-    Rectangle {
-        id: notifPill
+    // ── Уведомление: только содержимое, фон рисует Island ─────────────
+    NotifToastRow {
+        id: notifRow
         visible: holder.mode === "notif"
         anchors.centerIn: parent
-        implicitWidth: notifRow.implicitWidth + Theme.dp(20)
-        implicitHeight: Theme.dp(30)
-        radius: Theme.radiusPill
-        color: Theme.bgOpaque
-        border.width: 1
-        border.color: Theme.a(Theme.outline, 0.25)
-
-        NotifToastRow {
-            id: notifRow
-            anchors.centerIn: parent
-            current: Notif.current
-        }
+        current: Notif.current
     }
 }

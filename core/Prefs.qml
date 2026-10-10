@@ -20,7 +20,7 @@ Singleton {
         accentPunch: 1,
         surfaceDarkness: -1,
         surfaceTint: -1,
-        blurAmount: 0,
+        blurAmount: 0.25,
         weatherAuto: true,
         weatherCity: "",
         weatherLat: 0,

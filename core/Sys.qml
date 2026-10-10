@@ -47,6 +47,45 @@ Singleton {
             Quickshell.execDetached(["nmcli", "dev", "wifi", "connect", ssid]);
     }
 
+    // ── Живой статус соединений (большие карточки панели) ─────────────
+    property string activeSsid: ""
+    property var btConnected: []   // имена подключённых устройств
+
+    Process {
+        id: linkProc
+        command: ["sh", "-c",
+            "echo \"WIFI $(nmcli -t -f WIFI general 2>/dev/null)\"; " +
+            "printf 'SSID %s\\n' \"$(nmcli -t -f ACTIVE,SSID dev wifi 2>/dev/null | awk -F: '$1==\"yes\"{print $2; exit}')\"; " +
+            "C=$(timeout 4 bluetoothctl devices Connected 2>/dev/null | sed 's/^Device [0-9A-Fa-f:]* //' | paste -sd'|' -); echo \"BTCONN ${C:-}\"; " +
+            "B=$(timeout 4 bluetoothctl show 2>/dev/null | awk '/Powered:/{print $2}'); echo \"BT ${B:-no}\""]
+        stdout: SplitParser {
+            onRead: line => s._linkLine(line)
+        }
+    }
+
+    Timer {
+        interval: 5000
+        running: true
+        repeat: true
+        triggeredOnStart: true
+        onTriggered: {
+            linkProc.running = false;
+            linkProc.running = true;
+        }
+    }
+
+    function _linkLine(line) {
+        if (line.startsWith("WIFI "))
+            s.wifiEnabled = line.slice(5).trim() === "enabled";
+        else if (line.startsWith("SSID "))
+            s.activeSsid = line.slice(5).trim();
+        else if (line.startsWith("BTCONN ")) {
+            const v = line.slice(7).trim();
+            s.btConnected = v === "" ? [] : v.split("|");
+        } else if (line.startsWith("BT "))
+            s.btEnabled = line.slice(3).trim() === "yes";
+    }
+
     // ── Bluetooth ──────────────────────────────────────────────────────
     property bool btEnabled: false
     property var btDevices: []

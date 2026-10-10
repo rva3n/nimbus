@@ -22,7 +22,10 @@ PanelWindow {
     screen: modelData
     color: "transparent"
     anchors { top: true; left: true; right: true }
-    exclusiveZone: 0
+    // Полоска под остров зарезервирована ровно по капсулу (6 + 34), чтобы
+    // максимизированные окна не заезжали под неё; отступ снизу даёт само окно.
+    // В fullscreen остров скрывается и зона не держится.
+    exclusiveZone: win.fullscreenActive ? 0 : Theme.dp(40)
     implicitHeight: Math.max(664, win.panelMax + Theme.dp(16))
     WlrLayershell.layer: WlrLayer.Overlay
     WlrLayershell.namespace: "nimbus-island"
@@ -34,6 +37,13 @@ PanelWindow {
                                  : (Osd.visible && view === "idle") ? "osd" : view
     readonly property bool big: mode === "panel" || mode === "launcher"
     readonly property string page: win.shell ? win.shell.panelPage : ""
+    // ширина панели: лончер 470, настройки 620 (двухколоночные), остальное 404
+    readonly property int panelW: win.mode === "launcher" ? 470 : (win.page === "settings" ? 620 : 404)
+    // активное окно во весь экран на этом output → остров уступает игрушке
+    readonly property bool fullscreenActive: win.screen
+        ? Umbriel.fullscreenFor(win.screen.name, win.screen.width, win.screen.height) : false
+    // панель по запросу, OSD и тосты показываются всегда; idle прячется в fullscreen
+    visible: win.big || Osd.visible || Notif.visible || !win.fullscreenActive
     // Максимальная высота панели: 75% экрана, чтобы высокие страницы (обои,
     // звук) помещались целиком, а не обрезались прежними жёсткими 652px.
     readonly property real panelMax: Math.max(360, Math.round((win.screen ? win.screen.height : 1080) * 0.75))
@@ -106,14 +116,13 @@ PanelWindow {
         return u;
     }
 
-    // мягкая тень под пилюлей: несколько слоёв low-alpha вместо блюра
+    // тень под капсулой (тени остаются тенями; низ полоски не резервируем)
     Repeater {
         model: 3
 
         delegate: Rectangle {
             required property int index
 
-            visible: win.big
             width: pill.width + Theme.dp(6 + index * 7)
             height: pill.height + Theme.dp(6 + index * 7)
             x: pill.x + (pill.width - width) / 2
@@ -128,12 +137,12 @@ PanelWindow {
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.top: parent.top
         anchors.topMargin: Theme.dp(6)
-        width: win.big ? Theme.dp(win.mode === "launcher" ? 470 : 404) : (idlePill.implicitWidth + Theme.pad * 2)
-        height: win.big ? Math.min(contentCol.implicitHeight + Theme.dp(32), win.panelMax) : Theme.height
+        width: win.big ? Theme.dp(win.panelW) : (idlePill.implicitWidth + Theme.pad * 2)
+        height: win.big ? Math.min(contentCol.implicitHeight + Theme.dp(32), win.panelMax) : Math.max(Theme.height, idlePill.implicitHeight + Theme.dp(6))
         radius: win.big ? Theme.radiusXl : height / 2
-        color: win.big ? Theme.bg : "transparent"
-        border.width: win.big ? 1 : 0
-        border.color: Theme.a(Theme.outline, 0.35)
+        color: Theme.bg
+        border.width: 1
+        border.color: Theme.a(Theme.outline, 0.25)
         clip: true
         Behavior on width { NumberAnimation { duration: Theme.durMedium; easing.type: Easing.Bezier; easing.bezierCurve: Theme.curveDefaultSpatial } }
         Behavior on height { NumberAnimation { duration: Theme.durMedium; easing.type: Easing.Bezier; easing.bezierCurve: Theme.curveDefaultSpatial } }
@@ -154,7 +163,7 @@ PanelWindow {
         Flickable {
             id: panelView
             visible: win.big
-            width: (win.mode === "launcher" ? Theme.dp(470) : Theme.dp(404)) - Theme.dp(32)
+            width: Theme.dp(win.panelW) - Theme.dp(32)
             height: Math.min(contentCol.implicitHeight, win.panelMax - Theme.dp(32))
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.top: parent.top
@@ -200,7 +209,7 @@ PanelWindow {
                     }
                     Item { Layout.fillWidth: true }
                     IconButton {
-                        visible: win.mode === "panel"
+                        visible: win.mode === "panel" && win.page === "" && win.shell && win.shell.panelTab === "control"
                         icon: "settings"
                         onClicked: if (win.shell) win.shell.setPage(win.page === "settings" ? "" : "settings")
                     }

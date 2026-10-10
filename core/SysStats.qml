@@ -25,9 +25,21 @@ Singleton {
     property real gpuTempC: -1
     property real gpuPowerW: -1
 
+    // дополнительные метрики (компактная страница «Система»)
+    property real load1: 0
+    property real load5: 0
+    property int procCount: 0
+    property real swapUsed: 0
+    property real swapTotal: 0
+    property int cpuCurMhz: 0
+    property int cpuMaxMhz: 0
+    property int gpuSclkMhz: 0
+    property int gpuFanRpm: 0
+
     readonly property real memFrac: memTotal > 0 ? memUsed / memTotal : 0
     readonly property real diskFrac: diskTotal > 0 ? diskUsed / diskTotal : 0
     readonly property real vramFrac: vramTotal > 0 ? vramUsed / vramTotal : 0
+    readonly property real swapFrac: swapTotal > 0 ? swapUsed / swapTotal : 0
 
     property var _prevCpu: null
 
@@ -74,6 +86,24 @@ Singleton {
         } else if (line.startsWith("GPOW ")) {
             const w = +(line.slice(5));
             s.gpuPowerW = w > 0 ? w / 1000000 : -1;
+        } else if (line.startsWith("LOAD ")) {
+            const p = line.split(/\s+/);
+            s.load1 = +p[1];
+            s.load5 = +p[2];
+        } else if (line.startsWith("PROCS ")) {
+            s.procCount = +line.slice(6);
+        } else if (line.startsWith("SWAP ")) {
+            const p = line.split(/\s+/);
+            s.swapTotal = (+p[1]) * 1024;
+            s.swapUsed = ((+p[1]) - (+p[2])) * 1024;
+        } else if (line.startsWith("CPUF ")) {
+            const p = line.split(/\s+/);
+            s.cpuCurMhz = Math.round((+p[1]) / 1000);
+            s.cpuMaxMhz = Math.round((+p[2]) / 1000);
+        } else if (line.startsWith("GCLK ")) {
+            s.gpuSclkMhz = +line.slice(5);
+        } else if (line.startsWith("GFAN ")) {
+            s.gpuFanRpm = +line.slice(5);
         } else if (line.startsWith("UP "))
             s.uptime = +line.slice(3);
         else if (line.startsWith("HOST "))
@@ -96,7 +126,13 @@ Singleton {
             "V=$(for f in /sys/class/drm/card[0-9]*/device/mem_info_vram_used; do [ -r \"$f\" ] && cat \"$f\" && break; done); " +
             "V2=$(for f in /sys/class/drm/card[0-9]*/device/mem_info_vram_total; do [ -r \"$f\" ] && cat \"$f\" && break; done); echo \"VRAM ${V:-0} ${V2:-0}\"; " +
             "GT=$(for f in /sys/class/drm/card[0-9]*/device/hwmon/hwmon*/temp1_input; do [ -r \"$f\" ] && cat \"$f\" && break; done); echo \"GTEMP ${GT:-0}\"; " +
-            "GP=$(for f in /sys/class/drm/card[0-9]*/device/hwmon/hwmon*/power1_average; do [ -r \"$f\" ] && cat \"$f\" && break; done); echo \"GPOW ${GP:-0}\""]
+            "GP=$(for f in /sys/class/drm/card[0-9]*/device/hwmon/hwmon*/power1_average; do [ -r \"$f\" ] && cat \"$f\" && break; done); echo \"GPOW ${GP:-0}\"; " +
+            "L=$(cut -d' ' -f1,2 /proc/loadavg); echo \"LOAD $L\"; " +
+            "echo \"PROCS $(ps -e --no-headers 2>/dev/null | wc -l)\"; " +
+            "SW=$(awk '/SwapTotal/{t=$2}/SwapFree/{f=$2}END{print t,f}' /proc/meminfo); echo \"SWAP $SW\"; " +
+            "CF=$(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq 2>/dev/null || echo 0); CM=$(cat /sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq 2>/dev/null || echo 0); echo \"CPUF ${CF:-0} ${CM:-0}\"; " +
+            "GS=$(for f in /sys/class/drm/card[0-9]*/device/pp_dpm_sclk; do [ -r \"$f\" ] && awk '/[*]/{print $2; exit}' \"$f\" && break; done | tr -dc 0-9); echo \"GCLK ${GS:-0}\"; " +
+            "GF=$(for f in /sys/class/drm/card[0-9]*/device/hwmon/hwmon*/fan1_input; do [ -r \"$f\" ] && cat \"$f\" && break; done); echo \"GFAN ${GF:-0}\""]
         stdout: SplitParser {
             onRead: line => s._line(line)
         }

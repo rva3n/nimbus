@@ -101,10 +101,13 @@ ShellRoot {
     function closeOverlays()  { root.view = "idle"; root.panelPage = ""; }
     function lock()           { root.view = "idle"; root.panelPage = ""; Quickshell.execDetached(["umbriel", "msg", "dpms-on"]); root.locked = true; }
     function setPage(p)       { root.panelPage = p; }
-    // совместимость с чипами острова: weather — страница, system — диспетчер
+    // совместимость с чипами острова: weather — погода, calendar — календарь,
+    // system — диспетчер, остальное — корень панели
     function setTab(t) {
         if (t === "weather")
             root.togglePage("weather");
+        else if (t === "calendar")
+            root.togglePage("calendar");
         else if (t === "system")
             root.taskman();
         else

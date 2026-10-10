@@ -148,7 +148,7 @@ Item {
                 anchors.fill: parent
                 hoverEnabled: true
                 cursorShape: Qt.PointingHandCursor
-                onClicked: if (holder.shell) holder.shell.setTab("control")
+                onClicked: if (holder.shell) holder.shell.setTab("calendar")
             }
         }
     }

@@ -67,12 +67,13 @@ Singleton {
     readonly property real uiScale: Math.max(0.7, Math.min(1.3, Prefs.uiScale || 1))
     readonly property real cornerScale: Math.max(0, Math.min(1.5, Prefs.cornerScale === undefined ? 1 : Prefs.cornerScale))
     readonly property real motionScale: Math.max(0.5, Math.min(1.5, Prefs.motionScale || 1))
-    // Ползунок «Размытие фона» (Prefs.blurAmount 0..100) управляет и радиусом
-    // блюра (scripts/set-blur.sh), и лёгкой глубиной стекла — как в Lucid, но
-    // без «водянистости»: 0% — почти плотно (94%), 100% — стекло (66%)
+    // Ползунок «Размытие фона» ведёт радиус блюра Umbriel (scripts/set-blur.sh),
+    // а глубина стекла лишь чуть-чуть ему вторит и всегда остаётся выше порога
+    // blur_ignore_alpha (0.72) — иначе композитор перестаёт размывать капсулу
+    // (был баг: ползунок читался как прозрачность и на максимуме убивал блюр).
     readonly property real blurPct: Math.max(0, Math.min(100, Prefs.blurAmount)) / 100
-    readonly property real glass: 0.94 - root.blurPct * 0.28
-    readonly property real glassCard: 0.95 - root.blurPct * 0.25
+    readonly property real glass: 0.88 - root.blurPct * 0.10
+    readonly property real glassCard: 0.91 - root.blurPct * 0.06
     // зарезервированная сверху полоса под остров (exclusiveZone); Umbriel
     // сдвигает на неё другие top-слои, поэтому медиа-островок компенсирует её
     readonly property int topReserve: Theme.dp(40)

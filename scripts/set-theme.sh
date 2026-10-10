@@ -1,10 +1,8 @@
 #!/bin/sh
 # Тема из обоев через matugen с нашим конфигом.
-# Нюанс: даже почти бесцветный источник matugen склонен окрашивать в синеву
-# (tonal-spot усиливает лёгкий цветовой каст серого). Поэтому основная схема —
-# scheme-smart: цветные обои дают прежний vivid-акцент, серые и холодно-серые
-# (ч/б) — честную нейтральную палитру. Для совсем бесцветного источника
-# (сработал fallback) страховочно строим scheme-content.
+# Почти бесцветные обои (ч/б, сепия, холодно-серые) → scheme-monochrome:
+# строго серая палитра, как в Android, без примеси цвета в контейнерах.
+# Цветные обои → scheme-smart: привычный vivid-акцент.
 IMG="${1:?path to image}"
 CONF="${NIMBUS_MATUGEN_CONF:-$HOME/nimbus/matugen/config.toml}"
 FB="#9a9a9a"
@@ -14,7 +12,7 @@ SRC=$(matugen image -c "$CONF" --prefer saturation --fallback-color "$FB" -j hex
 
 TYPE=scheme-smart
 if [ "$SRC" = "$FB" ] || [ -z "$SRC" ]; then
-    TYPE=scheme-content
+    TYPE=scheme-monochrome
 else
     HEX=$(printf '%s' "$SRC" | tr -d '#')
     R=$((16#$(printf '%s' "$HEX" | cut -c1-2)))
@@ -26,7 +24,9 @@ else
     MIN=$R
     [ "$G" -lt "$MIN" ] && MIN=$G
     [ "$B" -lt "$MIN" ] && MIN=$B
-    [ $((MAX - MIN)) -lt 24 ] && TYPE=scheme-content
+    # почти бесцветный источник (включая серые с лёгким кастом — сепия/синева):
+    # строгая монохромная палитра, как в Android на ч/б обоях — без примеси цвета
+    [ $((MAX - MIN)) -lt 56 ] && TYPE=scheme-monochrome
 fi
 
 matugen -c "$CONF" --prefer saturation --type "$TYPE" --fallback-color "$FB" image "$IMG" >/dev/null 2>&1

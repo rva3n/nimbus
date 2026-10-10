@@ -89,6 +89,7 @@ Item {
                     font.family: Theme.textFont
                     font.pixelSize: Theme.typeSize("titleSmall")
                     font.weight: Theme.typeWeight("titleSmall")
+                    font.features: ({ "tnum": 1 })  // цифры одной ширины
                     color: Theme.fgAccentContainer
                     text: Math.round(Weather.temp) + "°"
                 }
@@ -137,6 +138,7 @@ Item {
                 font.family: Theme.textFont
                 font.pixelSize: Theme.typeSize("titleSmall")
                 font.weight: Theme.typeWeight("titleSmall")
+                font.features: ({ "tnum": 1 })  // табличные цифры: ширина не дёргается каждую секунду
                 color: Theme.fgAccentContainer
                 text: Qt.formatDateTime(holder.now, "HH:mm:ss")
             }

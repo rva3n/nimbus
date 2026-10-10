@@ -65,6 +65,7 @@ ColumnLayout {
             font.family: Theme.textFont
             font.pixelSize: Theme.typeSize("displayMedium")
             font.weight: Theme.typeWeight("displayMedium")
+            font.features: ({ "tnum": 1 })  // счетчик не дёргается каждую секунду
         }
 
         Text {
@@ -168,6 +169,7 @@ ColumnLayout {
             font.family: Theme.textFont
             font.pixelSize: Theme.typeSize("displayMedium")
             font.weight: Theme.typeWeight("displayMedium")
+            font.features: ({ "tnum": 1 })  // счетчик не дёргается
         }
 
         RowLayout { // управление

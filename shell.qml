@@ -61,6 +61,17 @@ ShellRoot {
         }
     }
 
+    // Таймер завершился: алерт в островке + запись в историю (сигнал finished()
+    // раньше никто не слушал — таймер истекал молча). DND не глушит: это будильник.
+    Connections {
+        target: Chrono
+        function onFinished() {
+            const snap = { appName: "Nimbus", summary: "Таймер завершён", body: "Время вышло" };
+            Notif.add(snap);
+            if (root.view === "idle" && !root.locked) Notif.toast(snap);
+        }
+    }
+
     // Backdrop first → below the island (Overlay layer).
     Variants {
         model: Quickshell.screens

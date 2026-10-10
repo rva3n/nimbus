@@ -73,6 +73,9 @@ Singleton {
     readonly property real blurPct: Math.max(0, Math.min(100, Prefs.blurAmount)) / 100
     readonly property real glass: 0.94 - root.blurPct * 0.28
     readonly property real glassCard: 0.95 - root.blurPct * 0.25
+    // зарезервированная сверху полоса под остров (exclusiveZone); Umbriel
+    // сдвигает на неё другие top-слои, поэтому медиа-островок компенсирует её
+    readonly property int topReserve: Theme.dp(40)
     // акцент: 1 = как даёт палитра, >1 — ярче, <1 — тише
     readonly property real accentPunch: Prefs.accentPunch
     // тени поверхностей: -1 = авто по теме

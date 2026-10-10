@@ -115,6 +115,9 @@ scripts/                  clip-pin.sh, clip-unpin.sh, geo.sh (IP-геолока�
 который пишет `matugen -c ~/nimbus/matugen/config.toml`. `core/Theme.qml` сам следит
 за файлом (FileView) и выводит из сырых ролей тональные рампы, контейнеры, статусы,
 типографику, motion-кривые и формы. Смена обоев — мгновенно, без перезапуска.
+Для бесцветных обоев (ч/б, почти серые) `scripts/set-theme.sh` сам переключает
+matugen на `scheme-content`: акцент остаётся нейтрально-серым, а не синим
+(у matugen иначе вылезает его fallback-цвет либо синеватый tonal-spot).
 
 ## IPC
 

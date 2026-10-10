@@ -18,7 +18,9 @@ PanelWindow {
     anchors { top: true; left: true }
     implicitWidth: Theme.dp(420)
     implicitHeight: Theme.dp(84)
-    margins { top: Theme.dp(4); left: Theme.dp(10) }
+    // Umbriel сам сдвигает top-слой на зарезервированную островом полосу —
+    // компенсируем её, чтобы пилюля встала на одну линию с островом (6px)
+    margins { top: Theme.dp(6) - Theme.topReserve - Theme.dp(4); left: Theme.dp(10) }
     exclusiveZone: 0
     WlrLayershell.layer: WlrLayer.Overlay
     WlrLayershell.namespace: "nimbus-media"
@@ -44,7 +46,7 @@ PanelWindow {
         id: shadowHost
 
         readonly property int padH: Theme.dp(26)
-        readonly property int padTop: Theme.dp(8)
+        readonly property int padTop: Theme.dp(4)
         readonly property int padBottom: Theme.dp(18)
 
         x: 0

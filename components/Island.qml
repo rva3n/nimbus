@@ -27,7 +27,7 @@ PanelWindow {
     // Полоска под остров зарезервирована ровно по капсулу (6 + 34), чтобы
     // максимизированные окна не заезжали под неё; отступ снизу даёт само окно.
     // В fullscreen остров скрывается и зона не держится.
-    exclusiveZone: win.fullscreenActive ? 0 : Theme.dp(40)
+    exclusiveZone: win.fullscreenActive ? 0 : Theme.topReserve
     implicitHeight: Math.max(664, win.panelMax + Theme.dp(16))
     WlrLayershell.layer: WlrLayer.Overlay
     WlrLayershell.namespace: "nimbus-island"

@@ -242,7 +242,7 @@ PanelWindow {
                 TimersPage { win: win }
                 SettingsPage { win: win }
 
-                TaskManager { visible: win.mode === "taskman"; shell: win.shell }
+                TaskManager { visible: win.mode === "taskman"; shell: win.shell; initialTab: win.shell ? win.shell.taskmanTab : 0 }
 
                 Launcher { active: win.mode === "launcher"; shell: win.shell; tab: win.shell ? win.shell.launcherTab : "apps" }
             }

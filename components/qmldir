@@ -1,6 +1,7 @@
 Island 1.0 Island.qml
 Lockscreen 1.0 Lockscreen.qml
 Backdrop 1.0 Backdrop.qml
+MediaPill 1.0 MediaPill.qml
 IdlePill 1.0 IdlePill.qml
 OsdRow 1.0 OsdRow.qml
 NotifToastRow 1.0 NotifToastRow.qml

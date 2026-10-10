@@ -11,7 +11,7 @@ import "../core"
 Row {
     id: wsRow
     property string output: ""
-    spacing: Theme.dp(5)
+    spacing: Theme.dp(4)
 
     readonly property var items: Umbriel.workspacesFor(output)
 
@@ -63,10 +63,11 @@ Row {
                 return false;
             }
 
-            height: Theme.dp(22)
-            // геометрия не зависит от активности (активный — только цвет):
-            // переключение не двигает пилюлю; паддинг только у иконок
-            width: wsPill.hasIcons ? content.implicitWidth + Theme.dp(10) : Theme.dp(6)
+            height: Theme.dp(20)
+            // ровный ритм: пустой слот 8 (+8 активному), занятый — иконки + 4
+            // (+8 активному); активность даёт одинаковую прибавку всем
+            width: (wsPill.hasIcons ? content.implicitWidth + Theme.dp(4) : Theme.dp(8))
+                 + (wsPill.active ? Theme.dp(8) : 0)
             scale: area.pressed ? 0.98 : 1
 
             Behavior on width {

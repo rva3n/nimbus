@@ -86,8 +86,8 @@ Singleton {
             const p = line.split(/\s+/);
             s.diskTotal = +p[1];
             s.diskUsed = +p[2];
-        } else if (line.startsWith("TEMP ")) {
-            const t = +(line.slice(5));
+        } else if (line.startsWith("TZ ")) {
+            const t = +(line.slice(3));
             s.tempC = t > 1000 ? t / 1000 : t;
         } else if (line.startsWith("GPUB ")) {
             s.gpuBusy = Math.max(0, Math.min(1, (+line.slice(5)) / 100));
@@ -122,14 +122,20 @@ Singleton {
         } else if (line.startsWith("CORES ")) {
             s.cores = +line.slice(6);
         } else if (line.startsWith("DISKS ")) {
-            const parts = line.slice(6).split("|");
+            // "mount size used|mount size used|…" — поля через пробелы, диски через |
+            const chunks = line.slice(6).split("|");
             const out = [];
-            for (let i = 0; i + 2 < parts.length; i += 3)
-                out.push({ mount: parts[i], total: +parts[i + 1], used: +parts[i + 2] });
+            for (const ch of chunks) {
+                const f = ch.trim().split(/\s+/);
+                if (f.length >= 3)
+                    out.push({ mount: f[0], total: +f[1], used: +f[2] });
+            }
             s.disks = out;
         } else if (line.startsWith("TEMP ")) {
             const p = line.slice(5).split("|");
             let v = +p[2];
+            if (isNaN(v))
+                return;
             if (v > 1000) v /= 1000;
             const arr = s.temps.slice();
             // у одного hwmon несколько датчиков: имя с подписью, если есть
@@ -188,7 +194,7 @@ Singleton {
             "echo \"UP $(cut -d. -f1 /proc/uptime)\"; " +
             "echo \"HOST $(uname -n)\"; " +
             "echo \"KERN $(uname -r)\"; " +
-            "T=$(for z in /sys/class/thermal/thermal_zone*/temp; do [ -r \"$z\" ] && cat \"$z\" && break; done); echo \"TEMP ${T:-0}\"; " +
+            "T=$(for z in /sys/class/thermal/thermal_zone*/temp; do [ -r \"$z\" ] && cat \"$z\" && break; done); echo \"TZ ${T:-0}\"; " +
             "B=$(for f in /sys/class/drm/card[0-9]*/device/gpu_busy_percent; do [ -r \"$f\" ] && cat \"$f\" && break; done); echo \"GPUB ${B:-0}\"; " +
             "V=$(for f in /sys/class/drm/card[0-9]*/device/mem_info_vram_used; do [ -r \"$f\" ] && cat \"$f\" && break; done); " +
             "V2=$(for f in /sys/class/drm/card[0-9]*/device/mem_info_vram_total; do [ -r \"$f\" ] && cat \"$f\" && break; done); echo \"VRAM ${V:-0} ${V2:-0}\"; " +

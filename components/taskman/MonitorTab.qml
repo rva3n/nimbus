@@ -3,34 +3,69 @@ import QtQuick.Layouts
 import "../../core"
 import "../../ui"
 
-// Вкладка «Монитор» диспетчера задач: подробная статистика — процессор,
-// видеокарта, память, диски и температуры. Внутри панели 920 (внутренняя
-// ширина 888, высота контента ~620): RowLayout из двух равных колонок, ниже
-// карточка датчиков во всю ширину. Внешней прокрутки нет — всё подогнано по
-// высоте компактными паддингами (карточки pad 12, строки 26).
+// Вкладка «Монитор» диспетчера задач: плотная сводка в три колонки —
+// процессор с сеткой ядер, видеокарта с сетью, память с дисками — и карточка
+// температур во всю ширину. Внутренняя ширина панели 888, высота умещается
+// в ~640 без внешней прокрутки: паддинги карточек 12, строки 24–26,
+// spacing 2–10. Пустого места не держим — у каждой метрики свой ряд.
 ColumnLayout {
     id: monitor
 
     property var shell: null
 
+    // SysStats обнуляет temps/coreLoads в начале каждого тика и наполняет их
+    // заново, поэтому показываем «липкие» копии: копируем массив, когда поток
+    // строк стих (60 мс). Иначе бары ядер и датчики мигали бы каждые 2 секунды.
+    property var coreView: []
+    property var tempView: []
+
     Layout.fillWidth: true
     spacing: Theme.dp(10)
+
+    Timer {
+        id: viewSettle
+
+        interval: 60
+
+        onTriggered: {
+            if (SysStats.coreLoads.length > 0)
+                monitor.coreView = SysStats.coreLoads;
+            if (SysStats.temps.length > 0)
+                monitor.tempView = SysStats.temps;
+        }
+    }
+
+    Connections {
+        target: SysStats
+
+        function onCoreLoadsChanged() {
+            if (SysStats.coreLoads.length > 0)
+                viewSettle.restart();
+        }
+
+        function onTempsChanged() {
+            if (SysStats.temps.length > 0)
+                viewSettle.restart();
+        }
+    }
 
     // ── форматирование ────────────────────────────────────────────────
 
     // байты → гигабайты с одним знаком: "5.2"
     function fmtGb(bytes) {
+        if (!isFinite(bytes) || bytes < 0)
+            return "—";
         return (bytes / 1073741824).toFixed(1);
     }
 
-    // мегагерцы → гигагерцы: "4.7"
+    // мегагерцы → гигагерцы: "4.2"
     function fmtGhz(mhz) {
-        return (mhz / 1000).toFixed(1);
+        return ((isFinite(mhz) ? mhz : 0) / 1000).toFixed(1);
     }
 
     // секунды → "3д 4ч", "4ч 12м", "12м"
     function fmtUptime(sec) {
-        const s = Math.max(0, Math.floor(sec));
+        const s = Math.max(0, Math.floor(sec || 0));
         const d = Math.floor(s / 86400);
         const h = Math.floor((s % 86400) / 3600);
         const m = Math.floor((s % 3600) / 60);
@@ -39,6 +74,22 @@ ColumnLayout {
         if (h > 0)
             return h + "ч " + m + "м";
         return m + "м";
+    }
+
+    // байт/с → "812 Б/с", "12.4 КБ/с", "3.1 МБ/с"
+    function fmtSpeed(b) {
+        if (!isFinite(b) || b < 0)
+            return "—";
+        if (b < 1024)
+            return Math.round(b) + " Б/с";
+        if (b < 1048576)
+            return (b / 1024).toFixed(1) + " КБ/с";
+        return (b / 1048576).toFixed(1) + " МБ/с";
+    }
+
+    // нагрузка (load average) с двумя знаками
+    function fmtLoad(v) {
+        return (isFinite(v) ? v : 0).toFixed(2);
     }
 
     // русское склонение: 1 поток, 2 потока, 16 потоков
@@ -63,7 +114,7 @@ ColumnLayout {
         return Theme.text;
     }
 
-    // цвет бара заполнения: >0.92 — ошибка, >0.8 — предупреждение, иначе акцент
+    // цвет бара заполнения: почти полный — ошибка, заметный — предупреждение
     function fillTone(frac) {
         if (frac > 0.92)
             return Theme.error;
@@ -72,19 +123,37 @@ ColumnLayout {
         return Theme.accent;
     }
 
+    // загрузка ядра из «липкой» копии (до первого полного тика — ноль)
+    function coreAt(i) {
+        return i >= 0 && i < monitor.coreView.length ? monitor.coreView[i] : 0;
+    }
+
+    // цвет ядра: 90 %+ — ошибка, 75 %+ — предупреждение
+    function coreTone(frac) {
+        if (frac >= 0.9)
+            return Theme.error;
+        if (frac >= 0.75)
+            return Theme.warning;
+        return Theme.accent;
+    }
+
+    // колонки сетки ядер: 12 и больше — 4×3, иначе три
+    readonly property int coreCols: SysStats.cores >= 12 ? 4
+                                    : SysStats.cores >= 6 ? 3 : 2
+
     // есть ли вообще данные о видеокарте (иначе карточка целиком скрыта)
     readonly property bool hasGpu: SysStats.gpuTempC >= 0 || SysStats.gpuPowerW > 0
                                    || SysStats.gpuSclkMhz > 0 || SysStats.gpuFanRpm > 0
                                    || SysStats.vramTotal > 0 || SysStats.gpuBusy > 0
 
-    // колонки сетки температур: чем больше датчиков, тем больше колонок
-    readonly property int tempCols: SysStats.temps.length > 12 ? 4
-                                  : SysStats.temps.length > 8 ? 3 : 2
+    // колонки карточки температур: чем больше датчиков, тем больше колонок
+    readonly property int tempCols: monitor.tempView.length > 12 ? 4
+                                  : monitor.tempView.length > 8 ? 3 : 2
 
     // датчики одной колонки при чтении «по строкам» слева направо
     function tempItems(col) {
         const out = [];
-        const t = SysStats.temps;
+        const t = monitor.tempView;
         for (let i = col; i < t.length; i += monitor.tempCols)
             out.push(t[i]);
         return out;
@@ -134,15 +203,16 @@ ColumnLayout {
         }
     }
 
-    // бар заполнения 6px: трек bgTrack + заливка с плавным изменением
+    // бар заполнения: трек bgTrack + заливка с плавным изменением
     component UsageBar: Item {
         id: ub
 
         property real frac: 0
         property color fillColor: Theme.accent
+        property real thickness: Theme.dp(6)
 
         Layout.fillWidth: true
-        implicitHeight: Theme.dp(6)
+        implicitHeight: ub.thickness
 
         Rectangle {
             anchors.fill: parent
@@ -211,12 +281,52 @@ ColumnLayout {
         }
     }
 
-    // ── две колонки: процессор/видеокарта и память/диски ──────────────
+    // строка сети: стрелка, подпись и крупное значение скорости
+    component NetRow: RowLayout {
+        id: nr
+
+        property string icon: ""
+        property string label: ""
+        property string value: ""
+
+        Layout.fillWidth: true
+        implicitHeight: Theme.dp(30)
+        spacing: Theme.dp(8)
+
+        Icon {
+            Layout.alignment: Qt.AlignVCenter
+            name: nr.icon
+            size: Theme.dp(14)
+            color: Theme.accent
+        }
+
+        Text {
+            Layout.fillWidth: true
+            Layout.alignment: Qt.AlignVCenter
+            text: nr.label
+            color: Theme.subtext
+            elide: Text.ElideRight
+            font.family: Theme.textFont
+            font.pixelSize: Theme.typeSize("bodyMedium")
+            font.weight: Theme.typeWeight("bodyMedium")
+        }
+
+        Text {
+            Layout.alignment: Qt.AlignVCenter
+            text: nr.value
+            color: Theme.text
+            font.family: Theme.textFont
+            font.pixelSize: Theme.typeSize("titleSmall")
+            font.weight: Theme.typeWeight("titleSmall")
+        }
+    }
+
+    // ── три колонки метрик ────────────────────────────────────────────
     RowLayout {
         Layout.fillWidth: true
         spacing: Theme.dp(10)
 
-        // левая колонка
+        // колонка 1: процессор и ядра
         ColumnLayout {
             Layout.fillWidth: true
             Layout.alignment: Qt.AlignTop
@@ -233,8 +343,8 @@ ColumnLayout {
 
                     Ring {
                         Layout.alignment: Qt.AlignVCenter
-                        implicitWidth: Theme.dp(68)
-                        implicitHeight: Theme.dp(68)
+                        implicitWidth: Theme.dp(64)
+                        implicitHeight: Theme.dp(64)
                         value: SysStats.cpu
                         label: Math.round(SysStats.cpu * 100) + "%"
                     }
@@ -251,11 +361,12 @@ ColumnLayout {
                         }
                         StatRow {
                             label: "Нагрузка"
-                            value: SysStats.load1.toFixed(2) + " / " + SysStats.load5.toFixed(2)
+                            value: monitor.fmtLoad(SysStats.load1) + " / " + monitor.fmtLoad(SysStats.load5)
                         }
                         StatRow {
                             label: "Температура"
-                            value: SysStats.tempC >= 0 ? Math.round(SysStats.tempC) + " °C" : "—"
+                            value: SysStats.tempC >= 0 && isFinite(SysStats.tempC)
+                                   ? Math.round(SysStats.tempC) + " °C" : "—"
                             valueColor: monitor.tempTone(SysStats.tempC, 75, 85)
                         }
                         StatRow {
@@ -274,59 +385,159 @@ ColumnLayout {
 
             Card {
                 Layout.fillWidth: true
-                visible: monitor.hasGpu
-                title: "Видеокарта"
+                title: "Ядра"
                 pad: Theme.dp(12)
 
-                RowLayout {
+                GridLayout {
                     Layout.fillWidth: true
-                    spacing: Theme.dp(14)
+                    columns: monitor.coreCols
+                    columnSpacing: Theme.dp(8)
+                    rowSpacing: Theme.dp(6)
 
-                    Ring {
-                        Layout.alignment: Qt.AlignVCenter
-                        implicitWidth: Theme.dp(68)
-                        implicitHeight: Theme.dp(68)
-                        value: SysStats.gpuBusy
-                        label: Math.round(SysStats.gpuBusy * 100) + "%"
-                    }
+                    Repeater {
+                        model: SysStats.cores
 
-                    ColumnLayout {
-                        Layout.fillWidth: true
-                        spacing: Theme.dp(2)
+                        delegate: RowLayout {
+                            id: coreCell
 
-                        StatRow {
-                            visible: SysStats.gpuTempC >= 0
-                            label: "Температура"
-                            value: Math.round(SysStats.gpuTempC) + " °C"
-                        }
-                        StatRow {
-                            visible: SysStats.gpuPowerW > 0
-                            label: "Мощность"
-                            value: Math.round(SysStats.gpuPowerW) + " Вт"
-                        }
-                        StatRow {
-                            visible: SysStats.gpuSclkMhz > 0
-                            label: "Частота"
-                            value: SysStats.gpuSclkMhz + " МГц"
-                        }
-                        StatRow {
-                            visible: SysStats.gpuFanRpm > 0
-                            label: "Вентилятор"
-                            value: SysStats.gpuFanRpm + " rpm"
-                        }
+                            required property int index
 
-                        UsageBlock {
-                            visible: SysStats.vramTotal > 0
-                            label: "VRAM"
-                            caption: monitor.fmtGb(SysStats.vramUsed) + " / " + monitor.fmtGb(SysStats.vramTotal) + " ГБ"
-                            frac: SysStats.vramFrac
+                            readonly property real load: monitor.coreAt(coreCell.index)
+
+                            Layout.fillWidth: true
+                            implicitHeight: Theme.dp(16)
+                            spacing: Theme.dp(4)
+
+                            Text { // индекс ядра
+                                Layout.alignment: Qt.AlignVCenter
+                                Layout.preferredWidth: Theme.dp(12)
+                                horizontalAlignment: Text.AlignRight
+                                text: String(coreCell.index)
+                                color: Theme.subtext
+                                font.family: Theme.textFont
+                                font.pixelSize: Theme.typeSize("labelSmall")
+                                font.weight: Theme.typeWeight("labelSmall")
+                            }
+
+                            UsageBar {
+                                Layout.fillWidth: true
+                                Layout.alignment: Qt.AlignVCenter
+                                thickness: Theme.dp(4)
+                                frac: coreCell.load
+                                fillColor: monitor.coreTone(coreCell.load)
+                            }
+
+                            Text { // процент загрузки, до трёх знаков
+                                Layout.alignment: Qt.AlignVCenter
+                                Layout.preferredWidth: Theme.dp(26)
+                                horizontalAlignment: Text.AlignRight
+                                text: Math.round(coreCell.load * 100) + "%"
+                                color: Theme.text
+                                font.family: Theme.textFont
+                                font.pixelSize: Theme.typeSize("labelSmall")
+                                font.weight: Theme.typeWeight("labelSmall")
+                            }
                         }
                     }
                 }
             }
         }
 
-        // правая колонка
+        // колонка 2: видеокарта и сеть
+        ColumnLayout {
+            Layout.fillWidth: true
+            Layout.alignment: Qt.AlignTop
+            spacing: Theme.dp(10)
+
+            Card {
+                Layout.fillWidth: true
+                visible: monitor.hasGpu
+                title: "Видеокарта"
+                pad: Theme.dp(12)
+
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    spacing: Theme.dp(8)
+
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: Theme.dp(14)
+
+                        Ring {
+                            Layout.alignment: Qt.AlignVCenter
+                            implicitWidth: Theme.dp(64)
+                            implicitHeight: Theme.dp(64)
+                            value: SysStats.gpuBusy
+                            label: Math.round(SysStats.gpuBusy * 100) + "%"
+                        }
+
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: Theme.dp(2)
+
+                            StatRow {
+                                visible: SysStats.gpuTempC >= 0 && isFinite(SysStats.gpuTempC)
+                                label: "Температура"
+                                value: Math.round(SysStats.gpuTempC) + " °C"
+                                valueColor: monitor.tempTone(SysStats.gpuTempC, 80, 90)
+                            }
+                            StatRow {
+                                visible: SysStats.gpuPowerW > 0
+                                label: "Мощность"
+                                value: Math.round(SysStats.gpuPowerW) + " Вт"
+                            }
+                            StatRow {
+                                visible: SysStats.gpuSclkMhz > 0
+                                label: "Частота"
+                                value: SysStats.gpuSclkMhz + " МГц"
+                            }
+                            StatRow {
+                                visible: SysStats.gpuFanRpm > 0
+                                label: "Вентилятор"
+                                value: SysStats.gpuFanRpm + " об/мин"
+                            }
+                        }
+                    }
+
+                    UsageBlock {
+                        visible: SysStats.vramTotal > 0
+                        label: "VRAM"
+                        caption: monitor.fmtGb(SysStats.vramUsed) + " / " + monitor.fmtGb(SysStats.vramTotal) + " ГБ"
+                        frac: SysStats.vramFrac
+                        fillColor: monitor.fillTone(SysStats.vramFrac)
+                    }
+                }
+            }
+
+            Card {
+                Layout.fillWidth: true
+                title: "Сеть"
+                pad: Theme.dp(12)
+
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    spacing: Theme.dp(2)
+
+                    NetRow {
+                        icon: "south"
+                        label: "Скачивание"
+                        value: monitor.fmtSpeed(SysStats.netRx)
+                    }
+
+                    Divider {
+                        Layout.fillWidth: true
+                    }
+
+                    NetRow {
+                        icon: "north"
+                        label: "Отправка"
+                        value: monitor.fmtSpeed(SysStats.netTx)
+                    }
+                }
+            }
+        }
+
+        // колонка 3: память и диски
         ColumnLayout {
             Layout.fillWidth: true
             Layout.alignment: Qt.AlignTop
@@ -379,6 +590,7 @@ ColumnLayout {
                             label: modelData.mount
                             caption: monitor.fmtGb(modelData.used) + " / " + monitor.fmtGb(modelData.total) + " ГБ"
                             frac: modelData.total > 0 ? modelData.used / modelData.total : 0
+                            fillColor: monitor.fillTone(modelData.total > 0 ? modelData.used / modelData.total : 0)
                         }
                     }
                 }
@@ -392,15 +604,16 @@ ColumnLayout {
         title: "Температуры"
         pad: Theme.dp(12)
 
-        RowLayout {
-            visible: SysStats.temps.length === 0
+        RowLayout { // пока датчики не найдены
+            visible: monitor.tempView.length === 0
             Layout.fillWidth: true
             spacing: Theme.dp(8)
+            implicitHeight: Theme.dp(24)
 
             Icon {
                 Layout.alignment: Qt.AlignVCenter
                 name: "device_thermostat"
-                size: Theme.dp(18)
+                size: Theme.dp(16)
                 color: Theme.subtext
             }
 
@@ -416,7 +629,7 @@ ColumnLayout {
         }
 
         RowLayout {
-            visible: SysStats.temps.length > 0
+            visible: monitor.tempView.length > 0
             Layout.fillWidth: true
             spacing: Theme.dp(16)
 
@@ -437,7 +650,7 @@ ColumnLayout {
                             required property var modelData
 
                             Layout.fillWidth: true
-                            implicitHeight: Theme.dp(26)
+                            implicitHeight: Theme.dp(24)
                             spacing: Theme.dp(8)
 
                             Text {
@@ -453,8 +666,9 @@ ColumnLayout {
 
                             Text {
                                 Layout.alignment: Qt.AlignVCenter
-                                text: Math.round(modelData.c) + " °C"
-                                color: monitor.tempTone(modelData.c, 60, 80)
+                                text: modelData && isFinite(modelData.c)
+                                      ? Math.round(modelData.c) + " °C" : "—"
+                                color: monitor.tempTone(modelData ? modelData.c : -1, 60, 80)
                                 font.family: Theme.textFont
                                 font.pixelSize: Theme.typeSize("titleSmall")
                                 font.weight: Theme.typeWeight("titleSmall")

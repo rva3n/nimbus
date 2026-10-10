@@ -13,7 +13,7 @@ RowLayout {
     id: page
 
     property var win: null
-    // выбранный раздел: 0 — интерфейс, 1 — погода, 2 — о шелле, 3 — сброс
+    // выбранный раздел: 0 — интерфейс, 1 — погода
     property int section: 0
 
     visible: win !== null && win.mode === "panel" && win.page === "settings"
@@ -25,19 +25,6 @@ RowLayout {
 
     function applyCity() {
         Prefs.set("weatherCity", cityField.text.trim());
-    }
-
-    function resetPrefs() {
-        Prefs.set("uiScale", 1);
-        Prefs.set("cornerScale", 1);
-        Prefs.set("motionScale", 1);
-        Prefs.set("accentPunch", 1);
-        Prefs.set("surfaceDarkness", -1);
-        Prefs.set("surfaceTint", -1);
-        Prefs.set("blurAmount", 45);
-        Quickshell.execDetached(["sh", Quickshell.env("HOME") + "/nimbus/scripts/set-blur.sh", "45"]);
-        Prefs.set("weatherAuto", true);
-        Prefs.set("weatherCity", "");
     }
 
     // ── локальные компоненты ──────────────────────────────────────────
@@ -204,55 +191,6 @@ RowLayout {
         }
     }
 
-    // строка-инфо: иконка 40×40 на подложке, подпись слева, значение справа
-    component InfoRow: RowLayout {
-        id: ir
-
-        property string icon: "info"
-        property string label: ""
-        property string value: ""
-
-        Layout.fillWidth: true
-        Layout.topMargin: Theme.dp(6)
-        Layout.bottomMargin: Theme.dp(6)
-        spacing: Theme.dp(12)
-
-        Rectangle {
-            Layout.alignment: Qt.AlignVCenter
-            implicitWidth: Theme.dp(40)
-            implicitHeight: Theme.dp(40)
-            radius: Theme.radiusPill
-            color: Theme.bgTrack
-
-            Icon {
-                anchors.centerIn: parent
-                name: ir.icon
-                size: Theme.dp(20)
-                color: Theme.subtext
-            }
-        }
-
-        Text {
-            Layout.fillWidth: true
-            Layout.alignment: Qt.AlignVCenter
-            text: ir.label
-            color: Theme.text
-            elide: Text.ElideRight
-            font.family: Theme.textFont
-            font.pixelSize: Theme.typeSize("bodyLarge")
-            font.weight: Theme.typeWeight("bodyLarge")
-        }
-
-        Text {
-            Layout.alignment: Qt.AlignVCenter
-            text: ir.value
-            color: Theme.subtext
-            font.family: Theme.textFont
-            font.pixelSize: Theme.typeSize("bodyMedium")
-            font.weight: Theme.typeWeight("bodyMedium")
-        }
-    }
-
     // ── левая колонка: рейл разделов ──────────────────────────────────
     ColumnLayout {
         id: rail
@@ -272,18 +210,6 @@ RowLayout {
             label: "Погода"
             selected: page.section === 1
             onClicked: page.section = 1
-        }
-        NavItem {
-            icon: "info"
-            label: "О шелле"
-            selected: page.section === 2
-            onClicked: page.section = 2
-        }
-        NavItem {
-            icon: "restart_alt"
-            label: "Сброс"
-            selected: page.section === 3
-            onClicked: page.section = 3
         }
     }
 
@@ -515,98 +441,10 @@ RowLayout {
                 }
             }
         }
-
-        // 3. О шелле
-        ColumnLayout {
-            visible: page.section === 2
-            Layout.fillWidth: true
-            spacing: Theme.dp(10)
-
-            SectionHeader {
-                title: "О шелле"
-                caption: "Сборка, композитор и конфиг"
-            }
-
-            Card {
-                Layout.fillWidth: true
-
-                ColumnLayout {
-                    Layout.fillWidth: true
-                    spacing: 0
-
-                    InfoRow {
-                        icon: "info"
-                        label: "Nimbus"
-                        value: "2.0"
-                    }
-                    Divider {
-                        Layout.fillWidth: true
-                        leftInset: Theme.dp(56)
-                    }
-                    InfoRow {
-                        icon: "monitor"
-                        label: "Композитор"
-                        value: "Umbriel"
-                    }
-                    Divider {
-                        Layout.fillWidth: true
-                        leftInset: Theme.dp(56)
-                    }
-                    InfoRow {
-                        icon: "folder"
-                        label: "Конфиг"
-                        value: "~/nimbus"
-                    }
-                    Divider {
-                        Layout.fillWidth: true
-                        leftInset: Theme.dp(56)
-                    }
-                    InfoRow {
-                        icon: "description"
-                        label: "Лицензия"
-                        value: "MIT"
-                    }
-                }
-            }
-        }
-
-        // 4. Сброс
-        ColumnLayout {
-            visible: page.section === 3
-            Layout.fillWidth: true
-            spacing: Theme.dp(10)
-
-            SectionHeader {
-                title: "Сброс"
-                caption: "Значения по умолчанию"
-            }
-
-            Card {
-                Layout.fillWidth: true
-
-                Text {
-                    Layout.fillWidth: true
-                    text: "Вернуть внешний вид и погоду к значениям по умолчанию."
-                    color: Theme.subtext
-                    wrapMode: Text.WordWrap
-                    font.family: Theme.textFont
-                    font.pixelSize: Theme.typeSize("bodySmall")
-                    font.weight: Theme.typeWeight("bodySmall")
-                }
-
-                Button {
-                    Layout.topMargin: Theme.dp(4)
-                    text: "Сбросить настройки"
-                    icon: "restart_alt"
-                    variant: "tonal"
-                    onClicked: page.resetPrefs()
-                }
-            }
-        }
     }
 
     // Switch и TextInput ломают биндинг при ручном изменении — синхронизируем
-    // состояние обратно при записи в Prefs (в т.ч. после сброса).
+    // состояние обратно при записи в Prefs.
     Connections {
         target: Prefs
 

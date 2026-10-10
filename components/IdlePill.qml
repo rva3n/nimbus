@@ -4,8 +4,8 @@ import "../ui"
 
 // Содержимое острова для idle/osd/notif. Внешнюю капсулу (фон Theme.bg,
 // рамку, радиус) рисует сам Island, поэтому своего общего фона здесь нет:
-// idle — один ряд [чип погоды][воркспейсы][чип часов], osd/notif — строки.
-// API: mode/now/output/shell.
+// idle — один ряд [раскладка][погода][воркспейсы][часы],
+// osd/notif — строки. API: mode/now/output/shell.
 Item {
     id: holder
     property string mode: "idle"
@@ -21,24 +21,45 @@ Item {
                   : mode === "osd" ? Theme.dp(34)
                   : Theme.dp(28)
 
-    // ── idle: погода + воркспейсы + часы в одном ряду ─────────────────
+    // ── idle: раскладка + погода + воркспейсы + часы ──────────────────
     Row {
         id: idleRow
         visible: holder.mode === "idle"
         anchors.centerIn: parent
         spacing: Theme.dp(12)
 
+        Rectangle { // чип раскладки клавиатуры
+            id: layoutChip
+            visible: Umbriel.keyboardLayout !== ""
+            anchors.verticalCenter: parent.verticalCenter
+            implicitWidth: layoutText.implicitWidth + Theme.dp(16)
+            implicitHeight: Theme.dp(22)
+            radius: Theme.radiusPill
+            color: Theme.alpha(Theme.accentContainer, 0.5)
+
+            Text {
+                id: layoutText
+                anchors.centerIn: parent
+                font.family: Theme.textFont
+                font.pixelSize: Theme.typeSize("labelMedium")
+                font.weight: Theme.typeWeight("labelMedium")
+                font.capitalization: Font.AllUppercase
+                color: Theme.fgAccentContainer
+                text: Umbriel.keyboardLayout
+            }
+        }
+
         Rectangle { // чип погоды: клик → вкладка «погода»
             id: weatherChip
             visible: Weather.hasData
             anchors.verticalCenter: parent.verticalCenter
-            implicitWidth: weatherRow.implicitWidth + Theme.dp(20)
-            implicitHeight: Theme.dp(24)
+            implicitWidth: weatherRow.implicitWidth + Theme.dp(16)
+            implicitHeight: Theme.dp(22)
             radius: Theme.radiusPill
-            // фон accentContainer + state layer композитом (Theme.layer)
+            // фон accentContainer + state layer композитом (Theme.layer), мягкая альфа
             color: Theme.alpha(Theme.layer(Theme.accentContainer, Theme.fgAccentContainer,
                                weatherArea.pressed ? Theme.statePressed
-                                                   : (weatherArea.containsMouse ? Theme.stateHover : 0)), 0.88)
+                                                   : (weatherArea.containsMouse ? Theme.stateHover : 0)), 0.5)
             scale: weatherArea.pressed ? 0.97 : 1
 
             Behavior on color { ColorAnimation { duration: Theme.ms(120) } }
@@ -91,13 +112,13 @@ Item {
         Rectangle { // чип часов с секундами: клик → вкладка «управление»
             id: clockChip
             anchors.verticalCenter: parent.verticalCenter
-            implicitWidth: clockText.implicitWidth + Theme.dp(20)
-            implicitHeight: Theme.dp(24)
+            implicitWidth: clockText.implicitWidth + Theme.dp(16)
+            implicitHeight: Theme.dp(22)
             radius: Theme.radiusPill
-            // фон accentContainer + state layer композитом (Theme.layer)
+            // фон accentContainer + state layer композитом (Theme.layer), мягкая альфа
             color: Theme.alpha(Theme.layer(Theme.accentContainer, Theme.fgAccentContainer,
                                clockArea.pressed ? Theme.statePressed
-                                                 : (clockArea.containsMouse ? Theme.stateHover : 0)), 0.88)
+                                                 : (clockArea.containsMouse ? Theme.stateHover : 0)), 0.5)
             scale: clockArea.pressed ? 0.97 : 1
 
             Behavior on color { ColorAnimation { duration: Theme.ms(120) } }

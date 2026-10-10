@@ -5,7 +5,7 @@ import ".."
 import "../../ui"
 
 // Корневая страница панели: карточки Wi-Fi/Bluetooth со статусом,
-// плитки быстрых настроек, медиа-карточка и уведомления.
+// плитки быстрых настроек и уведомления.
 ColumnLayout {
     id: rootPage
 
@@ -186,15 +186,6 @@ ColumnLayout {
         Tile { icon: "brightness_6"; label: "Яркость"; onTapped: if (win.shell) win.shell.togglePage("brightness") }
         Tile { icon: "do_not_disturb_on"; label: "DND"; active: Notif.dnd; onTapped: Notif.dnd = !Notif.dnd }
         Tile { icon: "timer"; label: "Таймеры"; onTapped: if (win.shell) win.shell.togglePage("timers") }
-    }
-
-    // Медиа-карточка — отдельный компонент; props не меняем.
-    MediaCard {
-        visible: win && win.player !== null
-        Layout.fillWidth: true
-        artFile: win ? win.artFile : ""
-        artUrl: win ? win.artUrl : ""
-        player: win ? win.player : null
     }
 
     // ── Уведомления ───────────────────────────────────────────────────

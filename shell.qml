@@ -13,6 +13,7 @@ ShellRoot {
     property string view: "idle"   // idle | panel | launcher | taskman
     property string panelPage: ""
     property string launcherTab: "apps"    // apps | clipboard | emoji (вкладки лончера)
+    property int taskmanTab: 0             // вкладка диспетчера (0/1/2)
     property bool locked: false
     property string pamError: ""
 
@@ -68,6 +69,10 @@ ShellRoot {
     Variants {
         model: Quickshell.screens
         delegate: Island { shell: root; view: root.view }
+    }
+    Variants {
+        model: Quickshell.screens
+        delegate: MediaPill { modelData: modelData }
     }
 
     Lockscreen {
@@ -134,6 +139,7 @@ ShellRoot {
         function pageWeather() { root.view = "panel"; root.panelPage = "weather"; }
         function pageSystem() { root.view = "taskman"; root.panelPage = ""; }
         function taskman() { root.view = "taskman"; root.panelPage = ""; }
+        function taskmanAt(i: int) { root.taskmanTab = i; root.view = "taskman"; root.panelPage = ""; }
         function tab(name: string) { root.setTab(name); }
         function pageCalendar() { root.view = "panel"; root.panelPage = "calendar"; }
         function pageTimers() { root.view = "panel"; root.panelPage = "timers"; }

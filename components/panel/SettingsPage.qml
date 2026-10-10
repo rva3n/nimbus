@@ -283,6 +283,21 @@ RowLayout {
                     }
                 }
 
+                ParamRow {
+                    label: "Затемнение поверхностей"
+                    min: 0
+                    max: 1.5
+                    value: Math.max(0, Prefs.surfaceDarkness)
+                    onCommitted: (v) => Prefs.set("surfaceDarkness", Math.round(v * 20) / 20)
+                }
+                ParamRow {
+                    label: "Тонировка поверхностей"
+                    min: 0
+                    max: 1
+                    value: Math.max(0, Prefs.surfaceTint)
+                    onCommitted: (v) => Prefs.set("surfaceTint", Math.round(v * 20) / 20)
+                }
+
                 Text { // пояснение к ползунку размытия
                     Layout.fillWidth: true
                     Layout.topMargin: Theme.dp(2)

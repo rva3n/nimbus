@@ -18,9 +18,11 @@ PanelWindow {
     anchors { top: true; left: true }
     implicitWidth: Theme.dp(420)
     implicitHeight: Theme.dp(84)
+    // отступ слева как у окон (layout gap 7): визуальный край пилюли = 7px
+    readonly property int padH: Theme.dp(26)
     // Umbriel сам сдвигает top-слой на зарезервированную островом полосу —
     // компенсируем её, чтобы пилюля встала на одну линию с островом (6px)
-    margins { top: Theme.dp(6) - Theme.topReserve - Theme.dp(4); left: Theme.dp(10) }
+    margins { top: Theme.dp(6) - Theme.topReserve - Theme.dp(4); left: Theme.dp(7) - mp.padH }
     exclusiveZone: 0
     WlrLayershell.layer: WlrLayer.Overlay
     WlrLayershell.namespace: "nimbus-media"
@@ -45,7 +47,7 @@ PanelWindow {
     Item {
         id: shadowHost
 
-        readonly property int padH: Theme.dp(26)
+        readonly property int padH: mp.padH
         readonly property int padTop: Theme.dp(4)
         readonly property int padBottom: Theme.dp(18)
 
@@ -68,7 +70,8 @@ PanelWindow {
             x: shadowHost.padH
             y: shadowHost.padTop
             width: Theme.dp(300)
-            height: Theme.dp(40)
+            // в размер облака: у острова капсула 34
+            height: Theme.dp(34)
             radius: height / 2
             color: Theme.bg
             border.width: 1
@@ -77,13 +80,13 @@ PanelWindow {
 
             Row {
                 anchors.fill: parent
-                anchors.leftMargin: Theme.dp(6)
-                anchors.rightMargin: Theme.dp(14)
-                spacing: Theme.dp(10)
+                anchors.leftMargin: Theme.dp(5)
+                anchors.rightMargin: Theme.dp(12)
+                spacing: Theme.dp(8)
 
                 Rectangle { // play/pause
                     anchors.verticalCenter: parent.verticalCenter
-                    width: Theme.dp(28)
+                    width: Theme.dp(24)
                     height: width
                     radius: width / 2
                     color: Theme.alpha(Theme.accentContainer, 0.6)
@@ -91,14 +94,14 @@ PanelWindow {
                     Icon {
                         anchors.centerIn: parent
                         name: (mp.player && mp.player.isPlaying) ? "pause" : "play_arrow"
-                        size: Theme.dp(15)
+                        size: Theme.dp(13)
                         color: Theme.fgAccentContainer
                     }
                 }
 
                 Column {
                     anchors.verticalCenter: parent.verticalCenter
-                    width: parent.width - Theme.dp(28) - Theme.dp(10)
+                    width: parent.width - Theme.dp(24) - Theme.dp(8)
                     spacing: 0
 
                     Text {
@@ -107,8 +110,8 @@ PanelWindow {
                         text: mp.player ? (mp.player.trackTitle || "") : ""
                         elide: Text.ElideRight
                         font.family: Theme.textFont
-                        font.pixelSize: Theme.typeSize("titleSmall")
-                        font.weight: Theme.typeWeight("titleSmall")
+                        font.pixelSize: Theme.typeSize("labelLarge")
+                        font.weight: Theme.typeWeight("labelLarge")
                     }
 
                     Text {

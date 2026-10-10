@@ -269,6 +269,29 @@ RowLayout {
                     onCommitted: (v) => Prefs.set("accentPunch", v)
                 }
 
+                RowLayout { // моно-tint иконок приложений цветом палитры (matugen)
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: Theme.dp(40)
+                    spacing: Theme.dp(8)
+
+                    Text {
+                        Layout.fillWidth: true
+                        text: "Окрашивать иконки приложений"
+                        color: Theme.text
+                        elide: Text.ElideRight
+                        font.family: Theme.textFont
+                        font.pixelSize: Theme.typeSize("bodyLarge")
+                        font.weight: Theme.typeWeight("bodyLarge")
+                    }
+
+                    Switch {
+                        id: tintSwitch
+                        Layout.alignment: Qt.AlignVCenter
+                        checked: Prefs.tintAppIcons
+                        onToggled: Prefs.set("tintAppIcons", tintSwitch.checked)
+                    }
+                }
+
                 ParamRow {
                     label: "Размытие фона"
                     min: 0

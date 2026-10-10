@@ -100,14 +100,12 @@ Item {
                         Layout.preferredHeight: Theme.dp(40)
                         radius: Theme.radiusMd
                         color: Theme.bgTrack
-                        Image {
+                        AppIcon {
                             anchors.centerIn: parent
-                            width: Theme.dp(30)
-                            height: Theme.dp(30)
-                            sourceSize.width: 30
-                            sourceSize.height: 30
-                            smooth: true
+                            size: 30
                             source: rowItem.modelData.icon ? Quickshell.iconPath(rowItem.modelData.icon, true) : ""
+                            tint: Theme.primary
+                            tinted: Prefs.tintAppIcons
                         }
                     }
 

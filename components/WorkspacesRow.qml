@@ -3,6 +3,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import Quickshell
 import "../core"
+import "../ui"
 
 // Пилюли воркспейсов Umbriel: активный — accentContainer, занятые — до трёх
 // иконок приложений, пустые — точка. Модель — по индексу (длина списка),
@@ -156,15 +157,13 @@ Row {
                             color: wsPill.active ? Theme.fgAccentContainer : Theme.subtext
                         }
 
-                        Image {
-                            id: img
+                        AppIcon {
                             anchors.fill: parent
                             visible: appIcon.iconPath !== ""
                             source: appIcon.iconPath
-                            sourceSize.width: Theme.dp(26)
-                            sourceSize.height: Theme.dp(26)
-                            fillMode: Image.PreserveAspectFit
-                            smooth: true
+                            tint: wsPill.ink
+                            tinted: Prefs.tintAppIcons
+                            size: 13
                         }
                     }
                 }

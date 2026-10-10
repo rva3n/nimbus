@@ -21,6 +21,7 @@ Singleton {
         surfaceDarkness: -1,
         surfaceTint: -1,
         blurAmount: 45,
+        tintAppIcons: true,
         weatherAuto: true,
         weatherCity: "",
         weatherLat: 0,
@@ -41,6 +42,7 @@ Singleton {
         watchChanges: true
         onFileChanged: reload()
         onLoadFailed: seedProc.running = true
+        onLoadedChanged: if (loaded) p.fillMissingDefaults()
         adapter: JsonAdapter {
             id: a
             property real uiScale: 1
@@ -50,6 +52,7 @@ Singleton {
             property real surfaceDarkness: -1
             property real surfaceTint: -1
             property real blurAmount: 45
+            property bool tintAppIcons: true
             property bool weatherAuto: true
             property string weatherCity: ""
             property real weatherLat: 0
@@ -66,6 +69,7 @@ Singleton {
     readonly property real surfaceDarkness: a.surfaceDarkness
     readonly property real surfaceTint: a.surfaceTint
     readonly property real blurAmount: a.blurAmount
+    readonly property bool tintAppIcons: a.tintAppIcons
     readonly property bool weatherAuto: a.weatherAuto
     readonly property string weatherCity: a.weatherCity
     readonly property real weatherLat: a.weatherLat
@@ -73,12 +77,30 @@ Singleton {
     readonly property string weatherPlace: a.weatherPlace
     readonly property bool dnd: a.dnd
 
+    // Добить ключи, которых нет в существующем файле: JsonAdapter оставляет
+    // их неопределёнными — иначе ловим "Unable to assign [undefined] to bool".
+    function fillMissingDefaults() {
+        const d = JSON.parse(p.defaultsJson);
+        let fixed = false;
+        for (const k of Object.keys(d)) {
+            if (a[k] === undefined) {
+                a[k] = d[k];
+                fixed = true;
+            }
+        }
+        if (fixed) file.writeAdapter();
+    }
+
     // Установить значение (ключ = имя свойства адаптера) и сохранить файл.
     function set(key, value) {
         a[key] = value;
         file.writeAdapter();
     }
 
-    Component.onCompleted: if (!file.loaded)
-        seedProc.running = true;
+    Component.onCompleted: {
+        if (!file.loaded)
+            seedProc.running = true;
+        else
+            fillMissingDefaults();
+    }
 }

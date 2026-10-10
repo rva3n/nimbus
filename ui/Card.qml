@@ -18,8 +18,8 @@ Rectangle {
     default property alias content: layout.data
 
     radius: Theme.radiusXl
-    // со «стеклом» карточки тоже чуть прозрачные, фон под ними размывает композитор
-    color: Theme.blurAmount > 0 ? Theme.withBlur(Theme.mHigh) : Theme.mHigh
+    // фиксированная лёгкая прозрачность — сквозь неё видно размытие композитора
+    color: Theme.alpha(Theme.mHigh, 0.9)
     border.width: 1
     border.color: Theme.a(Theme.outline, 0.25)
     implicitWidth: Theme.dp(300)

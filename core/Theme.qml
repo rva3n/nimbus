@@ -67,8 +67,9 @@ Singleton {
     readonly property real uiScale: Math.max(0.7, Math.min(1.3, Prefs.uiScale || 1))
     readonly property real cornerScale: Math.max(0, Math.min(1.5, Prefs.cornerScale === undefined ? 1 : Prefs.cornerScale))
     readonly property real motionScale: Math.max(0.5, Math.min(1.5, Prefs.motionScale || 1))
-    // 0 = непрозрачные панели, 1 = максимальное стекло (в Umbriel 0.1 блюра слоёв нет)
-    readonly property real blurAmount: Prefs.blurAmount
+    // 0 = непрозрачные панели; сейчас прозрачность фиксированная — ползунок
+    // в настройках управляет радиусом размытия Umbriel (set-blur.sh)
+    readonly property real glass: 0.86
     // акцент: 1 = как даёт палитра, >1 — ярче, <1 — тише
     readonly property real accentPunch: Prefs.accentPunch
     // тени поверхностей: -1 = авто по теме
@@ -134,7 +135,7 @@ Singleton {
     readonly property color mBright: root.toneSurface(root.cSurfaceBright, root._toneShift)
 
     // ── Семантика поверхностей ─────────────────────────────────────────
-    readonly property color bg: root.alpha(root.mContainer, 1 - root.blurAmount * 0.85)
+    readonly property color bg: root.alpha(root.mContainer, root.glass)
     readonly property color bgTransparent: root.alpha(root.bg, 0)
     readonly property color bgOpaque: root.mContainer
     readonly property color bgSunken: root.mLow
@@ -451,8 +452,6 @@ Singleton {
     function _mix(a, b, t) { return Qt.rgba(a.r * (1 - t) + b.r * t, a.g * (1 - t) + b.g * t, a.b * (1 - t) + b.b * t, 1) }
 
     function alpha(c, a) { return Qt.rgba(c.r, c.g, c.b, a) }
-
-    function withBlur(c) { return root.alpha(c, 1 - root.blurAmount * 0.85) }
 
     function toHex(c) {
         var r = Math.round(c.r * 255).toString(16).padStart(2, "0");

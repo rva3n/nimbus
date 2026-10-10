@@ -34,7 +34,8 @@ RowLayout {
         Prefs.set("accentPunch", 1);
         Prefs.set("surfaceDarkness", -1);
         Prefs.set("surfaceTint", -1);
-        Prefs.set("blurAmount", 0.25);
+        Prefs.set("blurRadius", 10);
+        Quickshell.execDetached(["sh", Quickshell.env("HOME") + "/nimbus/scripts/set-blur.sh", "10"]);
         Prefs.set("weatherAuto", true);
         Prefs.set("weatherCity", "");
     }
@@ -164,6 +165,9 @@ RowLayout {
         property real min: 0
         property real max: 1
         property real value: 1
+        // формат подписи справа: value * displayMul + suffix
+        property real displayMul: 100
+        property string suffix: "%"
 
         signal committed(real v)
 
@@ -185,7 +189,7 @@ RowLayout {
             }
 
             Text {
-                text: Math.round(pr.value * 100) + "%"
+                text: Math.round(pr.value * pr.displayMul) + pr.suffix
                 color: Theme.subtext
                 font.family: Theme.textFont
                 font.pixelSize: Theme.typeSize("labelMedium")
@@ -340,17 +344,23 @@ RowLayout {
                 }
 
                 ParamRow {
-                    label: "Стекло (размытие)"
+                    label: "Размытие фона"
                     min: 0
-                    max: 1
-                    value: Prefs.blurAmount
-                    onCommitted: (v) => Prefs.set("blurAmount", v)
+                    max: 100
+                    value: Prefs.blurRadius
+                    displayMul: 1
+                    suffix: "%"
+                    onCommitted: (v) => {
+                        const r = Math.round(v);
+                        Prefs.set("blurRadius", r);
+                        Quickshell.execDetached(["sh", Quickshell.env("HOME") + "/nimbus/scripts/set-blur.sh", String(r)]);
+                    }
                 }
 
-                Text { // пояснение к ползунку стекла
+                Text { // пояснение к ползунку размытия
                     Layout.fillWidth: true
                     Layout.topMargin: Theme.dp(2)
-                    text: "Прозрачность капсулы и панелей; фон размывает Umbriel (правило слоя)."
+                    text: "Интенсивность размытия фона (радиус Umbriel; влияет и на окна). Прозрачность не меняется."
                     color: Theme.subtextDim
                     wrapMode: Text.WordWrap
                     font.family: Theme.textFont

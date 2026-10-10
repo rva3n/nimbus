@@ -20,7 +20,7 @@ Singleton {
         accentPunch: 1,
         surfaceDarkness: -1,
         surfaceTint: -1,
-        blurAmount: 0.25,
+        blurRadius: 10,
         weatherAuto: true,
         weatherCity: "",
         weatherLat: 0,
@@ -48,7 +48,7 @@ Singleton {
             property real accentPunch: 1
             property real surfaceDarkness: -1
             property real surfaceTint: -1
-            property real blurAmount: 0
+            property real blurRadius: 10
             property bool weatherAuto: true
             property string weatherCity: ""
             property real weatherLat: 0
@@ -63,7 +63,7 @@ Singleton {
     readonly property real accentPunch: a.accentPunch
     readonly property real surfaceDarkness: a.surfaceDarkness
     readonly property real surfaceTint: a.surfaceTint
-    readonly property real blurAmount: a.blurAmount
+    readonly property real blurRadius: a.blurRadius
     readonly property bool weatherAuto: a.weatherAuto
     readonly property string weatherCity: a.weatherCity
     readonly property real weatherLat: a.weatherLat

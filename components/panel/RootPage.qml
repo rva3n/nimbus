@@ -184,7 +184,7 @@ ColumnLayout {
 
         Tile { icon: "volume_up"; label: "Звук"; onTapped: if (win.shell) win.shell.togglePage("volume") }
         Tile { icon: "brightness_6"; label: "Яркость"; onTapped: if (win.shell) win.shell.togglePage("brightness") }
-        Tile { icon: "do_not_disturb_on"; label: "DND"; active: Notif.dnd; onTapped: Notif.dnd = !Notif.dnd }
+        Tile { icon: "do_not_disturb_on"; label: "DND"; active: Notif.dnd; onTapped: Prefs.set("dnd", !Notif.dnd) }
         Tile { icon: "timer"; label: "Таймеры"; onTapped: if (win.shell) win.shell.togglePage("timers") }
     }
 

@@ -9,7 +9,7 @@ Singleton {
     property var history: []      // newest first
     property var current: null    // toast content
     property bool visible: false  // toast shown in the island
-    property bool dnd: false
+    property bool dnd: Prefs.dnd  // персистится в prefs.json (пишется через Prefs.set)
 
     Timer {
         id: hideTimer

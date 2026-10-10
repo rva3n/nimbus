@@ -25,7 +25,8 @@ Singleton {
         weatherCity: "",
         weatherLat: 0,
         weatherLon: 0,
-        weatherPlace: ""
+        weatherPlace: "",
+        dnd: false
     })
 
     Process {
@@ -54,6 +55,7 @@ Singleton {
             property real weatherLat: 0
             property real weatherLon: 0
             property string weatherPlace: ""
+            property bool dnd: false
         }
     }
 
@@ -69,6 +71,7 @@ Singleton {
     readonly property real weatherLat: a.weatherLat
     readonly property real weatherLon: a.weatherLon
     readonly property string weatherPlace: a.weatherPlace
+    readonly property bool dnd: a.dnd
 
     // Установить значение (ключ = имя свойства адаптера) и сохранить файл.
     function set(key, value) {

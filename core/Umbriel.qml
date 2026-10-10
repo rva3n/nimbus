@@ -10,6 +10,36 @@ Singleton {
     property var workspaces: []
     property var windows: []
     property var activeWindow: null
+    property string keyboardLayout: ""
+
+    // «English (US)» → US, «Russian» → RU
+    function shortLayout(name) {
+        const s = String(name || "");
+        if (s.indexOf("English") === 0)
+            return "US";
+        if (s.indexOf("Russian") === 0)
+            return "RU";
+        return s.length >= 2 ? s.slice(0, 2).toUpperCase() : s.toUpperCase();
+    }
+
+    function _layout(line) {
+        try {
+            const m = JSON.parse(line);
+            if (m.event === "keyboard_layout" && m.data && m.data.names) {
+                const i = m.data.current_index || 0;
+                root.keyboardLayout = root.shortLayout(m.data.names[i] || "");
+            }
+        } catch (e) {}
+    }
+
+    Process {
+        id: layoutProc
+        running: true
+        command: ["umbriel", "subscribe", "keyboard_layout"]
+        stdout: SplitParser {
+            onRead: line => root._layout(line)
+        }
+    }
 
     function workspacesFor(output) {
         const out = [];

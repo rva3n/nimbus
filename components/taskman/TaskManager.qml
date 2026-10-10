@@ -61,4 +61,8 @@ ColumnLayout {
     MonitorTab { visible: tm.tab === 1 }
 
     AboutTab { visible: tm.tab === 2 }
+
+    // ESC закрывает диспетчер
+    focus: visible
+    Keys.onEscapePressed: if (tm.shell) tm.shell.closeOverlays()
 }

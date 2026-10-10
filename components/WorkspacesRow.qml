@@ -64,11 +64,9 @@ Row {
             }
 
             height: Theme.dp(22)
-            // паддинг только у пилюль с иконками; пустой воркспейс — чистая точка,
-            // активный пустой — короткая капсула
-            width: wsPill.hasIcons ? content.implicitWidth + Theme.dp(10)
-                 : wsPill.active ? Theme.dp(16)
-                 : Theme.dp(6)
+            // геометрия не зависит от активности (активный — только цвет):
+            // переключение не двигает пилюлю; паддинг только у иконок
+            width: wsPill.hasIcons ? content.implicitWidth + Theme.dp(10) : Theme.dp(6)
             scale: area.pressed ? 0.98 : 1
 
             Behavior on width {

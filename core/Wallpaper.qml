@@ -221,7 +221,7 @@ Singleton {
             "setsid mpvpaper -f -o 'no-audio loop' '*' " + shq(url) + " >/dev/null 2>&1"]);
         Quickshell.execDetached(["sh", "-c",
             "ffmpeg -y -ss 3 -i " + shq(url) + " -frames:v 1 -vf scale=640:-1 /tmp/nimbus-frame.png >/dev/null 2>&1; " +
-            "matugen -c " + shq(w.matugenConf) + " --prefer saturation image /tmp/nimbus-frame.png >/dev/null 2>&1"]);
+            "sh " + shq(Quickshell.env("HOME") + "/nimbus/scripts/set-theme.sh") + " /tmp/nimbus-frame.png"]);
         saveState();
     }
 
@@ -230,9 +230,9 @@ Singleton {
         if (isVideo) {
             Quickshell.execDetached(["sh", "-c",
                 "ffmpeg -y -ss 3 -i " + shq(path) + " -frames:v 1 -vf scale=640:-1 /tmp/nimbus-frame.png >/dev/null 2>&1; " +
-                "matugen -c " + shq(w.matugenConf) + " --prefer saturation image /tmp/nimbus-frame.png >/dev/null 2>&1"]);
+                "sh " + shq(Quickshell.env("HOME") + "/nimbus/scripts/set-theme.sh") + " /tmp/nimbus-frame.png"]);
         } else {
-            Quickshell.execDetached(["sh", "-c", "matugen -c " + shq(w.matugenConf) + " --prefer saturation image " + shq(path) + " >/dev/null 2>&1"]);
+            Quickshell.execDetached(["sh", "-c", "sh " + shq(Quickshell.env("HOME") + "/nimbus/scripts/set-theme.sh") + " " + shq(path)]);
         }
     }
 

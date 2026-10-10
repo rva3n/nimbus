@@ -137,11 +137,24 @@ ShellRoot {
         function tab(name: string) { root.setTab(name); }
         function pageCalendar() { root.view = "panel"; root.panelPage = "calendar"; }
         function pageTimers() { root.view = "panel"; root.panelPage = "timers"; }
-        function emoji() { root.openLauncher("emoji"); }
+        function emoji() {
+            if (root.view === "launcher" && root.launcherTab === "emoji")
+                root.closeOverlays();
+            else
+                root.openLauncher("emoji");
+        }
         function pageSettings() { root.view = "panel"; root.panelPage = "settings"; }
         function weatherRefresh() { Weather.refresh(); }
         function wallpapers() { root.togglePage("wallpapers"); }
-        function clipboard() { root.openLauncher("clipboard"); Clip.refresh(); }
+        function clipboard() {
+            if (root.view === "launcher" && root.launcherTab === "clipboard") {
+                root.closeOverlays();
+            } else {
+                root.launcherTab = "clipboard";
+                root.view = "launcher";
+                Clip.refresh();
+            }
+        }
         function screenshotRegion() {
             Quickshell.execDetached(["sh", "-c",
                 "mkdir -p \"$HOME/Pictures/Screenshots\"; f=\"$HOME/Pictures/Screenshots/$(date +%F_%H-%M-%S).png\"; " +

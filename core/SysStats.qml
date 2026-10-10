@@ -42,6 +42,14 @@ Singleton {
     property string distro: ""
     property var temps: []   // [{name, label, c}]
     property var disks: []   // [{mount, used, total}]
+    property var coreLoads: []   // загрузка по ядрам, 0..1
+    property real netRx: 0       // байт/с
+    property real netTx: 0
+
+    property var _prevCores: null
+    property double _prevNetTime: 0
+    property real _prevNetRx: 0
+    property real _prevNetTx: 0
 
     readonly property real memFrac: memTotal > 0 ? memUsed / memTotal : 0
     readonly property real diskFrac: diskTotal > 0 ? diskUsed / diskTotal : 0
@@ -127,6 +135,42 @@ Singleton {
             // у одного hwmon несколько датчиков: имя с подписью, если есть
             arr.push({ name: p[0] || "", label: p[1] || "", c: v });
             s.temps = arr;
+        } else if (line.startsWith("CORE ")) {
+            const v = line.slice(5).split(/\s+/).filter(x => x !== "").slice(0, 8).map(Number);
+            if (v.length < 8)
+                return;
+            const total = v.reduce((a, b) => a + b, 0);
+            const idle = v[3] + (v[4] || 0);
+            const idx = s.coreLoads.length;
+            const prev = s._prevCores ? s._prevCores[idx] : null;
+            let load = 0;
+            if (prev) {
+                const dt = total - prev.total;
+                const di = idle - prev.idle;
+                if (dt > 0)
+                    load = Math.max(0, Math.min(1, 1 - di / dt));
+            }
+            const arr = s.coreLoads.slice();
+            arr.push(load);
+            s.coreLoads = arr;
+            const pc = s._prevCores ? s._prevCores.slice() : [];
+            pc[idx] = { total: total, idle: idle };
+            s._prevCores = pc;
+        } else if (line.startsWith("NET ")) {
+            const p = line.split(/\s+/);
+            const rx = +p[1];
+            const tx = +p[2];
+            const now = Date.now();
+            if (s._prevNetTime > 0) {
+                const dt = (now - s._prevNetTime) / 1000;
+                if (dt > 0.5) {
+                    s.netRx = Math.max(0, (rx - s._prevNetRx) / dt);
+                    s.netTx = Math.max(0, (tx - s._prevNetTx) / dt);
+                }
+            }
+            s._prevNetTime = now;
+            s._prevNetRx = rx;
+            s._prevNetTx = tx;
         } else if (line.startsWith("UP "))
             s.uptime = +line.slice(3);
         else if (line.startsWith("HOST "))
@@ -158,7 +202,9 @@ Singleton {
             "GF=$(for f in /sys/class/drm/card[0-9]*/device/hwmon/hwmon*/fan1_input; do [ -r \"$f\" ] && cat \"$f\" && break; done); echo \"GFAN ${GF:-0}\"; " +
             "echo \"CORES $(nproc 2>/dev/null || echo 0)\"; " +
             "echo \"DISKS $(df -B1 -x tmpfs -x devtmpfs -x squashfs -x efivarfs -x overlay --output=target,size,used 2>/dev/null | tail -n +2 | grep '^/' | paste -sd'|' -)\"; " +
-            "for d in /sys/class/hwmon/hwmon*; do n=$(cat \"$d/name\" 2>/dev/null); for f in \"$d\"/temp*_input; do [ -r \"$f\" ] || continue; l=\"${f%_input}_label\"; lab=''; [ -r \"$l\" ] && lab=$(cat \"$l\" 2>/dev/null); printf 'TEMP %s|%s|%s\\n' \"$n\" \"$lab\" \"$(cat \"$f\")\"; done; done"]
+            "for d in /sys/class/hwmon/hwmon*; do n=$(cat \"$d/name\" 2>/dev/null); for f in \"$d\"/temp*_input; do [ -r \"$f\" ] || continue; l=\"${f%_input}_label\"; lab=''; [ -r \"$l\" ] && lab=$(cat \"$l\" 2>/dev/null); printf 'TEMP %s|%s|%s\\n' \"$n\" \"$lab\" \"$(cat \"$f\")\"; done; done; " +
+            "awk '/^cpu[0-9]/{print \"CORE\", $2,$3,$4,$5,$6,$7,$8,$9}' /proc/stat; " +
+            "awk 'NR>2{rx+=$2; tx+=$10} END{printf \"NET %d %d\\n\", rx, tx}' /proc/net/dev"]
         stdout: SplitParser {
             onRead: line => s._line(line)
         }
@@ -192,6 +238,9 @@ Singleton {
         repeat: true
         triggeredOnStart: true
         onTriggered: {
+            // массивные метрики собираются заново каждый тик
+            s.temps = [];
+            s.coreLoads = [];
             proc.running = false;
             proc.running = true;
         }

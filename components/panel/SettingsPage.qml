@@ -360,7 +360,7 @@ RowLayout {
                 Text { // пояснение к ползунку размытия
                     Layout.fillWidth: true
                     Layout.topMargin: Theme.dp(2)
-                    text: "Интенсивность размытия фона (радиус Umbriel; влияет и на окна). Прозрачность фиксированная; всегда есть лёгкий мороз."
+                    text: "Интенсивность размытия и глубина стекла (радиус Umbriel; влияет и на окна). 0% — плотно, 100% — густое стекло."
                     color: Theme.subtextDim
                     wrapMode: Text.WordWrap
                     font.family: Theme.textFont

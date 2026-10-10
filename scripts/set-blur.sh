@@ -6,7 +6,7 @@
 P=$(printf '%s' "${1:-}" | tr -dc 0-9)
 [ -n "$P" ] || exit 1
 [ "$P" -gt 100 ] && P=100
-R=$(( 2 + P * 12 / 100 ))
+R=$(( 3 + P * 13 / 100 ))
 CFG=$(grep -rl '^\[appearance\.blur\]' "$HOME/.config/umbriel" 2>/dev/null | head -1)
 [ -n "$CFG" ] || exit 1
 sed -i -E "/^\[appearance\.blur\]/,/^\[/{s/^radius *=.*/radius = $R/}" "$CFG"

@@ -67,9 +67,12 @@ Singleton {
     readonly property real uiScale: Math.max(0.7, Math.min(1.3, Prefs.uiScale || 1))
     readonly property real cornerScale: Math.max(0, Math.min(1.5, Prefs.cornerScale === undefined ? 1 : Prefs.cornerScale))
     readonly property real motionScale: Math.max(0.5, Math.min(1.5, Prefs.motionScale || 1))
-    // 0 = непрозрачные панели; сейчас прозрачность фиксированная — ползунок
-    // в настройках управляет радиусом размытия Umbriel (set-blur.sh)
-    readonly property real glass: 0.86
+    // Ползунок «Размытие фона» (Prefs.blurAmount 0..100) управляет и радиусом
+    // блюра (scripts/set-blur.sh), и лёгкой глубиной стекла — как в Lucid, но
+    // без «водянистости»: 0% — почти плотно (94%), 100% — стекло (66%)
+    readonly property real blurPct: Math.max(0, Math.min(100, Prefs.blurAmount)) / 100
+    readonly property real glass: 0.94 - root.blurPct * 0.28
+    readonly property real glassCard: 0.95 - root.blurPct * 0.25
     // акцент: 1 = как даёт палитра, >1 — ярче, <1 — тише
     readonly property real accentPunch: Prefs.accentPunch
     // тени поверхностей: -1 = авто по теме

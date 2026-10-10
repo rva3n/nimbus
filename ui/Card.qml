@@ -18,8 +18,8 @@ Rectangle {
     default property alias content: layout.data
 
     radius: Theme.radiusXl
-    // фиксированная лёгкая прозрачность — сквозь неё видно размытие композитора
-    color: Theme.alpha(Theme.mHigh, 0.9)
+    // глубина стекла следует за ползунком «Размытие фона» (Theme.glassCard)
+    color: Theme.alpha(Theme.mHigh, Theme.glassCard)
     border.width: 1
     border.color: Theme.a(Theme.outline, 0.25)
     implicitWidth: Theme.dp(300)

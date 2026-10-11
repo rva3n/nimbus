@@ -5,10 +5,18 @@ import Quickshell.Io
 import "../../core"
 import "../../ui"
 
-// Вкладка «Пакеты»: поиск по репозиториям Arch и AUR (paru -Ss), обновления
-// (checkupdates + paru -Qua), установка/удаление/обновление. Установка AUR и
-// обновление системы уходят в терминал (ghostty -e paru …), установка/удаление
-// из репозиториев — через pkexec pacman. Удаление подтверждается вторым Enter.
+// Вкладка «Пакеты».
+//  • Пустой запрос — список УСТАНОВЛЕННЫХ приложений (DesktopEntries ∩
+//    `pacman -Qq`) с реальными иконками; клик/Enter по строке открывает панель
+//    деталей (`pacman -Qi`: описание, зависимости, размер/сборщик/дата).
+//  • Поиск (≥2 символов) — прежний `paru -Ss`: установка репозиториев через
+//    pkexec pacman, AUR — в терминале. Enter по УСТАНОВЛЕННОМУ результату тоже
+//    открывает ту же панель деталей с кнопкой удаления.
+//  • Удаление живёт в панели деталей: первый клик — подтверждение (красный чип),
+//    второй — собственно удаление (AUR → терминал paru -Rns, репо → pkexec).
+//  • Обновления (`checkupdates` + `paru -Qua`) — компактная карточка сверху,
+//    кнопка «Обновить всё» нажимается мышью и НЕ участвует в клавиатурном выборе.
+//  • Все действия лончера вызывают closeOverlays() ПЕРВЫМ делом.
 ColumnLayout {
     id: tab
 
@@ -32,8 +40,23 @@ ColumnLayout {
     // установленные версии (ленивый `pacman -Q`) и ленивое git-URL из AUR RPC
     property var installedVersions: ({})
     property string _verName: ""
-    property var aurGitCache: ({})
+    property var aurGitCache: ({}) // pkg → homepage URL ("" — не в AUR)
     property string aurGitName: ""
+    property var aurSet: ({})      // pkg → true, если пакет есть в AUR (из RPC)
+    property bool _aurWantOpen: false
+
+    // ── список установленных приложений ──────────────────────────────
+    property var installedSet: ({}) // pkg → true (`pacman -Qq`, one-shot)
+    property var _installedAcc: ({})
+    property bool _installedLoaded: false
+    property bool _installedStarted: false
+
+    // ── детали (`pacman -Qi`) ─────────────────────────────────────────
+    property bool detailsOpen: false
+    property var qiCache: ({})     // pkg → {data: {…}, code: int}
+    property var qiData: ({})
+    property string qiName: ""
+    property string _qiField: ""
 
     readonly property bool searchMode: tab.query.trim().length >= 2
     readonly property int totalUpdates: tab.repoUpdates + tab.aurUpdates
@@ -41,13 +64,12 @@ ColumnLayout {
     readonly property var detailLines: tab.updatesList.concat(tab.aurList).slice(0, 8)
     readonly property int count: tab.searchMode
         ? tab.results.length
-        : (tab.totalUpdates > 0 ? 1 + Math.min(8, tab.updatesList.length) : 0)
+        : tab.appsList.length
 
     readonly property var selectedResult:
         (tab.sel >= 0 && tab.sel < tab.results.length) ? tab.results[tab.sel] : null
 
-    // индекс приложений: имя пакета → имя иконки темы (id без .desktop или
-    // basename команды запуска), см. паттерн в WorkspacesRow.qml
+    // пакет → иконка темы (id без .desktop или basename команды запуска)
     readonly property var appIconIndex: {
         const byPkg = {};
         for (const e of DesktopEntries.applications.values) {
@@ -58,12 +80,8 @@ ColumnLayout {
                 if (id.endsWith(".desktop")) id = id.slice(0, -8);
                 if (id) byPkg[id.toLowerCase()] = icon;
             }
-            const cmd = String(e.command || e.execString || "");
-            if (cmd) {
-                const first = cmd.trim().split(/\s+/)[0] || "";
-                const base = first.split("/").pop();
-                if (base) byPkg[base.toLowerCase()] = icon;
-            }
+            const base = tab._cmdBasename(e);
+            if (base) byPkg[base.toLowerCase()] = icon;
         }
         return byPkg;
     }
@@ -76,16 +94,115 @@ ColumnLayout {
         return Quickshell.iconPath(icon, true) || "";
     }
 
-    // подсказка по Enter для выбранной строки
+    // первый исполняемый токен команды записи (без path, без `env VAR=…`)
+    function _cmdBasename(e) {
+        let first = "";
+        if (Array.isArray(e.command) && e.command.length > 0) first = String(e.command[0]);
+        else {
+            const s = String(e.execString || e.command || "").trim();
+            first = s.split(/\s+/)[0] || "";
+        }
+        // пропускаем обёртку `env FOO=bar prog …`
+        if (first === "env") {
+            const tok = String(e.execString || "").trim().split(/\s+/);
+            for (let i = 1; i < tok.length; i++) {
+                if (tok[i].indexOf("=") === -1) { first = tok[i]; break; }
+            }
+        }
+        return first.split("/").pop();
+    }
+
+    // кандидат-пакет для .desktop: id без ".desktop", иначе basename команды.
+    // Если id не совпал с установленным — пробуем basename команды (GNOME/KDE
+    // часто именуют файл с неймспейсом, а пакет — по бинарю).
+    function _pkgForEntry(e) {
+        const inst = tab.installedSet;
+        let id = "";
+        if (e.id) {
+            id = String(e.id);
+            if (id.endsWith(".desktop")) id = id.slice(0, -8);
+        }
+        if (id !== "" && inst[id]) return id;
+        const base = tab._cmdBasename(e);
+        if (base && inst[base]) return base;
+        return "";
+    }
+
+    // установленные приложения: {pkg, name, icon}, дедуп по pkg, сорт по имени (ru)
+    readonly property var appsList: {
+        const inst = tab.installedSet;
+        const out = [];
+        const seen = {};
+        for (const e of DesktopEntries.applications.values) {
+            const pkg = tab._pkgForEntry(e);
+            if (!pkg || seen[pkg]) continue;
+            seen[pkg] = true;
+            const icon = e.icon ? (Quickshell.iconPath(String(e.icon), true) || "") : "";
+            out.push({ pkg: pkg, name: String(e.name || pkg), icon: icon });
+        }
+        out.sort((a, b) => a.name.localeCompare(b.name, "ru"));
+        return out;
+    }
+
+    // цель панели деталей: выбранное приложение (пустой запрос) или
+    // установленный результат поиска
+    readonly property var detailTarget: {
+        if (!tab.detailsOpen) return null;
+        if (tab.searchMode) {
+            const it = tab.selectedResult;
+            if (!it || !it.installed) return null;
+            return { pkg: it.name, name: it.name, icon: tab.iconForPkg(it.name), aur: !!it.aur };
+        }
+        const a = tab.appsList[tab.sel];
+        if (!a) return null;
+        return { pkg: a.pkg, name: a.name, icon: a.icon, aur: false };
+    }
+    readonly property string detailPkg: tab.detailTarget ? tab.detailTarget.pkg : ""
+    readonly property bool detailAur: {
+        if (!tab.detailTarget) return false;
+        if (tab.searchMode) return !!tab.detailTarget.aur;
+        return tab.aurSet[tab.detailTarget.pkg] === true;
+    }
+
+    // разобранный `pacman -Qi`
+    readonly property var detailInfo: {
+        if (!tab.detailTarget) return null;
+        const c = tab.qiCache[tab.detailTarget.pkg];
+        return c ? c.data : null;
+    }
+    readonly property bool detailLoading: tab.detailTarget !== null && tab.detailInfo === null
+    readonly property string dDescription: tab.detailInfo ? String(tab.detailInfo["Description"] || "") : ""
+    readonly property string dVersion: tab.detailInfo ? String(tab.detailInfo["Version"] || "") : ""
+    readonly property string dSize: tab.detailInfo ? String(tab.detailInfo["Installed Size"] || "") : ""
+    readonly property string dPackager: tab.detailInfo ? String(tab.detailInfo["Packager"] || "") : ""
+    readonly property string dDate: tab.detailInfo ? String(tab.detailInfo["Install Date"] || "") : ""
+    readonly property var dDeps: tab.detailInfo ? tab._splitList(tab.detailInfo["Depends On"]) : []
+    readonly property var dRequired: tab.detailInfo ? tab._splitList(tab.detailInfo["Required By"]) : []
+    readonly property var dOptional: tab.detailInfo ? tab._splitOptional(tab.detailInfo["Optional Deps"]) : []
+    readonly property string dMeta: [tab.dSize, tab.dPackager, tab.dDate].filter((s) => s !== "").join("  ·  ")
+
+    function _splitList(v) {
+        if (!v) return [];
+        const s = String(v).trim();
+        if (s === "" || s === "None" || s === "Нет") return [];
+        return s.split(/\s+/).filter((x) => x !== "" && x !== "None" && x !== "Нет");
+    }
+
+    function _splitOptional(v) {
+        if (!v) return [];
+        return String(v).split("\n").map((s) => s.trim())
+            .filter((s) => s !== "" && s !== "None" && s !== "Нет");
+    }
+
+    // подсказка по Enter для выбранной строки поиска
     readonly property string hintText: {
         const it = tab.selectedResult;
         if (!it) return "";
         if (!it.installed) return "Enter — установить";
-        if (tab.pending === it.name) return "Enter — подтвердить удаление";
-        return "Enter — удалить, ещё раз — подтвердить";
+        return "Enter — подробнее";
     }
 
-    // детали выбранной строки: repo · version · установлено · AUR-статистика
+    // детали выбранной строки поиска: repo · version · установлено · AUR-статистика
     readonly property string detailsText: {
         const it = tab.selectedResult;
         if (!it) return "";
@@ -103,17 +220,21 @@ ColumnLayout {
         return parts.join(" · ");
     }
 
-    implicitHeight: Theme.dp(400)
     spacing: Theme.dp(4)
 
     onSelChanged: {
         tab.pending = "";
         tab._maybeFetchInstalled();
+        if (!tab.searchMode && tab.sel >= 0 && tab.sel < appView.count)
+            appView.positionViewAtIndex(tab.sel, ListView.Contain);
     }
 
     onQueryChanged: {
         tab.pending = "";
-        if (!tab.searchMode) {
+        tab.detailsOpen = false;
+        // читаем длину напрямую: searchMode может ещё не пересчитаться на этом
+        // кадре (важно при вставке/мгновенной смене всего запроса)
+        if (tab.query.trim().length < 2) {
             searchTimer.stop();
             if (searchProc.running) searchProc.running = false;
             tab.results = [];
@@ -126,6 +247,8 @@ ColumnLayout {
     onActiveChanged: {
         if (!tab.active) return;
         tab.pending = "";
+        tab.detailsOpen = false;
+        tab.loadInstalled();
         tab.refreshUpdates();
         if (tab.searchMode) {
             searchTimer.stop();
@@ -136,13 +259,31 @@ ColumnLayout {
     }
 
     onSelectedResultChanged: tab._maybeFetchInstalled()
+    onDetailTargetChanged: tab._ensureDetails()
+
+    // Esc закрывает панель деталей и возвращает к списку (не закрывая лончер).
+    Shortcut {
+        sequence: "Escape"
+        enabled: tab.active && tab.detailsOpen
+        onActivated: tab.closeDetails()
+    }
 
     // ── действия ──────────────────────────────────────────────────────
     function runInTerminal(args) {
         Quickshell.execDetached(["ghostty", "-e"].concat(args));
     }
 
-    // ленивое получение установленной версии выбранного пакета
+    function openDetails() {
+        tab.pending = "";
+        tab.detailsOpen = true;
+    }
+
+    function closeDetails() {
+        tab.detailsOpen = false;
+        tab.pending = "";
+    }
+
+    // ленивое получение установленной версии выбранного пакета поиска
     function _maybeFetchInstalled() {
         const it = tab.selectedResult;
         if (it && it.installed && !it.installedVer)
@@ -169,6 +310,69 @@ ColumnLayout {
         tab.installedVersions = map;
     }
 
+    // ── установленные пакеты (one-shot, кэш) ──────────────────────────
+    function loadInstalled() {
+        if (tab._installedLoaded || tab._installedStarted) return;
+        tab._installedStarted = true;
+        tab._installedAcc = {};
+        listProc.running = false;
+        listProc.running = true;
+    }
+
+    function _installedLine(line) {
+        const p = String(line).trim();
+        if (p !== "") tab._installedAcc[p] = true;
+    }
+
+    function _installedExit(exitCode) {
+        tab.installedSet = tab._installedAcc;
+        tab._installedLoaded = (exitCode === 0);
+        tab._installedStarted = false;
+    }
+
+    // ── детали: ленивый `pacman -Qi` ──────────────────────────────────
+    function _ensureDetails() {
+        const t = tab.detailTarget;
+        if (!t) return;
+        tab.ensureQi(t.pkg);
+        if (!tab.searchMode && tab.aurSet[t.pkg] === undefined)
+            tab.ensureAurInfo(t.pkg, false);
+    }
+
+    function ensureQi(name) {
+        if (!name) return;
+        if (tab.qiCache[name] !== undefined) return;
+        if (tab.qiName === name && qiProc.running) return;
+        tab.qiName = name;
+        tab.qiData = {};
+        tab._qiField = "";
+        qiProc.command = ["env", "LC_ALL=C", "pacman", "-Qi", "--", name];
+        qiProc.running = false;
+        qiProc.running = true;
+    }
+
+    // поле начинается с `^[A-Z][A-Za-z ]* *:`; продолжения — с отступа
+    function _qiLine(line) {
+        const m = String(line).match(/^([A-Z][A-Za-z ]*?)\s*:\s?(.*)$/);
+        if (m) {
+            tab._qiField = m[1].trim();
+            tab.qiData[tab._qiField] = m[2];
+            return;
+        }
+        if (tab._qiField !== "" && /^\s+\S/.test(line)) {
+            tab.qiData[tab._qiField] = String(tab.qiData[tab._qiField] || "")
+                + "\n" + String(line).trim();
+        }
+    }
+
+    function _qiExit(exitCode) {
+        const name = tab.qiName;
+        if (!name) return;
+        const map = Object.assign({}, tab.qiCache);
+        map[name] = { data: tab.qiData, code: exitCode };
+        tab.qiCache = map;
+    }
+
     function openAur(name) {
         if (!name) return;
         Quickshell.execDetached(["xdg-open", "https://aur.archlinux.org/packages/" + name]);
@@ -179,35 +383,51 @@ ColumnLayout {
         Quickshell.execDetached(["xdg-open", "https://archlinux.org/packages/?q=" + name]);
     }
 
-    // ленивый AUR RPC: разрешаем homepage (Git) выбранного AUR-пакета
-    function openAurGit(name) {
+    // ленивый AUR RPC (кэш): homepage + факт наличия пакета в AUR
+    function ensureAurInfo(name, openWhenReady) {
         if (!name) return;
         const cached = tab.aurGitCache[name];
         if (cached !== undefined) {
-            if (cached) Quickshell.execDetached(["xdg-open", cached]);
+            if (openWhenReady && cached) Quickshell.execDetached(["xdg-open", cached]);
+            return;
+        }
+        if (tab.aurGitName === name && aurInfoProc.running) {
+            tab._aurWantOpen = openWhenReady;
             return;
         }
         tab.aurGitName = name;
+        tab._aurWantOpen = openWhenReady;
         aurInfoProc.command = ["curl", "-s", "--max-time", "15",
                                "https://aur.archlinux.org/rpc/v5/info?arg[]=" + name];
         aurInfoProc.running = false;
         aurInfoProc.running = true;
     }
 
+    function openAurGit(name) {
+        tab.ensureAurInfo(name, true);
+    }
+
     function _aurInfoDone(txt) {
         let url = "";
+        let aur = false;
         try {
             const j = JSON.parse(String(txt || ""));
-            if (j && j.results && j.results.length > 0 && j.results[0].URL)
-                url = String(j.results[0].URL);
+            if (j && j.results && j.results.length > 0) {
+                aur = true;
+                url = String(j.results[0].URL || "");
+            }
         } catch (e) {}
         const name = tab.aurGitName;
         if (name) {
             const map = Object.assign({}, tab.aurGitCache);
             map[name] = url;
             tab.aurGitCache = map;
+            const set = Object.assign({}, tab.aurSet);
+            set[name] = aur;
+            tab.aurSet = set;
         }
-        if (url) Quickshell.execDetached(["xdg-open", url]);
+        if (url && tab._aurWantOpen) Quickshell.execDetached(["xdg-open", url]);
+        tab._aurWantOpen = false;
     }
 
     function doSearch() {
@@ -232,13 +452,30 @@ ColumnLayout {
         aurProc.running = true;
     }
 
+    // «Обновить всё» — только по клику мышью (вне клавиатурного выбора)
+    function updateAll() {
+        if (tab.shell) tab.shell.closeOverlays();
+        tab.runInTerminal(["paru", "-Syu"]);
+    }
+
+    // удаление текущей цели деталей: первый вызов — подтверждение
+    function removeDetail() {
+        const t = tab.detailTarget;
+        if (!t) return;
+        if (tab.pending !== t.pkg) {
+            tab.pending = t.pkg;
+            return;
+        }
+        if (tab.shell) tab.shell.closeOverlays();
+        if (tab.detailAur) tab.runInTerminal(["paru", "-Rns", "--", t.pkg]);
+        else Quickshell.execDetached(["pkexec", "pacman", "-Rns", "--noconfirm", "--", t.pkg]);
+        tab.pending = "";
+    }
+
     function activate(index) {
         if (!tab.searchMode) {
-            if (index === 0 && tab.totalUpdates > 0) {
-                // сначала скрываем лончер, затем запускаем обновление
-                if (tab.shell) tab.shell.closeOverlays();
-                tab.runInTerminal(["paru", "-Syu"]);
-            }
+            const a = tab.appsList[index];
+            if (a) tab.openDetails();
             return;
         }
         const it = tab.results[index];
@@ -249,14 +486,7 @@ ColumnLayout {
             else Quickshell.execDetached(["pkexec", "pacman", "-S", "--noconfirm", "--", it.name]);
             return;
         }
-        if (tab.pending === it.name) {
-            if (tab.shell) tab.shell.closeOverlays();
-            if (it.aur) tab.runInTerminal(["paru", "-Rns", "--", it.name]);
-            else Quickshell.execDetached(["pkexec", "pacman", "-Rns", "--noconfirm", "--", it.name]);
-            tab.pending = "";
-        } else {
-            tab.pending = it.name;
-        }
+        tab.openDetails();
     }
 
     // ── разбор вывода paru -Ss ────────────────────────────────────────
@@ -353,12 +583,30 @@ ColumnLayout {
         onExited: (exitCode) => tab.aurUpdates = tab.aurList.length
     }
 
+    Process { // установленные пакеты (one-shot)
+        id: listProc
+        command: ["pacman", "-Qq"]
+        stdout: SplitParser {
+            onRead: (line) => tab._installedLine(line)
+        }
+        onExited: (exitCode) => tab._installedExit(exitCode)
+    }
+
     Process { // ленивое получения версии установленного пакета
         id: verProc
         command: ["pacman", "-Q", "--", ""]
         stdout: SplitParser {
             onRead: (line) => tab._verLine(line)
         }
+    }
+
+    Process { // ленивые детали пакета
+        id: qiProc
+        command: ["env", "LC_ALL=C", "pacman", "-Qi", "--", ""]
+        stdout: SplitParser {
+            onRead: (line) => tab._qiLine(line)
+        }
+        onExited: (exitCode) => tab._qiExit(exitCode)
     }
 
     Process { // ленивый AUR RPC: homepage пакета
@@ -377,11 +625,11 @@ ColumnLayout {
         onTriggered: tab.doSearch()
     }
 
-    // ── содержимое ────────────────────────────────────────────────────
-    Item { // режим поиска
+    // ── режим поиска ──────────────────────────────────────────────────
+    Item {
         visible: tab.searchMode
         Layout.fillWidth: true
-        Layout.preferredHeight: Theme.dp(320)
+        Layout.preferredHeight: tab.detailsOpen ? Theme.dp(150) : Theme.dp(300)
 
         ListView {
             id: resultView
@@ -407,7 +655,7 @@ ColumnLayout {
                 height: Theme.dp(40)
 
                 Rectangle {
-                    id: row
+                    id: searchRow
 
                     anchors.fill: parent
                     radius: Theme.radiusMd
@@ -435,7 +683,7 @@ ColumnLayout {
                         anchors.rightMargin: Theme.dp(8)
                         spacing: Theme.dp(8)
 
-                        // иконка приложения (установленные с резолвом) или глиф пакета
+                        // иконка приложения (установленные) или глиф пакета
                         Item {
                             Layout.alignment: Qt.AlignVCenter
                             implicitWidth: Theme.dp(28)
@@ -521,11 +769,11 @@ ColumnLayout {
         }
     }
 
-    // ── подвал выбранной строки: детали + ссылки ──────────────────────
+    // ── подвал выбранной строки поиска (когда детали закрыты) ─────────
     ColumnLayout {
-        id: footer
+        id: searchFooter
 
-        visible: tab.searchMode && tab.selectedResult !== null
+        visible: tab.searchMode && !tab.detailsOpen && tab.selectedResult !== null
         Layout.fillWidth: true
         Layout.leftMargin: Theme.dp(8)
         Layout.rightMargin: Theme.dp(8)
@@ -549,14 +797,11 @@ ColumnLayout {
                 id: hint
                 Layout.fillWidth: true
                 text: tab.hintText
-                color: hint.pendingHint ? Theme.error : Theme.subtextDim
+                color: Theme.subtextDim
                 elide: Text.ElideRight
                 font.family: Theme.textFont
                 font.pixelSize: Theme.typeSize("labelSmall")
                 font.weight: Theme.typeWeight("labelSmall")
-
-                readonly property bool pendingHint: tab.selectedResult !== null
-                    && tab.pending === tab.selectedResult.name
             }
 
             Chip {
@@ -580,53 +825,227 @@ ColumnLayout {
         }
     }
 
-    ColumnLayout { // режим обновлений
+    // ── режим по умолчанию: обновления + установленные приложения ─────
+    ColumnLayout {
+        id: defaultView
+
         visible: !tab.searchMode
         Layout.fillWidth: true
-        Layout.topMargin: Theme.dp(4)
         spacing: Theme.dp(6)
 
+        // компактная карточка обновлений
+        ColumnLayout {
+            visible: !tab.searchMode
+            Layout.fillWidth: true
+            Layout.topMargin: Theme.dp(4)
+            spacing: Theme.dp(6)
+
+            Text {
+                Layout.fillWidth: true
+                Layout.leftMargin: Theme.dp(8)
+                text: tab.totalUpdates > 0
+                    ? "Обновления: " + tab.totalUpdates + " (репо " + tab.repoUpdates + ", AUR " + tab.aurUpdates + ")"
+                    : "Всё актуально 🎉"
+                color: tab.totalUpdates > 0 ? Theme.text : Theme.subtext
+                font.family: Theme.textFont
+                font.pixelSize: Theme.typeSize("bodyLarge")
+                font.weight: Font.DemiBold
+            }
+
+            // «Обновить всё» — кнопка (мышь), не входит в клавиатурный выбор
+            Chip {
+                visible: tab.totalUpdates > 0
+                Layout.alignment: Qt.AlignLeft
+                Layout.leftMargin: Theme.dp(8)
+                label: "Обновить всё в терминале"
+                icon: "system_update_alt"
+                onClicked: tab.updateAll()
+            }
+
+            Column { // строки обновлений (невыделяемые)
+                Layout.fillWidth: true
+                spacing: Theme.dp(2)
+
+                Repeater {
+                    model: tab.detailLines
+
+                    delegate: Text {
+                        required property var modelData
+
+                        width: parent.width
+                        leftPadding: Theme.dp(8)
+                        text: modelData
+                        color: Theme.subtextDim
+                        elide: Text.ElideRight
+                        font.family: Theme.textFont
+                        font.pixelSize: Theme.typeSize("bodySmall")
+                        font.weight: Theme.typeWeight("bodySmall")
+                    }
+                }
+            }
+        }
+
+        // заголовок секции
         Text {
             Layout.fillWidth: true
             Layout.leftMargin: Theme.dp(8)
-            text: tab.totalUpdates > 0
-                ? "Обновления: " + tab.totalUpdates + " (репо " + tab.repoUpdates + ", AUR " + tab.aurUpdates + ")"
-                : "Всё актуально 🎉"
-            color: tab.totalUpdates > 0 ? Theme.text : Theme.subtext
+            Layout.topMargin: Theme.dp(6)
+            text: "Приложения (" + tab.appsList.length + ")"
+            color: Theme.subtext
             font.family: Theme.textFont
-            font.pixelSize: Theme.typeSize("bodyLarge")
-            font.weight: Font.DemiBold
+            font.pixelSize: Theme.typeSize("labelLarge")
+            font.weight: Theme.typeWeight("labelLarge")
+            elide: Text.ElideRight
         }
 
-        Item { // строка действия «Обновить всё в терминале»
-            visible: tab.totalUpdates > 0
+        ListView { // установленные приложения
+            id: appView
+
+            visible: !tab.searchMode
             Layout.fillWidth: true
-            implicitHeight: Theme.dp(40)
+            Layout.preferredHeight: Theme.dp(260)
+            model: tab.appsList
+            clip: true
+            spacing: Theme.dp(4)
+            boundsBehavior: Flickable.StopAtBounds
 
-            Rectangle {
-                anchors.fill: parent
-                radius: Theme.radiusMd
-                color: tab.sel === 0 ? Theme.accentContainer
-                     : (actMouse.containsMouse ? Theme.bgHover : "transparent")
+            delegate: Item {
+                id: appRow
 
-                Behavior on color {
-                    ColorAnimation { duration: Theme.durQuick }
+                required property var modelData
+                required property int index
+
+                readonly property bool hasIcon: appRow.modelData.icon !== ""
+
+                width: appView.width
+                height: Theme.dp(40)
+
+                Rectangle {
+                    anchors.fill: parent
+                    radius: Theme.radiusMd
+                    color: appRow.index === tab.sel ? Theme.accentContainer
+                         : (appMouse.containsMouse ? Theme.bgHover : "transparent")
+
+                    Behavior on color {
+                        ColorAnimation { duration: Theme.durQuick }
+                    }
+
+                    MouseArea {
+                        id: appMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onEntered: tab.hovered(appRow.index)
+                        onClicked: tab.activate(appRow.index)
+                    }
+
+                    RowLayout {
+                        anchors.fill: parent
+                        anchors.leftMargin: Theme.dp(8)
+                        anchors.rightMargin: Theme.dp(8)
+                        spacing: Theme.dp(8)
+
+                        Item {
+                            Layout.alignment: Qt.AlignVCenter
+                            implicitWidth: Theme.dp(28)
+                            implicitHeight: Theme.dp(28)
+
+                            AppIcon {
+                                anchors.centerIn: parent
+                                visible: appRow.hasIcon
+                                source: appRow.modelData.icon
+                                size: 26
+                            }
+
+                            Icon { // фолбэк-глиф для неразрешённых иконок
+                                anchors.centerIn: parent
+                                visible: !appRow.hasIcon
+                                name: "inventory_2"
+                                size: Theme.dp(16)
+                                color: appRow.index === tab.sel ? Theme.fgAccentContainer : Theme.subtext
+                            }
+                        }
+
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            Layout.alignment: Qt.AlignVCenter
+                            spacing: 0
+
+                            Text {
+                                Layout.fillWidth: true
+                                text: appRow.modelData.name
+                                color: appRow.index === tab.sel ? Theme.fgAccentContainer : Theme.text
+                                font.family: Theme.textFont
+                                font.pixelSize: Theme.typeSize("bodyLarge")
+                                font.weight: Font.DemiBold
+                                elide: Text.ElideRight
+                            }
+                            Text {
+                                Layout.fillWidth: true
+                                text: appRow.modelData.pkg
+                                color: appRow.index === tab.sel ? Theme.fgAccentContainer : Theme.subtext
+                                opacity: appRow.index === tab.sel ? 0.75 : 1
+                                font.family: Theme.textFont
+                                font.pixelSize: Theme.typeSize("bodySmall")
+                                font.weight: Theme.typeWeight("bodySmall")
+                                elide: Text.ElideRight
+                            }
+                        }
+
+                        Icon { // подсказка «подробнее»
+                            Layout.alignment: Qt.AlignVCenter
+                            name: "chevron_right"
+                            size: Theme.dp(18)
+                            color: appRow.index === tab.sel ? Theme.fgAccentContainer : Theme.subtextDim
+                        }
+                    }
                 }
             }
 
-            MouseArea {
-                id: actMouse
-                anchors.fill: parent
-                hoverEnabled: true
-                cursorShape: Qt.PointingHandCursor
-                onEntered: tab.hovered(0)
-                onClicked: tab.activate(0)
+            Text { // пусто / ещё грузится
+                anchors.centerIn: parent
+                visible: appView.count === 0
+                text: tab._installedLoaded ? "Нет установленных приложений" : "Загрузка…"
+                color: Theme.subtext
+                font.family: Theme.textFont
+                font.pixelSize: Theme.typeSize("bodyMedium")
+                font.weight: Theme.typeWeight("bodyMedium")
             }
+        }
+    }
 
-            RowLayout {
-                anchors.fill: parent
-                anchors.leftMargin: Theme.dp(8)
-                anchors.rightMargin: Theme.dp(8)
+    // ── панель деталей ────────────────────────────────────────────────
+    Item {
+        id: detailsPanel
+
+        visible: tab.detailsOpen && tab.detailTarget !== null
+        Layout.fillWidth: true
+        Layout.preferredHeight: Theme.dp(164)
+
+        ColumnLayout {
+            anchors.fill: parent
+            spacing: Theme.dp(4)
+
+            Flickable {
+                id: detailsFlick
+
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                contentWidth: width
+                contentHeight: detailsCol.implicitHeight
+                clip: true
+                boundsBehavior: Flickable.StopAtBounds
+                flickableDirection: Flickable.VerticalFlick
+
+                ColumnLayout {
+                    id: detailsCol
+
+                    width: detailsFlick.width
+                    spacing: Theme.dp(4)
+
+            RowLayout { // заголовок: иконка + имя + версия/источник
+                Layout.fillWidth: true
+                Layout.leftMargin: Theme.dp(4)
                 spacing: Theme.dp(8)
 
                 Item {
@@ -634,45 +1053,190 @@ ColumnLayout {
                     implicitWidth: Theme.dp(24)
                     implicitHeight: Theme.dp(24)
 
+                    AppIcon {
+                        anchors.centerIn: parent
+                        visible: tab.detailTarget !== null && tab.detailTarget.icon !== ""
+                        source: tab.detailTarget ? tab.detailTarget.icon : ""
+                        size: 22
+                    }
                     Icon {
                         anchors.centerIn: parent
-                        name: "system_update_alt"
+                        visible: tab.detailTarget === null || tab.detailTarget.icon === ""
+                        name: "inventory_2"
                         size: Theme.dp(16)
-                        color: tab.sel === 0 ? Theme.fgAccentContainer : Theme.subtext
+                        color: Theme.subtext
                     }
                 }
 
                 Text {
                     Layout.fillWidth: true
-                    Layout.alignment: Qt.AlignVCenter
-                    text: "Обновить всё в терминале"
-                    color: tab.sel === 0 ? Theme.fgAccentContainer : Theme.text
+                    text: (tab.detailTarget ? tab.detailTarget.name : "")
+                          + (tab.dVersion !== "" ? "  " + tab.dVersion : "")
+                    color: Theme.text
                     font.family: Theme.textFont
                     font.pixelSize: Theme.typeSize("bodyLarge")
-                    font.weight: Theme.typeWeight("bodyLarge")
+                    font.weight: Font.DemiBold
                     elide: Text.ElideRight
                 }
             }
-        }
 
-        Column { // строки обновлений (невыделяемые)
-            Layout.fillWidth: true
-            spacing: Theme.dp(2)
+            Text { // описание (перенос)
+                Layout.fillWidth: true
+                Layout.leftMargin: Theme.dp(4)
+                visible: tab.dDescription !== ""
+                text: tab.dDescription
+                color: Theme.text
+                wrapMode: Text.WordWrap
+                font.family: Theme.textFont
+                font.pixelSize: Theme.typeSize("bodySmall")
+                font.weight: Theme.typeWeight("bodySmall")
+            }
 
-            Repeater {
-                model: tab.detailLines
+            Text { // зависимости
+                Layout.fillWidth: true
+                Layout.leftMargin: Theme.dp(4)
+                visible: tab.dDeps.length > 0
+                text: "<font color=\"" + Theme.subtextDim + "\">Зависит от (" + tab.dDeps.length + "):</font> "
+                      + tab.dDeps.join("  ")
+                textFormat: Text.StyledText
+                color: Theme.subtext
+                wrapMode: Text.WordWrap
+                font.family: Theme.textFont
+                font.pixelSize: Theme.typeSize("bodySmall")
+                font.weight: Theme.typeWeight("bodySmall")
+            }
 
-                delegate: Text {
-                    required property var modelData
+            Text { // обратные зависимости
+                Layout.fillWidth: true
+                Layout.leftMargin: Theme.dp(4)
+                visible: tab.dRequired.length > 0
+                text: "<font color=\"" + Theme.subtextDim + "\">Требуется для (" + tab.dRequired.length + "):</font> "
+                      + tab.dRequired.join("  ")
+                textFormat: Text.StyledText
+                color: Theme.subtext
+                wrapMode: Text.WordWrap
+                font.family: Theme.textFont
+                font.pixelSize: Theme.typeSize("bodySmall")
+                font.weight: Theme.typeWeight("bodySmall")
+            }
 
-                    width: parent.width
-                    leftPadding: Theme.dp(8)
-                    text: modelData
-                    color: Theme.subtextDim
-                    elide: Text.ElideRight
-                    font.family: Theme.textFont
-                    font.pixelSize: Theme.typeSize("bodySmall")
-                    font.weight: Theme.typeWeight("bodySmall")
+            Text { // опциональные зависимости
+                Layout.fillWidth: true
+                Layout.leftMargin: Theme.dp(4)
+                visible: tab.dOptional.length > 0
+                text: "<font color=\"" + Theme.subtextDim + "\">Опционально:</font> "
+                      + tab.dOptional.join("; ")
+                textFormat: Text.StyledText
+                color: Theme.subtext
+                wrapMode: Text.WordWrap
+                font.family: Theme.textFont
+                font.pixelSize: Theme.typeSize("bodySmall")
+                font.weight: Theme.typeWeight("bodySmall")
+            }
+
+            Text { // размер · сборщик · дата установки
+                Layout.fillWidth: true
+                Layout.leftMargin: Theme.dp(4)
+                visible: tab.dMeta !== ""
+                text: tab.dMeta
+                color: Theme.subtextDim
+                wrapMode: Text.WordWrap
+                font.family: Theme.textFont
+                font.pixelSize: Theme.typeSize("labelSmall")
+                font.weight: Theme.typeWeight("labelSmall")
+            }
+
+                    Text { // состояние загрузки
+                        Layout.fillWidth: true
+                        Layout.leftMargin: Theme.dp(4)
+                        visible: tab.detailLoading
+                        text: "Загрузка сведений…"
+                        color: Theme.subtextDim
+                        font.family: Theme.textFont
+                        font.pixelSize: Theme.typeSize("labelSmall")
+                        font.weight: Theme.typeWeight("labelSmall")
+                    }
+                }
+            }
+
+            RowLayout { // ссылки + удаление
+                Layout.fillWidth: true
+                Layout.leftMargin: Theme.dp(4)
+                Layout.topMargin: Theme.dp(4)
+                spacing: Theme.dp(6)
+
+                Chip {
+                    visible: tab.detailAur
+                    label: "AUR"
+                    icon: "open_in_new"
+                    onClicked: if (tab.detailTarget) tab.openAur(tab.detailTarget.pkg)
+                }
+                Chip {
+                    visible: tab.detailAur
+                    label: "Git"
+                    icon: "link"
+                    onClicked: if (tab.detailTarget) tab.openAurGit(tab.detailTarget.pkg)
+                }
+                Chip {
+                    visible: !tab.detailAur
+                    label: "archlinux.org"
+                    icon: "open_in_new"
+                    onClicked: if (tab.detailTarget) tab.openArch(tab.detailTarget.pkg)
+                }
+
+                Item { Layout.fillWidth: true }
+
+                // «Удалить» → первый клик — подтверждение (красный чип), второй — удаление
+                Rectangle {
+                    id: deleteChip
+
+                    Layout.alignment: Qt.AlignVCenter
+                    readonly property bool danger: tab.detailTarget !== null
+                        && tab.pending === tab.detailTarget.pkg
+                    implicitWidth: deleteRow.implicitWidth + Theme.dp(24)
+                    implicitHeight: Theme.dp(30)
+                    radius: Theme.pill(height)
+                    color: deleteChip.danger ? Theme.errorContainer : "transparent"
+                    border.width: deleteChip.danger ? 0 : 1
+                    border.color: Theme.divider
+
+                    Rectangle { // hover/нажатие — state layer
+                        anchors.fill: parent
+                        radius: parent.radius
+                        color: deleteChip.danger ? Theme.fgErrorContainer : Theme.text
+                        opacity: deleteMouse.containsMouse
+                            ? (deleteMouse.pressed ? Theme.statePressed : Theme.stateHover) : 0
+                    }
+
+                    Row {
+                        id: deleteRow
+                        anchors.centerIn: parent
+                        spacing: Theme.dp(6)
+
+                        Icon {
+                            anchors.verticalCenter: parent.verticalCenter
+                            name: "delete"
+                            size: Theme.dp(16)
+                            color: deleteChip.danger ? Theme.fgErrorContainer : Theme.subtext
+                        }
+                        Text {
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: deleteChip.danger ? "Подтвердить удаление?" : "Удалить"
+                            color: deleteChip.danger ? Theme.fgErrorContainer : Theme.subtext
+                            font.family: Theme.textFont
+                            font.pixelSize: Theme.fs(11)
+                            font.weight: Theme.typeWeight("labelMedium")
+                        }
+                    }
+
+                    MouseArea {
+                        id: deleteMouse
+                        anchors.fill: parent
+                        anchors.margins: -Theme.dp(4)
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: tab.removeDetail()
+                    }
                 }
             }
         }

@@ -4,97 +4,71 @@ import "../../core"
 import "../../ui"
 import ".."
 
-// Bluetooth: карточка-переключатель радио и карточка найденных устройств.
+// Bluetooth в анатомии Lucid: карточка-переключатель радио (ToggleRow) и
+// карточка найденных устройств на DeviceRow (групповые углы) с пустым
+// состоянием. Логика прежняя: toggleBt/startBtScan.
 ColumnLayout {
     id: btPage
     property var win: null
     visible: win !== null && win.mode === "panel" && win.page === "bluetooth"
-    Layout.fillWidth: true; spacing: 10
+    Layout.fillWidth: true
+    spacing: Theme.dp(12)
 
     // переключатель модуля
     Card {
         Layout.fillWidth: true
-        pad: Theme.dp(6)
+        pad: Theme.dp(4)
 
         ToggleRow {
             Layout.fillWidth: true
             icon: "bluetooth"
-            label: "Bluetooth"; sub: Sys.btEnabled ? "включён" : "выключен"
+            label: "Bluetooth"
+            sub: Sys.btEnabled ? "Включён" : "Выключен"
             active: Sys.btEnabled
-            onToggled: { Sys.toggleBt(); if (!Sys.btEnabled) Sys.refreshBt(); }
+            onToggled: (v) => { Sys.toggleBt(); if (!v) Sys.refreshBt(); }
         }
     }
 
-    // устройства: заголовок секции и сканирование — в шапке Card
+    // устройства
     Card {
         Layout.fillWidth: true
         title: "Устройства"
         actionIcon: "refresh"
         onActionClicked: Sys.startBtScan()
 
-        ListView {
-            Layout.fillWidth: true; Layout.preferredHeight: 260
-            model: Sys.btDevices
-            clip: true; spacing: Theme.dp(4)
-
-            delegate: Rectangle {
-                id: btRow
-                required property var modelData
-                required property int index
-                width: ListView.view.width; height: Theme.dp(56)
-                radius: Theme.radiusMd
-                color: btMouse.containsMouse ? Theme.bgHover : "transparent"
-                Behavior on color { ColorAnimation { duration: Theme.durDefaultEffects } }
-
-                RowLayout {
-                    anchors.fill: parent
-                    anchors.leftMargin: Theme.dp(8); anchors.rightMargin: Theme.dp(8)
-                    spacing: Theme.dp(8)
-
-                    Rectangle { // ведущая иконка 40×40
-                        implicitWidth: Theme.dp(40); implicitHeight: Theme.dp(40)
-                        radius: Theme.radiusMd
-                        color: Theme.bgTrack
-
-                        Icon {
-                            anchors.centerIn: parent
-                            name: "bluetooth"; size: Theme.dp(20)
-                            color: Theme.subtext
-                        }
-                    }
-                    ColumnLayout {
-                        Layout.fillWidth: true
-                        spacing: 0
-                        Text {
-                            Layout.fillWidth: true; elide: Text.ElideRight
-                            font.family: Theme.textFont; font.pixelSize: Theme.typeSize("bodyLarge")
-                            font.weight: Theme.typeWeight("bodyLarge"); color: Theme.text
-                            text: btRow.modelData.name
-                        }
-                        Text {
-                            Layout.fillWidth: true; elide: Text.ElideRight
-                            font.family: Theme.textFont; font.pixelSize: Theme.typeSize("bodySmall")
-                            font.weight: Theme.typeWeight("bodySmall"); color: Theme.subtext
-                            text: btRow.modelData.mac
-                        }
-                    }
-                }
-
-                MouseArea {
-                    id: btMouse
-                    anchors.fill: parent; hoverEnabled: true
-                }
-            }
+        LText { // пустое состояние
+            Layout.fillWidth: true
+            Layout.topMargin: Theme.dp(4)
+            Layout.bottomMargin: Theme.dp(4)
+            visible: Sys.btDevices.length === 0
+            role: "bodySmall"
+            color: Theme.subtext
+            text: Sys.btEnabled ? "Устройств не найдено" : "Bluetooth выключен"
         }
 
-        Text {
-            visible: Sys.btDevices.length === 0
-            Layout.fillWidth: true
-            Layout.leftMargin: Theme.dp(8)
-            Layout.bottomMargin: Theme.dp(4)
-            font.family: Theme.textFont; font.pixelSize: Theme.typeSize("bodySmall")
-            font.weight: Theme.typeWeight("bodySmall"); color: Theme.subtext
-            text: "Устройств не найдено"
+        Repeater {
+            model: Sys.btDevices
+
+            delegate: ColumnLayout {
+                id: btWrap
+                required property var modelData
+                required property int index
+                Layout.fillWidth: true
+                spacing: 0
+
+                readonly property int count: Sys.btDevices.length
+                readonly property string pos: btWrap.count <= 1 ? "single"
+                    : (btWrap.index === 0 ? "top"
+                    : (btWrap.index === btWrap.count - 1 ? "bottom" : "middle"))
+
+                DeviceRow {
+                    Layout.fillWidth: true
+                    icon: "bluetooth"
+                    devName: btWrap.modelData.name
+                    sub: btWrap.modelData.mac
+                    position: btWrap.pos
+                }
+            }
         }
     }
 }

@@ -3,9 +3,10 @@ import QtQuick.Layouts
 import "../core"
 import "../ui"
 
-// M3 list item (строка внутри Card): прозрачная, hover — bgHover,
-// нажатие — bgActive. Ведущая иконка 40×40 в контейнере; danger —
-// error-тон контейнера и иконки («Выключение»).
+// Lucid-строка сессии (питание): высота 56dp, ведущая иконка 40dp,
+// заголовок bodyLarge и шеврон справа. danger-вариант залит errorContainer,
+// текст/иконки — error-тоном («Выключение»). Строка живёт внутри ui/Card;
+// ховер и нажатие рисует StateLayer.
 Item {
     id: pr
 
@@ -21,8 +22,8 @@ Item {
         id: bg
 
         anchors.fill: parent
-        radius: Theme.radiusLg
-        color: prArea.pressed ? Theme.bgActive : (prArea.containsMouse ? Theme.bgHover : "transparent")
+        radius: Theme.rad(16)
+        color: pr.danger ? Theme.errorContainer : "transparent"
 
         Behavior on color {
             ColorAnimation {
@@ -31,52 +32,53 @@ Item {
         }
     }
 
+    StateLayer {
+        radius: bg.radius
+        tint: pr.danger ? Theme.error : Theme.text
+        onClicked: pr.clicked()
+    }
+
     RowLayout {
         anchors.fill: parent
         anchors.leftMargin: Theme.dp(8)
         anchors.rightMargin: Theme.dp(16)
         spacing: Theme.dp(12)
 
-        Rectangle { // контейнер иконки
+        Rectangle { // контейнер иконки 40×40
             Layout.alignment: Qt.AlignVCenter
             implicitWidth: Theme.dp(40)
             implicitHeight: Theme.dp(40)
             radius: Theme.radiusPill
-            color: pr.danger ? Theme.errorContainer : Theme.bgTrack
+            color: pr.danger ? Theme.alpha(Theme.fgErrorContainer, 0.12) : Theme.bgTrack
+
+            Behavior on color {
+                ColorAnimation {
+                    duration: Theme.durDefaultEffects
+                }
+            }
 
             Icon {
                 anchors.centerIn: parent
                 name: pr.icon
-                size: Theme.dp(20)
+                size: Theme.dp(22)
                 color: pr.danger ? Theme.fgErrorContainer : Theme.subtext
             }
         }
 
-        Text {
+        LText {
             Layout.fillWidth: true
             Layout.alignment: Qt.AlignVCenter
-            text: pr.label
-            color: Theme.text
+            role: "bodyLarge"
+            color: pr.danger ? Theme.fgErrorContainer : Theme.text
             elide: Text.ElideRight
-            font.family: Theme.textFont
-            font.pixelSize: Theme.typeSize("bodyLarge")
-            font.weight: Theme.typeWeight("bodyLarge")
+            text: pr.label
         }
 
         Icon {
             Layout.alignment: Qt.AlignVCenter
             name: "chevron_right"
             size: Theme.dp(20)
-            color: Theme.subtextDim
+            color: pr.danger ? Theme.fgErrorContainer : Theme.subtextDim
         }
-    }
-
-    MouseArea {
-        id: prArea
-
-        anchors.fill: parent
-        hoverEnabled: true
-        cursorShape: Qt.PointingCursor
-        onClicked: pr.clicked()
     }
 }

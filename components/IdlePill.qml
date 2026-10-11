@@ -1,4 +1,5 @@
 import QtQuick
+import Quickshell
 import "../core"
 import "../ui"
 
@@ -21,54 +22,78 @@ Item {
                   : mode === "osd" ? Theme.dp(34)
                   : Theme.dp(28)
 
-    // ── idle: раскладка + погода + воркспейсы + часы ──────────────────
+    // ── idle: раскладка + погода + воркспейсы + часы + трей ────────────
+    // Чипы — Lucid-пилюли: без обводок, заливка ролью (bgTile/accent),
+    // взаимодействие — StateLayer. Высота 24 внутри 28-полосы idle.
     Row {
         id: idleRow
         visible: holder.mode === "idle"
         anchors.centerIn: parent
-        spacing: Theme.dp(12)
+        spacing: Theme.dp(6)
 
-        Rectangle { // чип раскладки клавиатуры
+        // раскладка клавиатуры: компактный кликабельный чип (bgTile)
+        Item {
             id: layoutChip
             visible: Umbriel.keyboardLayout !== "" && Prefs.islandLayout
             anchors.verticalCenter: parent.verticalCenter
-            implicitWidth: layoutText.implicitWidth + Theme.dp(16)
-            implicitHeight: Theme.dp(22)
-            radius: Theme.radiusPill
-            color: Theme.alpha(Theme.accentContainer, 0.5)
-
-            Text {
-                id: layoutText
-                anchors.centerIn: parent
-                font.family: Theme.textFont
-                font.pixelSize: Theme.typeSize("labelMedium")
-                font.weight: Theme.typeWeight("labelMedium")
-                font.capitalization: Font.AllUppercase
-                color: Theme.fgAccentContainer
-                text: Umbriel.keyboardLayout
-            }
-        }
-
-        Rectangle { // чип погоды: клик → вкладка «погода»
-            id: weatherChip
-            visible: Weather.hasData && isFinite(Weather.temp) && Prefs.islandWeather
-            anchors.verticalCenter: parent.verticalCenter
-            implicitWidth: weatherRow.implicitWidth + Theme.dp(16)
-            implicitHeight: Theme.dp(22)
-            radius: Theme.radiusPill
-            // фон accentContainer + state layer композитом (Theme.layer), мягкая альфа
-            color: Theme.alpha(Theme.layer(Theme.accentContainer, Theme.fgAccentContainer,
-                               weatherArea.pressed ? Theme.statePressed
-                                                   : (weatherArea.containsMouse ? Theme.stateHover : 0)), 0.5)
-            scale: weatherArea.pressed ? 0.97 : 1
-
-            Behavior on color { ColorAnimation { duration: Theme.ms(120) } }
+            implicitWidth: layoutText.implicitWidth + Theme.dp(18)
+            implicitHeight: Theme.dp(24)
+            scale: layoutArea.pressed ? 0.96 : 1
 
             Behavior on scale {
                 NumberAnimation {
-                    duration: Theme.ms(120)
+                    duration: Theme.durFastEffects
                     easing.type: Easing.Bezier
-                    easing.bezierCurve: Theme.curveEffects
+                    easing.bezierCurve: Theme.curveFastSpatial
+                }
+            }
+
+            Rectangle {
+                anchors.fill: parent
+                radius: Theme.radiusPill
+                color: Theme.bgTile
+                StateLayer {
+                    id: layoutArea
+                    radius: parent.radius
+                    onClicked: Quickshell.execDetached(["umbriel", "msg", "keyboard-layout-next"])
+                }
+            }
+
+            LText {
+                id: layoutText
+                anchors.centerIn: parent
+                role: "labelMedium"
+                color: Theme.subtext
+                text: Umbriel.keyboardLayout
+                font.capitalization: Font.AllUppercase
+            }
+        }
+
+        // погода: чип icon + temp (bgTile), клик → вкладка «погода»
+        Item {
+            id: weatherChip
+            visible: Weather.hasData && isFinite(Weather.temp) && Prefs.islandWeather
+            anchors.verticalCenter: parent.verticalCenter
+            implicitWidth: weatherRow.implicitWidth + Theme.dp(18)
+            implicitHeight: Theme.dp(24)
+            scale: weatherArea.pressed ? 0.96 : 1
+
+            Behavior on scale {
+                NumberAnimation {
+                    duration: Theme.durFastEffects
+                    easing.type: Easing.Bezier
+                    easing.bezierCurve: Theme.curveFastSpatial
+                }
+            }
+
+            Rectangle {
+                anchors.fill: parent
+                radius: Theme.radiusPill
+                color: Theme.bgTile
+                StateLayer {
+                    id: weatherArea
+                    radius: parent.radius
+                    onClicked: if (holder.shell) holder.shell.setTab("weather")
                 }
             }
 
@@ -80,27 +105,17 @@ Item {
                 Icon {
                     anchors.verticalCenter: parent.verticalCenter
                     name: Weather.icon
-                    size: Theme.dp(13)
-                    color: Theme.fgAccentContainer
+                    size: Theme.dp(14)
+                    color: Theme.primary
                 }
 
-                Text {
+                LText {
                     anchors.verticalCenter: parent.verticalCenter
-                    font.family: Theme.textFont
-                    font.pixelSize: Theme.typeSize("titleSmall")
-                    font.weight: Theme.typeWeight("titleSmall")
-                    font.features: ({ "tnum": 1 })  // цифры одной ширины
-                    color: Theme.fgAccentContainer
+                    role: "labelLarge"
+                    tabular: true
+                    color: Theme.text
                     text: Math.round(Weather.temp) + "°"
                 }
-            }
-
-            MouseArea {
-                id: weatherArea
-                anchors.fill: parent
-                hoverEnabled: true
-                cursorShape: Qt.PointingHandCursor
-                onClicked: if (holder.shell) holder.shell.setTab("weather")
             }
         }
 
@@ -111,46 +126,45 @@ Item {
             visible: Prefs.islandWorkspaces
         }
 
-        Rectangle { // чип часов с секундами: клик → вкладка «управление»
+        // часы: залитый акцентный чип (Lucid clock pill), табличные цифры
+        Item {
             id: clockChip
             visible: Prefs.islandClock
             anchors.verticalCenter: parent.verticalCenter
-            implicitWidth: clockText.implicitWidth + Theme.dp(16)
-            implicitHeight: Theme.dp(22)
-            radius: Theme.radiusPill
-            // фон accentContainer + state layer композитом (Theme.layer), мягкая альфа
-            color: Theme.alpha(Theme.layer(Theme.accentContainer, Theme.fgAccentContainer,
-                               clockArea.pressed ? Theme.statePressed
-                                                 : (clockArea.containsMouse ? Theme.stateHover : 0)), 0.5)
-            scale: clockArea.pressed ? 0.97 : 1
-
-            Behavior on color { ColorAnimation { duration: Theme.ms(120) } }
+            implicitWidth: clockText.implicitWidth + Theme.dp(20)
+            implicitHeight: Theme.dp(24)
+            scale: clockArea.pressed ? 0.96 : 1
 
             Behavior on scale {
                 NumberAnimation {
-                    duration: Theme.ms(120)
+                    duration: Theme.durFastEffects
                     easing.type: Easing.Bezier
-                    easing.bezierCurve: Theme.curveEffects
+                    easing.bezierCurve: Theme.curveFastSpatial
                 }
             }
 
-            Text {
-                id: clockText
-                anchors.centerIn: parent
-                font.family: Theme.textFont
-                font.pixelSize: Theme.typeSize("titleSmall")
-                font.weight: Theme.typeWeight("titleSmall")
-                font.features: ({ "tnum": 1 })  // табличные цифры: ширина не дёргается каждую секунду
-                color: Theme.fgAccentContainer
-                text: Qt.formatDateTime(holder.now, Prefs.clockSeconds ? "HH:mm:ss" : "HH:mm")
+            Rectangle {
+                anchors.fill: parent
+                radius: Theme.radiusPill
+                color: Theme.primary
+                StateLayer {
+                    id: clockArea
+                    radius: parent.radius
+                    tint: Theme.fgAccent
+                    onClicked: if (holder.shell) holder.shell.setTab("calendar")
+                }
             }
 
-            MouseArea {
-                id: clockArea
-                anchors.fill: parent
-                hoverEnabled: true
-                cursorShape: Qt.PointingHandCursor
-                onClicked: if (holder.shell) holder.shell.setTab("calendar")
+            LText {
+                id: clockText
+                anchors.centerIn: parent
+                anchors.verticalCenterOffset: Math.round(Theme.digitCenterOffset * size)
+                role: "labelLarge"
+                weight: 700
+                rounded: 100
+                tabular: true
+                color: Theme.fgAccent
+                text: Qt.formatDateTime(holder.now, Prefs.clockSeconds ? "HH:mm:ss" : "HH:mm")
             }
         }
 

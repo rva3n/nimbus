@@ -121,55 +121,6 @@ PanelWindow {
         return u;
     }
 
-    // Круглая ghost-кнопка-иконка панели, как в yoru: приглушённый круг
-    // Theme.alpha(mHigh, 0.10) и белая иконка 18.
-    component GhostButton: Item {
-        id: gb
-
-        property string icon: ""
-
-        signal clicked()
-
-        implicitWidth: Theme.dp(36)
-        implicitHeight: Theme.dp(36)
-
-        Rectangle {
-            anchors.fill: parent
-            radius: width / 2
-            color: Theme.alpha(Theme.mHigh, 0.10)
-
-            Rectangle { // state layer
-                anchors.fill: parent
-                radius: parent.radius
-                color: Theme.text
-                opacity: gbArea.pressed ? Theme.statePressed : (gbArea.containsMouse ? Theme.stateHover : 0)
-
-                Behavior on opacity {
-                    NumberAnimation {
-                        duration: Theme.ms(100)
-                        easing.type: Theme.easeStandard
-                    }
-                }
-            }
-        }
-
-        Icon {
-            anchors.centerIn: parent
-            name: gb.icon
-            size: Theme.dp(18)
-            color: Theme.text
-        }
-
-        MouseArea {
-            id: gbArea
-
-            anchors.fill: parent
-            hoverEnabled: true
-            cursorShape: Qt.PointingCursor
-            onClicked: gb.clicked()
-        }
-    }
-
     // Настоящая тень: обёртка с запасом, layer.effect рисует капсулу
     // с гауссовой тенью (в Umbriel теней слоёв нет — делаем сами).
     Item {
@@ -185,12 +136,13 @@ PanelWindow {
         layer.enabled: true
         layer.effect: MultiEffect {
             shadowEnabled: true
-            // альфа тени ниже порога blur_ignore_alpha (0.72), чтобы композитор
-            // не размывал фон под тенью — только под самой капсулой
-            shadowColor: Theme.a(Theme.scrim, 0.68)
-            shadowBlur: 0.9
-            shadowVerticalOffset: Theme.dp(7)
-            shadowOpacity: 1
+            // Lucid-бар без тени; оставляем только шёпот для отделения от светлых
+            // обоев. Альфа ниже blur_ignore_alpha (0.72), чтобы композитор не
+            // размывал фон под тенью — только под самой капсулой.
+            shadowColor: Theme.a(Theme.scrim, 0.42)
+            shadowBlur: 0.6
+            shadowVerticalOffset: Theme.dp(3)
+            shadowOpacity: 0.7
         }
 
         Rectangle {
@@ -198,32 +150,55 @@ PanelWindow {
             x: shadowHost.padH
             y: shadowHost.padTop
             width: win.big ? Theme.dp(win.panelW) : (idlePill.implicitWidth + Theme.pad * 2)
-        height: win.big ? Math.min(contentCol.implicitHeight + Theme.dp(32), win.panelMax) : Math.max(Theme.height, idlePill.implicitHeight + Theme.dp(6))
-        radius: win.big ? Math.max(Theme.radiusXl, Theme.dp(28)) : height / 2
-        color: win.big ? Theme.alpha(Theme.mContainer, 0.97) : Theme.bg
-        border.width: 1
-        border.color: Theme.a(Theme.outline, 0.25)
-        clip: true
-        Behavior on width { NumberAnimation { duration: Theme.durMedium; easing.type: Easing.Bezier; easing.bezierCurve: Theme.curveDefaultSpatial } }
-        Behavior on height { NumberAnimation { duration: Theme.durMedium; easing.type: Easing.Bezier; easing.bezierCurve: Theme.curveDefaultSpatial } }
-        Behavior on radius { NumberAnimation { duration: Theme.durMedium; easing.type: Easing.Bezier; easing.bezierCurve: Theme.curveDefaultSpatial } }
-        Behavior on color { ColorAnimation { duration: Theme.durMedium } }
+            height: win.big ? Math.min(contentCol.implicitHeight + Theme.dp(32), win.panelMax) : Math.max(Theme.height, idlePill.implicitHeight + Theme.dp(6))
+            // idle — Lucid-пилюля (radiusPill), панель — крупный скруглённый
+            // контейнер (radiusXl / shapeXlInc для лончера). Без обводки.
+            radius: win.big ? (win.mode === "launcher" ? Theme.shapeXlInc : Theme.radiusXl) : height / 2
+            color: win.big ? Theme.withBlur(Theme.mContainer) : Theme.bg
+            clip: true
+            // OPEN — emphasizedDecel @ durEnter, CLOSE — emphasizedAccel @ durExit
+            Behavior on width { NumberAnimation { duration: win.big ? Theme.durEnter : Theme.durExit; easing.type: Easing.Bezier; easing.bezierCurve: win.big ? Theme.easeEmphasizedDecel : Theme.easeEmphasizedAccel } }
+            Behavior on height { NumberAnimation { duration: win.big ? Theme.durEnter : Theme.durExit; easing.type: Easing.Bezier; easing.bezierCurve: win.big ? Theme.easeEmphasizedDecel : Theme.easeEmphasizedAccel } }
+            Behavior on radius { NumberAnimation { duration: win.big ? Theme.durEnter : Theme.durExit; easing.type: Easing.Bezier; easing.bezierCurve: win.big ? Theme.easeEmphasizedDecel : Theme.easeEmphasizedAccel } }
+            Behavior on color { ColorAnimation { duration: win.big ? Theme.durEnter : Theme.durExit } }
 
-        // ── IDLE / OSD / NOTIF ───────────────────────────────────────
-        IdlePill {
-            id: idlePill
-            visible: !win.big
-            anchors.centerIn: parent
-            mode: win.mode
-            now: win.now
-            output: win.screen.name
-            shell: win.shell
-        }
+            // ── IDLE / OSD / NOTIF ─────────────────────────────────────
+            // компактное лицо: при открытии панели съёживается (0.82) и гаснет,
+            // как compactFace в Lucid BarPill
+            Item {
+                id: compactFace
+                anchors.fill: parent
+                visible: opacity > 0.01
+                opacity: win.big ? 0 : 1
+                scale: win.big ? 0.82 : 1
 
-        // ── PANEL ────────────────────────────────────────────────────
+                Behavior on opacity { NumberAnimation { duration: win.big ? Theme.durExit : Theme.durEnter; easing.type: Easing.OutCubic } }
+                Behavior on scale { NumberAnimation { duration: Theme.ms(220); easing.type: Easing.OutCubic } }
+
+                IdlePill {
+                    id: idlePill
+                    anchors.centerIn: parent
+                    mode: win.mode
+                    now: win.now
+                    output: win.screen.name
+                    shell: win.shell
+                }
+            }
+
+            // ── PANEL ────────────────────────────────────────────────────
+            // панельное лицо: гаснет при закрытии, входящее — 1.04 → 1
+            Item {
+                id: panelFace
+                anchors.fill: parent
+                visible: opacity > 0.01
+                opacity: win.big ? 1 : 0
+                scale: win.big ? 1 : 1.04
+
+                Behavior on opacity { NumberAnimation { duration: win.big ? Theme.durEnter : Theme.durExit; easing.type: Easing.OutCubic } }
+                Behavior on scale { NumberAnimation { duration: Theme.ms(220); easing.type: Easing.OutCubic } }
+
         Flickable {
             id: panelView
-            visible: win.big
             width: Theme.dp(win.panelW) - Theme.dp(32)
             height: Math.min(contentCol.implicitHeight, win.panelMax - Theme.dp(32))
             anchors.horizontalCenter: parent.horizontalCenter
@@ -245,46 +220,49 @@ PanelWindow {
                 RowLayout {
                     visible: win.mode === "panel" || win.mode === "tray"
                     Layout.fillWidth: true
+                    Layout.preferredHeight: Theme.dp(52)
+                    spacing: Theme.dp(8)
                     IconButton {
                         icon: "arrow_back"
                         visible: win.mode === "panel" && win.page !== ""
                         onClicked: if (win.shell) win.shell.setPage("")
                     }
                     ColumnLayout {
-                        spacing: 0
+                        spacing: -Theme.dp(1)
                         visible: win.mode === "panel" && win.page === ""
-                        Text {
-                            font.family: Theme.textFont; font.pixelSize: Theme.typeSize("titleLarge")
-                            font.weight: Font.Bold; color: Theme.text
+                        LText {
+                            role: "titleMedium"
+                            color: Theme.text
                             text: Qt.formatDateTime(win.now, "HH:mm")
                         }
-                        Text {
-                            font.family: Theme.textFont; font.pixelSize: Theme.typeSize("bodySmall")
-                            color: Theme.subtextDim
+                        LText {
+                            role: "bodySmall"
+                            color: Theme.subtext
                             text: win.now.toLocaleDateString(Qt.locale("ru_RU"), "dddd, d MMMM")
                         }
                     }
-                    Text {
+                    LText {
                         visible: win.mode === "panel" && win.page !== ""
-                        font.family: Theme.textFont; font.pixelSize: Theme.typeSize("titleLarge")
-                        font.weight: Theme.typeWeight("titleLarge"); color: Theme.text
+                        role: "titleMedium"
+                        color: Theme.text
                         text: win.pageTitle
                     }
-                    Text { // заголовок вида «трей»
+                    LText { // заголовок вида «трей»
                         visible: win.mode === "tray"
-                        font.family: Theme.textFont; font.pixelSize: Theme.typeSize("titleLarge")
-                        font.weight: Theme.typeWeight("titleLarge"); color: Theme.text
+                        role: "titleMedium"
+                        color: Theme.text
                         text: "Трей"
                     }
                     Item { Layout.fillWidth: true }
-                    GhostButton {
+                    IconButton {
                         visible: win.mode === "panel" && win.page === ""
                         icon: "settings"
                         onClicked: if (win.shell) win.shell.setPage(win.page === "settings" ? "" : "settings")
                     }
-                    GhostButton {
+                    IconButton {
                         visible: win.mode === "panel"
                         icon: "power_settings_new"
+                        variant: "tonal"
                         onClicked: if (win.shell) win.shell.setPage(win.page === "power" ? "" : "power")
                     }
                 }
@@ -321,6 +299,7 @@ PanelWindow {
                 Launcher { active: win.mode === "launcher"; shell: win.shell; tab: win.shell ? win.shell.launcherTab : "apps" }
             }
         }
+            }
         }
     }
 

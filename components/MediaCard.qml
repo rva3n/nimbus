@@ -3,8 +3,11 @@ import QtQuick.Layouts
 import "../core"
 import "../ui"
 
-// Карточка медиаплеера v2: артворк 60×60, транспорт, тонкий seek-бар со временем.
-// API прежний (artFile/artUrl/player) — картой пользуются RootPage и Lockscreen.
+// Карточка медиаплеера: анатомия медиа-карточки контроль-центра Lucid —
+// заполненный withBlur(surfaceHigh) контейнер shapeLgInc, обложка dp(64)
+// shapeLg, titleSmall/bodySmall, транспорт standard и тонкий seek ui/Slider.
+// API прежний (artFile/artUrl/player, pos/seeking/dragFrac) — картой
+// пользуются Lockscreen (и панель).
 Rectangle {
     id: mc
     property string artFile: ""
@@ -17,7 +20,6 @@ Rectangle {
     property real dragFrac: 0
 
     function num(v) { return (typeof v === "number" && isFinite(v)) ? v : 0 }
-    function fracAt(px) { return Math.max(0, Math.min(1, px / Math.max(1, bar.width))) }
     function fmtTime(sec) { // m:ss
         const s = Math.max(0, Math.floor(mc.num(sec)));
         return Math.floor(s / 60) + ":" + ("0" + (s % 60)).slice(-2);
@@ -32,11 +34,11 @@ Rectangle {
         ? (mc.seeking ? mc.dragFrac : Math.max(0, Math.min(1, mc.pos / mc.length)))
         : 0
 
-    implicitHeight: main.implicitHeight + Theme.dp(20)
-    radius: Theme.radiusLg
-    color: Theme.bgTile
-    border.width: 1
-    border.color: Theme.a(Theme.outline, 0.2)
+    implicitHeight: main.implicitHeight + Theme.dp(16)
+    radius: Theme.shapeLgInc
+    // глубина стекла следует за ползунком «Размытие фона» (Theme.glass)
+    color: Theme.withBlur(Theme.mHigh)
+    clip: true
 
     // позиция в Mpris меняется не реактивно — читаем её сами раз в 500 мс
     Timer {
@@ -60,18 +62,18 @@ Rectangle {
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.top: parent.top
-        anchors.margins: Theme.dp(10)
+        anchors.margins: Theme.dp(8)
         spacing: Theme.dp(6)
 
-        RowLayout { // артворк + название/исполнитель + транспорт
+        RowLayout { // обложка + название/исполнитель + транспорт
             Layout.fillWidth: true
             spacing: Theme.dp(10)
 
-            Rectangle { // артворк 60×60
+            Rectangle { // обложка dp(64) shapeLg
                 Layout.alignment: Qt.AlignVCenter
-                Layout.preferredWidth: Theme.dp(60)
-                Layout.preferredHeight: Theme.dp(60)
-                radius: Theme.radiusMd
+                Layout.preferredWidth: Theme.dp(64)
+                Layout.preferredHeight: Theme.dp(64)
+                radius: Theme.shapeLg
                 color: Theme.bgTrack
                 clip: true
 
@@ -96,30 +98,27 @@ Rectangle {
                 Layout.alignment: Qt.AlignVCenter
                 spacing: 0
 
-                Text {
-                    font.family: Theme.textFont
-                    font.pixelSize: Theme.typeSize("titleSmall")
-                    font.weight: Theme.typeWeight("titleSmall")
+                LText {
+                    Layout.fillWidth: true
+                    role: "titleSmall"
                     color: Theme.text
                     text: mc.player ? (mc.player.trackTitle || "") : ""
                     elide: Text.ElideRight
-                    Layout.fillWidth: true
                 }
 
-                Text {
-                    font.family: Theme.textFont
-                    font.pixelSize: Theme.typeSize("bodySmall")
-                    font.weight: Theme.typeWeight("bodySmall")
+                LText {
+                    Layout.fillWidth: true
+                    role: "bodySmall"
                     color: Theme.subtext
                     text: mc.player ? (mc.player.trackArtist || "") : ""
                     elide: Text.ElideRight
-                    Layout.fillWidth: true
                 }
             }
 
             IconButton { // предыдущий трек
                 Layout.alignment: Qt.AlignVCenter
                 icon: "skip_previous"
+                size: "s"
                 disabled: !(mc.player && mc.player.canGoPrevious)
                 onClicked: if (mc.player) mc.player.previous()
             }
@@ -128,12 +127,14 @@ Rectangle {
                 Layout.alignment: Qt.AlignVCenter
                 icon: (mc.player && mc.player.isPlaying) ? "pause" : "play_arrow"
                 variant: "filled"
+                size: "s"
                 onClicked: if (mc.player) mc.player.togglePlaying()
             }
 
             IconButton { // следующий трек
                 Layout.alignment: Qt.AlignVCenter
                 icon: "skip_next"
+                size: "s"
                 disabled: !(mc.player && mc.player.canGoNext)
                 onClicked: if (mc.player) mc.player.next()
             }
@@ -146,103 +147,53 @@ Rectangle {
             Layout.topMargin: Theme.dp(2)
             spacing: Theme.dp(8)
 
-            Text { // текущее время
+            LText { // текущее время
                 Layout.alignment: Qt.AlignVCenter
                 Layout.preferredWidth: timeMetrics.advanceWidth
                 horizontalAlignment: Text.AlignRight
-                font.family: Theme.textFont
-                font.pixelSize: Theme.typeSize("labelSmall")
-                font.weight: Theme.typeWeight("labelSmall")
+                role: "labelSmall"
+                tabular: true
                 color: Theme.subtext
                 text: mc.fmtTime(mc.progress * mc.length)
             }
 
-            Item { // дорожка: тонкая, своя — ui/Slider здесь не нужен
+            Slider { // тонкий seek без бейджа; позиция опрашивается таймером
                 id: bar
                 Layout.fillWidth: true
                 Layout.alignment: Qt.AlignVCenter
-                implicitHeight: Theme.dp(16)
-
-                Rectangle { // фон дорожки
-                    id: track
-                    anchors.verticalCenter: parent.verticalCenter
-                    width: parent.width
-                    height: Theme.dp(5)
-                    radius: height / 2
-                    color: Theme.bgTrack
-
-                    Rectangle { // заливка прогресса
-                        id: fill
-                        width: track.width * mc.progress
-                        height: parent.height
-                        radius: parent.radius
-                        color: Theme.accent
-
-                        // плавно между тиками таймера; при перетаскивании — без анимации
-                        Behavior on width {
-                            enabled: !mc.seeking
-                            NumberAnimation {
-                                duration: Theme.ms(460)
-                                easing.type: Easing.Linear
-                            }
-                        }
-                    }
+                size: "xs"
+                trackH: Theme.dp(6)
+                handleH: Theme.dp(20)
+                outerR: Theme.dp(3)
+                from: 0
+                to: Math.max(0, mc.length)
+                value: mc.pos
+                showValue: false
+                inlineValue: false
+                activeColor: Theme.accent
+                inactiveColor: Theme.bgTrack
+                // локальный preview; запись в плеер — только на отпускании
+                onMoved: (v) => {
+                    mc.seeking = true;
+                    mc.dragFrac = mc.length > 0 ? v / mc.length : 0;
                 }
-
-                Rectangle { // ручка: видна на ховере/перетаскивании
-                    id: thumb
-                    anchors.verticalCenter: parent.verticalCenter
-                    width: Theme.dp(12)
-                    height: width
-                    radius: width / 2
-                    color: Theme.accent
-                    x: Math.max(-width / 2, Math.min(bar.width - width / 2, mc.progress * bar.width - width / 2))
-                    opacity: (seekArea.containsMouse || mc.seeking) ? 1 : 0
-
-                    Behavior on opacity {
-                        NumberAnimation {
-                            duration: Theme.ms(120)
-                            easing.type: Easing.Bezier
-                            easing.bezierCurve: Theme.curveEffects
-                        }
-                    }
-                }
-
-                MouseArea {
-                    id: seekArea
-                    anchors.fill: parent
-                    anchors.topMargin: -Theme.dp(5)
-                    anchors.bottomMargin: -Theme.dp(5)
-                    hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
-                    // локальный preview; запись в плеер — только на отпускании
-                    onPressed: (mouse) => { mc.seeking = true; mc.dragFrac = mc.fracAt(mouse.x); }
-                    onPositionChanged: (mouse) => { if (pressed) mc.dragFrac = mc.fracAt(mouse.x); }
-                    onReleased: {
-                        if (!mc.seeking) return;
-                        const target = mc.dragFrac * mc.length;
-                        if (mc.player && mc.canSeek) { // запись в плеер — один раз, на отпускании
-                            mc.player.position = target;
-                            mc.pos = target;
-                        } else {
-                            mc.pos = mc.num(mc.player ? mc.player.position : 0);
-                        }
-                        mc.seeking = false;
-                    }
-                    onCanceled: {
+                onCommitted: (v) => {
+                    if (mc.player && mc.canSeek) {
+                        mc.player.position = v;
+                        mc.pos = v;
+                    } else {
                         mc.pos = mc.num(mc.player ? mc.player.position : 0);
-                        mc.seeking = false;
                     }
+                    mc.seeking = false;
                 }
             }
 
-            Text { // полная длина
+            LText { // полная длина
                 Layout.alignment: Qt.AlignVCenter
                 Layout.preferredWidth: timeMetrics.advanceWidth
                 horizontalAlignment: Text.AlignLeft
-                font.family: Theme.textFont
-                font.pixelSize: Theme.typeSize("labelSmall")
-                font.weight: Theme.typeWeight("labelSmall")
+                role: "labelSmall"
+                tabular: true
                 color: Theme.subtext
                 text: mc.fmtTime(mc.length)
             }
@@ -252,7 +203,7 @@ Rectangle {
     // фикс. ширина подписей времени: дорожка не дёргается при смене цифр
     TextMetrics {
         id: timeMetrics
-        font.family: Theme.textFont
+        font.family: Theme.fontFamily
         font.pixelSize: Theme.typeSize("labelSmall")
         font.weight: Theme.typeWeight("labelSmall")
         text: "00:00"

@@ -183,18 +183,25 @@ Singleton {
             if (code !== 0) s._fail("Не удалось переключить Bluetooth");
             if (btToggleProc.queued) {
                 btToggleProc.queued = false;
-                btToggleProc.command = ["timeout", "8", "bluetoothctl", "power", btToggleProc.queuedValue ? "on" : "off"];
+                btToggleProc.command = btPowerCommand(btToggleProc.queuedValue);
                 btToggleProc.running = true;
                 return;
             }
             s._refreshLink();
         }
     }
+    function btPowerCommand(next) {
+        // включение: сперва снять rfkill-soft-block (иначе bluez отвечает
+        // org.bluez.Error.Blocked), повтор при org.bluez.Error.Busy
+        if (next)
+            return ["sh", "-c", "rfkill unblock bluetooth 2>/dev/null; timeout 8 bluetoothctl power on || { sleep 1; timeout 8 bluetoothctl power on; }"];
+        return ["timeout", "8", "bluetoothctl", "power", "off"];
+    }
     function toggleBt() {
         const next = !s.btEnabled;
         s.btEnabled = next;
         if (btToggleProc.running) { btToggleProc.queued = true; btToggleProc.queuedValue = next; return; }
-        btToggleProc.command = ["timeout", "8", "bluetoothctl", "power", next ? "on" : "off"];
+        btToggleProc.command = btPowerCommand(next);
         btToggleProc.running = true;
     }
 

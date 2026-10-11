@@ -45,8 +45,10 @@ Row {
             readonly property var wsData: wsRow.items[index] || null
             readonly property bool active: wsData ? wsData.active : false
             readonly property bool occupied: wsData ? wsData.occupied : false
+            readonly property bool hovered: area.containsMouse
+            // активный — ink на accentContainer, занятый — subtext, пустой — outline
             readonly property color ink: active ? Theme.fgAccentContainer
-                                        : occupied ? Theme.subtext : Theme.subtextDim
+                                        : occupied ? Theme.subtext : Theme.outline
 
             // до 3 приложений воркспейса; path — найденная иконка или ""
             readonly property var shownApps: {
@@ -64,49 +66,57 @@ Row {
                 return false;
             }
 
-            height: Theme.dp(20)
-            // ровный ритм: пустой слот 8 (+8 активному), занятый — иконки + 4
-            // (+8 активному); активность даёт одинаковую прибавку всем
-            width: (wsPill.hasIcons ? content.implicitWidth + Theme.dp(4) : Theme.dp(8))
-                 + (wsPill.active ? Theme.dp(8) : 0)
-            scale: area.pressed ? 0.98 : 1
+            height: Theme.dp(22)
+            // Lucid-ячейка: активная — rounded-rect (rad 10) accentContainer,
+            // занятая — тихая плитка bgTrack, пустая — точка без фона.
+            width: (wsPill.hasIcons ? content.implicitWidth + Theme.dp(12) : Theme.dp(12))
+                 + (wsPill.active ? Theme.dp(6) : 0)
+            // ховер слегка подрастает, нажатие проседает
+            scale: area.pressed ? 0.94 : (wsPill.hovered ? 1.08 : 1)
 
             Behavior on width {
                 NumberAnimation {
-                    duration: Theme.ms(160)
+                    duration: Theme.durFastSpatial
                     easing.type: Easing.Bezier
-                    easing.bezierCurve: Theme.curveEffects
+                    easing.bezierCurve: Theme.curveFastSpatial
                 }
             }
 
             Behavior on scale {
                 NumberAnimation {
-                    duration: Theme.ms(160)
+                    duration: Theme.durFastEffects
                     easing.type: Easing.Bezier
-                    easing.bezierCurve: Theme.curveEffects
+                    easing.bezierCurve: Theme.curveFastSpatial
                 }
             }
 
-            Rectangle { // фон-пилюля: активный — accentContainer
+            Rectangle { // фон-плитка + StateLayer
+                id: bg
                 anchors.fill: parent
-                radius: Theme.radiusPill
-                color: wsPill.active ? Theme.a(Theme.accentContainer, 0.88) : "transparent"
+                radius: wsPill.active ? Theme.rad(10) : Theme.radiusPill
+                color: wsPill.active ? Theme.accentContainer
+                     : (wsPill.occupied ? Theme.alpha(Theme.bgTrack, 0.7) : "transparent")
 
-                Behavior on color {
-                    ColorAnimation {
-                        duration: Theme.ms(160)
-                        easing.type: Easing.Bezier
-                        easing.bezierCurve: Theme.curveEffects
+                Behavior on radius {
+                    NumberAnimation {
+                        duration: Theme.durFastEffects
                     }
                 }
 
-                Rectangle { // hover/нажатие — лёгкий state layer
-                    anchors.fill: parent
-                    radius: parent.radius
-                    color: wsPill.active ? Theme.fgAccentContainer : Theme.text
-                    opacity: area.pressed ? Theme.statePressed : (area.containsMouse ? Theme.stateHover : 0)
+                Behavior on color {
+                    ColorAnimation {
+                        duration: Theme.durFastEffects
+                        easing.type: Easing.Bezier
+                        easing.bezierCurve: Theme.curveFastSpatial
+                    }
+                }
 
-                    Behavior on opacity { NumberAnimation { duration: Theme.ms(120) } }
+                StateLayer {
+                    id: area
+                    radius: bg.radius
+                    tint: wsPill.active ? Theme.fgAccentContainer : Theme.text
+                    onClicked: if (wsPill.wsData)
+                        Quickshell.execDetached(["umbriel", "msg", "workspace-switch:" + wsPill.wsData.index])
                 }
             }
 
@@ -125,9 +135,9 @@ Row {
 
                     Behavior on color {
                         ColorAnimation {
-                            duration: Theme.ms(160)
+                            duration: Theme.durFastEffects
                             easing.type: Easing.Bezier
-                            easing.bezierCurve: Theme.curveEffects
+                            easing.bezierCurve: Theme.curveFastSpatial
                         }
                     }
                 }
@@ -145,8 +155,8 @@ Row {
                         }
 
                         anchors.verticalCenter: parent.verticalCenter
-                        width: Theme.dp(13)
-                        height: Theme.dp(13)
+                        width: Theme.dp(14)
+                        height: Theme.dp(14)
 
                         Rectangle { // приложение без иконки — точка
                             visible: appIcon.iconPath === ""
@@ -154,26 +164,17 @@ Row {
                             width: Theme.dp(6)
                             height: Theme.dp(6)
                             radius: Theme.radiusPill
-                            color: wsPill.active ? Theme.fgAccentContainer : Theme.subtext
+                            color: wsPill.ink
                         }
 
                         AppIcon {
                             anchors.fill: parent
                             visible: appIcon.iconPath !== ""
                             source: appIcon.iconPath
-                            size: 13
+                            size: 14
                         }
                     }
                 }
-            }
-
-            MouseArea {
-                id: area
-                anchors.fill: parent
-                hoverEnabled: true
-                cursorShape: Qt.PointingHandCursor
-                onClicked: if (wsPill.wsData)
-                    Quickshell.execDetached(["umbriel", "msg", "workspace-switch:" + wsPill.wsData.index])
             }
         }
     }

@@ -4,101 +4,90 @@ import "../../core"
 import "../../ui"
 import ".."
 
-// Wi-Fi: карточка-переключатель радио и карточка списка сетей с паролем.
+// Wi-Fi в анатомии Lucid: карточка-переключатель радио (ToggleRow),
+// карточка списка сетей на DeviceRow (групповые углы) и заполненное поле
+// пароля с filled-кнопкой подключения. Логика прежняя: scan/connect/password.
 ColumnLayout {
     id: wifiPage
     property var win: null
     visible: win !== null && win.mode === "panel" && win.page === "wifi"
-    Layout.fillWidth: true; spacing: 10
+    Layout.fillWidth: true
+    spacing: Theme.dp(12)
 
     // переключатель модуля
     Card {
         Layout.fillWidth: true
-        pad: Theme.dp(6)
+        pad: Theme.dp(4)
 
         ToggleRow {
             Layout.fillWidth: true
             icon: "wifi"
-            label: "Wi-Fi"; sub: Sys.wifiEnabled ? "включён" : "выключен"
+            label: "Wi-Fi"
+            sub: Sys.wifiEnabled ? "Включён" : "Выключен"
             active: Sys.wifiEnabled
-            onToggled: { Sys.toggleWifi(); if (!Sys.wifiEnabled) Sys.refreshWifi(); }
+            onToggled: (v) => { Sys.toggleWifi(); if (!v) Sys.refreshWifi(); }
         }
     }
 
-    // сети: заголовок секции и обновление — в шапке Card
+    // сети
     Card {
         Layout.fillWidth: true
         title: "Сети"
         actionIcon: "refresh"
         onActionClicked: Sys.refreshWifi()
 
-        ListView {
+        LText { // пустое состояние
             Layout.fillWidth: true
-            Layout.preferredHeight: win && win.wifiSel === "" ? 300 : 200
-            model: win ? win.wifiList : []
-            clip: true; spacing: Theme.dp(4)
+            Layout.topMargin: Theme.dp(4)
+            Layout.bottomMargin: Theme.dp(4)
+            visible: (win ? win.wifiList.length : 0) === 0
+            role: "bodySmall"
+            color: Theme.subtext
+            text: Sys.wifiEnabled ? "Поиск сетей…" : "Wi-Fi выключен"
+        }
 
-            delegate: Rectangle {
-                id: netRow
+        Repeater {
+            model: win ? win.wifiList : []
+
+            delegate: ColumnLayout {
+                id: netWrap
                 required property var modelData
                 required property int index
-                width: ListView.view.width; height: Theme.dp(56)
-                radius: Theme.radiusMd
+                Layout.fillWidth: true
+                spacing: 0
+
                 readonly property bool sel: !!(win && win.wifiSel === modelData.ssid)
-                color: netRow.sel ? Theme.accentContainer
-                     : (netMouse.containsMouse ? Theme.bgHover : "transparent")
-                Behavior on color { ColorAnimation { duration: Theme.durDefaultEffects } }
+                readonly property int count: win ? win.wifiList.length : 0
+                readonly property string pos: netWrap.count <= 1 ? "single"
+                    : (netWrap.index === 0 ? "top"
+                    : (netWrap.index === netWrap.count - 1 ? "bottom" : "middle"))
+                readonly property bool secured: !!(modelData.security && modelData.security !== "--" && modelData.security !== "")
 
-                RowLayout {
-                    anchors.fill: parent
-                    anchors.leftMargin: Theme.dp(8); anchors.rightMargin: Theme.dp(8)
-                    spacing: Theme.dp(8)
-
-                    Rectangle { // ведущая иконка сети 40×40
-                        implicitWidth: Theme.dp(40); implicitHeight: Theme.dp(40)
-                        radius: Theme.radiusMd
-                        color: netRow.sel ? Theme.accentContainer : Theme.bgTrack
-
-                        Icon {
-                            anchors.centerIn: parent
-                            name: "wifi"; size: Theme.dp(20)
-                            color: netRow.sel ? Theme.fgAccentContainer : Theme.subtext
-                        }
-                    }
-                    Text {
-                        Layout.fillWidth: true; elide: Text.ElideRight
-                        font.family: Theme.textFont; font.pixelSize: Theme.typeSize("bodyLarge")
-                        font.weight: Theme.typeWeight("bodyLarge")
-                        color: netRow.sel ? Theme.fgAccentContainer : Theme.text
-                        text: netRow.modelData.ssid
-                    }
-                    Icon {
-                        visible: !!(netRow.modelData.security && netRow.modelData.security !== "--" && netRow.modelData.security !== "")
-                        name: "lock"; size: Theme.dp(14)
-                        color: netRow.sel ? Theme.fgAccentContainer : Theme.subtext
-                    }
-                    Text {
-                        font.family: Theme.textFont; font.pixelSize: Theme.typeSize("bodySmall")
-                        font.weight: Theme.typeWeight("bodySmall")
-                        color: netRow.sel ? Theme.fgAccentContainer : Theme.subtext
-                        text: netRow.modelData.signal + "%"
-                    }
-                }
-
-                MouseArea {
-                    id: netMouse
-                    anchors.fill: parent; hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
+                DeviceRow {
+                    id: netRow
+                    Layout.fillWidth: true
+                    icon: "wifi"
+                    devName: netWrap.modelData.ssid
+                    sub: netWrap.modelData.signal + "%"
+                    selected: netWrap.sel
+                    position: netWrap.pos
                     onClicked: {
-                        const sec = netRow.modelData.security;
+                        const sec = netWrap.modelData.security;
                         if (!sec || sec === "" || sec === "--") {
-                            Sys.connectWifi(netRow.modelData.ssid, "");
+                            Sys.connectWifi(netWrap.modelData.ssid, "");
                             if (win.shell) win.shell.setPage("");
                         } else {
-                            win.wifiSel = netRow.modelData.ssid;
+                            win.wifiSel = netWrap.modelData.ssid;
                             wifiPassInput.text = "";
                             wifiPassInput.forceActiveFocus();
                         }
+                    }
+
+                    trailing: Icon {
+                        visible: netWrap.secured
+                        name: "lock"
+                        size: Theme.dp(16)
+                        color: netRow.selected ? Theme.fgSecondaryContainer : Theme.subtextDim
                     }
                 }
             }
@@ -108,18 +97,22 @@ ColumnLayout {
         RowLayout {
             visible: win !== null && win.wifiSel !== ""
             Layout.fillWidth: true
-            Layout.leftMargin: Theme.dp(8); Layout.rightMargin: Theme.dp(8)
-            Layout.topMargin: Theme.dp(2)
+            Layout.topMargin: Theme.dp(6)
             spacing: Theme.dp(8)
+
             TextField {
                 id: wifiPassInput
                 Layout.fillWidth: true
-                placeholder: "Пароль: " + (win ? win.wifiSel : "")
-                echoMode: TextInput.Password
+                variant: "filled"
+                label: win ? ("Пароль · " + win.wifiSel) : "Пароль"
+                password: true
                 onAccepted: if (win) win.submitWifi(text)
             }
-            IconButton {
-                icon: "check"; variant: "filled"
+
+            Button {
+                Layout.alignment: Qt.AlignVCenter
+                variant: "filled"
+                text: "Подключить"
                 onClicked: if (win) win.submitWifi(wifiPassInput.text)
             }
         }

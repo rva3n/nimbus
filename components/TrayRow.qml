@@ -4,6 +4,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Services.SystemTray
 import "../core"
+import "../ui"
 
 // Системный трей (SNI) в idle-капсуле: маленькая пилюля-капсула (как clockChip)
 // со стопкой перекрывающихся иконок (до 6) + «+N». Клик открывает вид острова
@@ -43,28 +44,32 @@ Item {
         return Quickshell.iconPath(raw, true);
     }
 
-    // ── Капсула: стопка иконок + «+N» ──────────────────────────────────
+    // ── Капсула: нейтральная Lucid-пилюля + StateLayer ─────────────────
+    // Иконки приложений — в собственных цветах; верхний круг цвета капсулы
+    // отделяет перекрывающиеся иконки.
     Rectangle {
         id: capsule
         anchors.centerIn: parent
         visible: trayRow.items.length > 0
-        implicitWidth: capsuleRow.implicitWidth + Theme.dp(14)
-        implicitHeight: Theme.dp(22)
+        implicitWidth: capsuleRow.implicitWidth + Theme.dp(16)
+        implicitHeight: Theme.dp(24)
         radius: Theme.radiusPill
-        // фон как у clockChip: accentContainer + state layer композитом, альфа 0.5
-        color: Theme.alpha(Theme.layer(Theme.accentContainer, Theme.fgAccentContainer,
-                           capsuleArea.pressed ? Theme.statePressed
-                                               : (capsuleArea.containsMouse ? Theme.stateHover : 0)), 0.5)
+        color: Theme.bgTile
         scale: capsuleArea.pressed ? 0.97 : 1
-
-        Behavior on color { ColorAnimation { duration: Theme.ms(120) } }
 
         Behavior on scale {
             NumberAnimation {
-                duration: Theme.ms(120)
+                duration: Theme.durFastEffects
                 easing.type: Easing.Bezier
-                easing.bezierCurve: Theme.curveEffects
+                easing.bezierCurve: Theme.curveFastSpatial
             }
+        }
+
+        StateLayer {
+            id: capsuleArea
+            radius: parent.radius
+            acceptedButtons: Qt.LeftButton | Qt.MiddleButton | Qt.RightButton
+            onClicked: if (trayRow.shell) trayRow.shell.toggleTray()
         }
 
         Row {
@@ -72,13 +77,13 @@ Item {
             anchors.centerIn: parent
             spacing: Theme.dp(3)
 
-            // стопка перекрывающихся иконок: слот 18dp, шаг 9dp
+            // стопка перекрывающихся иконок: слот 22dp, шаг 13dp
             Item {
                 id: stack
                 anchors.verticalCenter: parent.verticalCenter
                 width: trayRow.shownCount > 0
-                    ? Theme.dp(18) + (trayRow.shownCount - 1) * Theme.dp(9) : 0
-                height: Theme.dp(18)
+                    ? Theme.dp(22) + (trayRow.shownCount - 1) * Theme.dp(13) : 0
+                height: Theme.dp(22)
 
                 Repeater {
                     model: trayRow.items.slice(0, 6)
@@ -88,27 +93,27 @@ Item {
                         required property var modelData
                         required property int index
 
-                        x: index * Theme.dp(9)
-                        width: Theme.dp(18)
-                        height: Theme.dp(18)
+                        x: index * Theme.dp(13)
+                        width: Theme.dp(22)
+                        height: Theme.dp(22)
                         z: index
 
                         // круг цвета капсулы — отделяет иконки друг от друга
                         Rectangle {
                             anchors.centerIn: parent
-                            width: Theme.dp(18)
-                            height: Theme.dp(18)
+                            width: Theme.dp(22)
+                            height: Theme.dp(22)
                             radius: width / 2
-                            color: Theme.alpha(Theme.accentContainer, 0.95)
+                            color: Theme.bgTile
                         }
 
                         Image {
                             anchors.centerIn: parent
-                            width: Theme.dp(15)
-                            height: Theme.dp(15)
+                            width: Theme.dp(18)
+                            height: Theme.dp(18)
                             source: trayRow.resolveIconSource(slot.modelData.icon)
-                            sourceSize.width: 30
-                            sourceSize.height: 30
+                            sourceSize.width: 36
+                            sourceSize.height: 36
                             smooth: true
                             asynchronous: true
                             fillMode: Image.PreserveAspectFit
@@ -117,24 +122,13 @@ Item {
                 }
             }
 
-            Text { // «+N» — сколько иконок не поместилось в стопку
+            LText { // «+N» — сколько иконок не поместилось в стопку
                 visible: trayRow.extraCount > 0
                 anchors.verticalCenter: parent.verticalCenter
+                role: "labelMedium"
+                color: Theme.subtext
                 text: "+" + trayRow.extraCount
-                color: Theme.fgAccentContainer
-                font.family: Theme.textFont
-                font.pixelSize: Theme.typeSize("labelMedium")
-                font.weight: Theme.typeWeight("labelMedium")
             }
-        }
-
-        MouseArea {
-            id: capsuleArea
-            anchors.fill: parent
-            hoverEnabled: true
-            cursorShape: Qt.PointingHandCursor
-            acceptedButtons: Qt.LeftButton | Qt.MiddleButton | Qt.RightButton
-            onClicked: if (trayRow.shell) trayRow.shell.toggleTray()
         }
     }
 }

@@ -7,7 +7,8 @@ import "../core"
 import "../ui"
 
 // Отдельный медиа-островок в левом верхнем углу экрана: есть плеер — виден,
-// нет — скрыт. Показывает название и исполнителя, клик — play/pause.
+// нет — скрыт. Компактное лицо модуля медиа из Lucid: обложка, название и
+// исполнитель, кнопка play/pause. API прежний: modelData (экран).
 PanelWindow {
     id: mp
 
@@ -78,60 +79,103 @@ PanelWindow {
             border.color: Theme.a(Theme.outline, 0.25)
             clip: true
 
-            Row {
-                anchors.fill: parent
-                anchors.leftMargin: Theme.dp(5)
-                anchors.rightMargin: Theme.dp(12)
-                spacing: Theme.dp(8)
-
-                Rectangle { // play/pause
-                    anchors.verticalCenter: parent.verticalCenter
-                    width: Theme.dp(24)
-                    height: width
-                    radius: width / 2
-                    color: Theme.alpha(Theme.accentContainer, 0.6)
-
-                    Icon {
-                        anchors.centerIn: parent
-                        name: (mp.player && mp.player.isPlaying) ? "pause" : "play_arrow"
-                        size: Theme.dp(13)
-                        color: Theme.fgAccentContainer
-                    }
-                }
-
-                Column {
-                    anchors.verticalCenter: parent.verticalCenter
-                    width: parent.width - Theme.dp(24) - Theme.dp(8)
-                    spacing: 0
-
-                    Text {
-                        width: parent.width
-                        color: Theme.text
-                        text: mp.player ? (mp.player.trackTitle || "") : ""
-                        elide: Text.ElideRight
-                        font.family: Theme.textFont
-                        font.pixelSize: Theme.typeSize("labelLarge")
-                        font.weight: Theme.typeWeight("labelLarge")
-                    }
-
-                    Text {
-                        width: parent.width
-                        visible: text !== ""
-                        color: Theme.subtext
-                        text: mp.player ? (mp.player.trackArtist || "") : ""
-                        elide: Text.ElideRight
-                        font.family: Theme.textFont
-                        font.pixelSize: Theme.typeSize("labelSmall")
-                        font.weight: Theme.typeWeight("labelSmall")
-                    }
-                }
-            }
-
+            // фон-клик пилюли — play/pause (nimbus-логика)
             MouseArea {
                 anchors.fill: parent
                 hoverEnabled: true
                 cursorShape: Qt.PointingHandCursor
                 onClicked: if (mp.player) mp.player.togglePlaying()
+            }
+
+            Row {
+                anchors.fill: parent
+                anchors.leftMargin: Theme.dp(5)
+                anchors.rightMargin: Theme.dp(10)
+                spacing: Theme.dp(8)
+
+                Rectangle { // обложка dp(26), радиус rad(8)
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: Theme.dp(26)
+                    height: width
+                    radius: Theme.rad(8)
+                    color: Theme.bgTrack
+                    clip: true
+
+                    Image {
+                        id: artImg
+
+                        anchors.fill: parent
+                        fillMode: Image.PreserveAspectCrop
+                        source: mp.player ? (mp.player.trackArtUrl || "") : ""
+                        visible: status === Image.Ready
+                    }
+
+                    Icon { // заглушка без арта
+                        anchors.centerIn: parent
+                        visible: !artImg.visible
+                        name: "music_note"
+                        size: Theme.dp(15)
+                        color: Theme.subtext
+                    }
+                }
+
+                Column {
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: parent.width - Theme.dp(26) - Theme.dp(24) - Theme.dp(8) * 2
+                    spacing: 0
+
+                    LText {
+                        width: parent.width
+                        role: "labelLarge"
+                        color: Theme.text
+                        text: mp.player ? (mp.player.trackTitle || "") : ""
+                        elide: Text.ElideRight
+                    }
+
+                    LText {
+                        width: parent.width
+                        visible: text !== ""
+                        role: "labelSmall"
+                        color: Theme.subtext
+                        text: mp.player ? (mp.player.trackArtist || "") : ""
+                        elide: Text.ElideRight
+                    }
+                }
+
+                // play/pause: залитая кнопка dp(24), круг → squircle при нажатии
+                Rectangle {
+                    id: playBtn
+
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: Theme.dp(24)
+                    height: width
+                    radius: playArea.pressed ? Theme.rad(8) : width / 2
+                    color: Theme.accent
+
+                    Behavior on radius {
+                        NumberAnimation {
+                            duration: Theme.durFastSpatial
+                            easing.type: Easing.Bezier
+                            easing.bezierCurve: Theme.curveDefaultSpatial
+                        }
+                    }
+
+                    Icon {
+                        anchors.centerIn: parent
+                        name: (mp.player && mp.player.isPlaying) ? "pause" : "play_arrow"
+                        size: Theme.dp(14)
+                        fill: 1
+                        color: Theme.fgAccent
+                    }
+
+                    StateLayer {
+                        id: playArea
+
+                        radius: playBtn.radius
+                        tint: Theme.fgAccent
+                        onClicked: if (mp.player) mp.player.togglePlaying()
+                    }
+                }
             }
         }
     }

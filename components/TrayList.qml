@@ -109,17 +109,15 @@ Item {
         anchors.fill: parent
         spacing: Theme.dp(2)
 
-        Text { // пустой трей
+        LText { // пустой трей
             visible: trayList.items.length === 0
             Layout.fillWidth: true
             Layout.topMargin: Theme.dp(18)
             Layout.bottomMargin: Theme.dp(18)
             horizontalAlignment: Text.AlignHCenter
-            text: "Нет приложений в трее"
+            role: "bodyMedium"
             color: Theme.subtext
-            font.family: Theme.textFont
-            font.pixelSize: Theme.typeSize("bodyMedium")
-            font.weight: Theme.typeWeight("bodyMedium")
+            text: "Нет приложений в трее"
         }
 
         Repeater {
@@ -133,42 +131,41 @@ Item {
                 readonly property bool selected: row.index === trayList.sel
 
                 Layout.fillWidth: true
-                Layout.preferredHeight: Theme.dp(30)
+                Layout.preferredHeight: Theme.dp(48)
 
-                Rectangle { // подложка hover/клавиатурного курсора
+                Rectangle { // подложка: выбранная — secondaryContainer, ховер — bgHover
                     anchors.fill: parent
-                    radius: Theme.radiusXs
-                    color: Theme.text
-                    opacity: (rowArea.containsMouse || row.selected) ? Theme.stateHover : 0
+                    anchors.margins: Theme.dp(1)
+                    radius: Theme.radiusSm
+                    color: row.selected ? Theme.secondaryContainer
+                         : (rowArea.containsMouse ? Theme.bgHover : "transparent")
 
-                    Behavior on opacity { NumberAnimation { duration: Theme.ms(100) } }
+                    Behavior on color { ColorAnimation { duration: Theme.durFastEffects } }
                 }
 
                 Image {
                     anchors.left: parent.left
-                    anchors.leftMargin: Theme.dp(8)
+                    anchors.leftMargin: Theme.dp(12)
                     anchors.verticalCenter: parent.verticalCenter
-                    width: Theme.dp(18)
-                    height: Theme.dp(18)
+                    width: Theme.dp(22)
+                    height: Theme.dp(22)
                     source: trayList.resolveIconSource(row.modelData.icon)
-                    sourceSize.width: 36
-                    sourceSize.height: 36
+                    sourceSize.width: 44
+                    sourceSize.height: 44
                     smooth: true
                     asynchronous: true
                     fillMode: Image.PreserveAspectFit
                 }
 
-                Text {
+                LText {
                     anchors.left: parent.left
-                    anchors.leftMargin: Theme.dp(8) + Theme.dp(18) + Theme.dp(10)
+                    anchors.leftMargin: Theme.dp(12) + Theme.dp(22) + Theme.dp(12)
                     anchors.right: parent.right
-                    anchors.rightMargin: Theme.dp(10)
+                    anchors.rightMargin: Theme.dp(12)
                     anchors.verticalCenter: parent.verticalCenter
+                    role: "bodyMedium"
+                    color: row.selected ? Theme.fgSecondaryContainer : Theme.text
                     text: (row.modelData.tooltipTitle || row.modelData.title || row.modelData.id || "?")
-                    color: Theme.text
-                    font.family: Theme.textFont
-                    font.pixelSize: Theme.typeSize("bodyMedium")
-                    font.weight: Theme.typeWeight("bodyMedium")
                     elide: Text.ElideRight
                 }
 
@@ -237,18 +234,17 @@ Item {
         Rectangle {
             id: menuCard
 
-            readonly property real wanted: entryCol.implicitHeight + Theme.dp(10)
-            readonly property int cardW: Theme.dp(210)
+            readonly property real wanted: entryCol.implicitHeight + Theme.dp(12)
+            readonly property int cardW: Theme.dp(220)
 
             width: cardW
             height: Math.min(menuCard.wanted, trayMenu.height - Theme.dp(80))
             // держим на экране у края
             x: Math.max(Theme.dp(8), Math.min(trayList.menuX, trayMenu.width - cardW - Theme.dp(8)))
             y: Math.max(Theme.dp(8), Math.min(trayList.menuY, trayMenu.height - height - Theme.dp(8)))
-            radius: Theme.radiusSm
-            color: Theme.bg
-            border.width: 1
-            border.color: Theme.a(Theme.outline, 0.25)
+            // Lucid popup-карточка: размытый surfaceHigh, крупный радиус, без обводки
+            radius: Theme.radiusMd
+            color: Theme.withBlur(Theme.mHigh)
             clip: true
 
             MouseArea { // клик по фону меню не закрывает его
@@ -284,14 +280,14 @@ Item {
                             readonly property bool checked: entry.checkState !== Qt.Unchecked
 
                             width: entryCol.width
-                            height: entryRow.isSep ? Theme.dp(7) : Theme.dp(28)
+                            height: entryRow.isSep ? Theme.dp(7) : Theme.dp(36)
 
                             Rectangle { // разделитель
                                 visible: entryRow.isSep
                                 anchors.verticalCenter: parent.verticalCenter
                                 anchors.left: parent.left
                                 anchors.right: parent.right
-                                anchors.margins: Theme.dp(4)
+                                anchors.margins: Theme.dp(6)
                                 height: 1
                                 color: Theme.outline
                             }
@@ -299,34 +295,34 @@ Item {
                             Rectangle { // подложка hover
                                 visible: !entryRow.isSep
                                 anchors.fill: parent
+                                anchors.margins: Theme.dp(1)
                                 radius: Theme.radiusXs
-                                color: Theme.text
-                                opacity: (entryArea.containsMouse && entryRow.entry.enabled)
-                                    ? Theme.stateHover : 0
+                                color: (entryArea.containsMouse && entryRow.entry.enabled)
+                                    ? Theme.bgHover : "transparent"
+
+                                Behavior on color { ColorAnimation { duration: Theme.durFastEffects } }
                             }
 
                             Icon { // галочка отмеченного пункта
                                 visible: !entryRow.isSep && entryRow.checked
                                 anchors.left: parent.left
-                                anchors.leftMargin: Theme.dp(6)
+                                anchors.leftMargin: Theme.dp(8)
                                 anchors.verticalCenter: parent.verticalCenter
                                 name: "check"
-                                size: Theme.dp(14)
+                                size: Theme.dp(16)
                                 color: Theme.accent
                             }
 
-                            Text {
+                            LText {
                                 visible: !entryRow.isSep
                                 anchors.left: parent.left
-                                anchors.leftMargin: entryRow.checked ? Theme.dp(24) : Theme.dp(10)
+                                anchors.leftMargin: entryRow.checked ? Theme.dp(34) : Theme.dp(12)
                                 anchors.right: parent.right
-                                anchors.rightMargin: Theme.dp(10)
+                                anchors.rightMargin: Theme.dp(12)
                                 anchors.verticalCenter: parent.verticalCenter
-                                text: entryRow.entry.text
+                                role: "bodyMedium"
                                 color: entryRow.entry.enabled ? Theme.text : Theme.subtextDim
-                                font.family: Theme.textFont
-                                font.pixelSize: Theme.typeSize("bodyMedium")
-                                font.weight: Theme.typeWeight("bodyMedium")
+                                text: entryRow.entry.text
                                 elide: Text.ElideRight
                             }
 

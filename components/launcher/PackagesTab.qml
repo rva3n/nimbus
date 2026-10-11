@@ -20,7 +20,7 @@ ColumnLayout {
     signal hovered(int index)
 
     // ── данные ────────────────────────────────────────────────────────
-    property var results: []       // [{name, repo, version, desc, installed, aur}]
+    property var results: []       // [{name, repo, version, desc, installed, aur, installedVer, votes, popularity}]
     property int repoUpdates: 0
     property int aurUpdates: 0
     property var updatesList: []   // строки обновлений репозиториев (checkupdates)
@@ -28,6 +28,12 @@ ColumnLayout {
     property string pending: ""    // пакет, ожидающий подтверждения удаления
     property bool searching: false
     property int _cur: -1          // индекс последнего заголовка (для строки описания)
+
+    // установленные версии (ленивый `pacman -Q`) и ленивое git-URL из AUR RPC
+    property var installedVersions: ({})
+    property string _verName: ""
+    property var aurGitCache: ({})
+    property string aurGitName: ""
 
     readonly property bool searchMode: tab.query.trim().length >= 2
     readonly property int totalUpdates: tab.repoUpdates + tab.aurUpdates
@@ -39,18 +45,71 @@ ColumnLayout {
 
     readonly property var selectedResult:
         (tab.sel >= 0 && tab.sel < tab.results.length) ? tab.results[tab.sel] : null
+
+    // индекс приложений: имя пакета → имя иконки темы (id без .desktop или
+    // basename команды запуска), см. паттерн в WorkspacesRow.qml
+    readonly property var appIconIndex: {
+        const byPkg = {};
+        for (const e of DesktopEntries.applications.values) {
+            if (!e.icon) continue;
+            const icon = String(e.icon);
+            if (e.id) {
+                let id = String(e.id);
+                if (id.endsWith(".desktop")) id = id.slice(0, -8);
+                if (id) byPkg[id.toLowerCase()] = icon;
+            }
+            const cmd = String(e.command || e.execString || "");
+            if (cmd) {
+                const first = cmd.trim().split(/\s+/)[0] || "";
+                const base = first.split("/").pop();
+                if (base) byPkg[base.toLowerCase()] = icon;
+            }
+        }
+        return byPkg;
+    }
+
+    function iconForPkg(name) {
+        const k = String(name || "").toLowerCase();
+        if (k === "") return "";
+        const icon = tab.appIconIndex[k];
+        if (!icon) return "";
+        return Quickshell.iconPath(icon, true) || "";
+    }
+
+    // подсказка по Enter для выбранной строки
     readonly property string hintText: {
         const it = tab.selectedResult;
         if (!it) return "";
         if (!it.installed) return "Enter — установить";
-        if (tab.pending === it.name) return "Ещё раз — удалить";
-        return "Enter — удалить (дважды для подтверждения)";
+        if (tab.pending === it.name) return "Enter — подтвердить удаление";
+        return "Enter — удалить, ещё раз — подтвердить";
+    }
+
+    // детали выбранной строки: repo · version · установлено · AUR-статистика
+    readonly property string detailsText: {
+        const it = tab.selectedResult;
+        if (!it) return "";
+        const parts = [it.repo, it.version];
+        if (it.installed) {
+            const v = it.installedVer || tab.installedVersions[it.name];
+            parts.push("установлено: " + (v || "…"));
+        }
+        if (it.aur && (it.votes !== undefined || it.popularity !== undefined)) {
+            const stat = [];
+            if (it.votes !== undefined) stat.push("голоса " + it.votes);
+            if (it.popularity !== undefined) stat.push("популярность " + it.popularity);
+            if (stat.length > 0) parts.push(stat.join(" · "));
+        }
+        return parts.join(" · ");
     }
 
     implicitHeight: Theme.dp(400)
     spacing: Theme.dp(4)
 
-    onSelChanged: tab.pending = ""
+    onSelChanged: {
+        tab.pending = "";
+        tab._maybeFetchInstalled();
+    }
 
     onQueryChanged: {
         tab.pending = "";
@@ -76,9 +135,79 @@ ColumnLayout {
         }
     }
 
+    onSelectedResultChanged: tab._maybeFetchInstalled()
+
     // ── действия ──────────────────────────────────────────────────────
     function runInTerminal(args) {
         Quickshell.execDetached(["ghostty", "-e"].concat(args));
+    }
+
+    // ленивое получение установленной версии выбранного пакета
+    function _maybeFetchInstalled() {
+        const it = tab.selectedResult;
+        if (it && it.installed && !it.installedVer)
+            tab.ensureInstalledVersion(it.name);
+    }
+
+    function ensureInstalledVersion(name) {
+        if (!name) return;
+        if (tab.installedVersions[name] !== undefined) return;
+        if (tab._verName === name && verProc.running) return;
+        tab._verName = name;
+        verProc.command = ["pacman", "-Q", "--", name];
+        verProc.running = false;
+        verProc.running = true;
+    }
+
+    function _verLine(line) {
+        const m = String(line).trim().match(/^(\S+)\s+(\S+)/);
+        if (!m) return;
+        const name = tab._verName;
+        if (!name || m[1] !== name) return;
+        const map = Object.assign({}, tab.installedVersions);
+        map[name] = m[2];
+        tab.installedVersions = map;
+    }
+
+    function openAur(name) {
+        if (!name) return;
+        Quickshell.execDetached(["xdg-open", "https://aur.archlinux.org/packages/" + name]);
+    }
+
+    function openArch(name) {
+        if (!name) return;
+        Quickshell.execDetached(["xdg-open", "https://archlinux.org/packages/?q=" + name]);
+    }
+
+    // ленивый AUR RPC: разрешаем homepage (Git) выбранного AUR-пакета
+    function openAurGit(name) {
+        if (!name) return;
+        const cached = tab.aurGitCache[name];
+        if (cached !== undefined) {
+            if (cached) Quickshell.execDetached(["xdg-open", cached]);
+            return;
+        }
+        tab.aurGitName = name;
+        aurInfoProc.command = ["curl", "-s", "--max-time", "15",
+                               "https://aur.archlinux.org/rpc/v5/info?arg[]=" + name];
+        aurInfoProc.running = false;
+        aurInfoProc.running = true;
+    }
+
+    function _aurInfoDone(txt) {
+        let url = "";
+        try {
+            const j = JSON.parse(String(txt || ""));
+            if (j && j.results && j.results.length > 0 && j.results[0].URL)
+                url = String(j.results[0].URL);
+        } catch (e) {}
+        const name = tab.aurGitName;
+        if (name) {
+            const map = Object.assign({}, tab.aurGitCache);
+            map[name] = url;
+            tab.aurGitCache = map;
+        }
+        if (url) Quickshell.execDetached(["xdg-open", url]);
     }
 
     function doSearch() {
@@ -106,35 +235,53 @@ ColumnLayout {
     function activate(index) {
         if (!tab.searchMode) {
             if (index === 0 && tab.totalUpdates > 0) {
-                tab.runInTerminal(["paru", "-Syu"]);
+                // сначала скрываем лончер, затем запускаем обновление
                 if (tab.shell) tab.shell.closeOverlays();
+                tab.runInTerminal(["paru", "-Syu"]);
             }
             return;
         }
         const it = tab.results[index];
         if (!it) return;
         if (!it.installed) {
+            if (tab.shell) tab.shell.closeOverlays();
             if (it.aur) tab.runInTerminal(["paru", "-S", "--", it.name]);
             else Quickshell.execDetached(["pkexec", "pacman", "-S", "--noconfirm", "--", it.name]);
-            if (tab.shell) tab.shell.closeOverlays();
             return;
         }
         if (tab.pending === it.name) {
+            if (tab.shell) tab.shell.closeOverlays();
             if (it.aur) tab.runInTerminal(["paru", "-Rns", "--", it.name]);
             else Quickshell.execDetached(["pkexec", "pacman", "-Rns", "--noconfirm", "--", it.name]);
             tab.pending = "";
-            if (tab.shell) tab.shell.closeOverlays();
         } else {
             tab.pending = it.name;
         }
     }
 
     // ── разбор вывода paru -Ss ────────────────────────────────────────
+    function _installedVerFromHeader(line) {
+        const m = line.match(/\[(?:Installed|Установлено)(?::\s*([^\]\[]+?))?\]/);
+        return (m && m[1]) ? m[1].trim() : "";
+    }
+
+    function _aurStats(rest) {
+        let votes;
+        let popularity;
+        const v = rest.match(/\+\s*(\d+)/);
+        if (v) votes = parseInt(v[1], 10);
+        const p = rest.match(/~\s*([0-9]+\.[0-9]+)/);
+        if (p) popularity = parseFloat(p[1]);
+        return { votes: votes, popularity: popularity };
+    }
+
     function _searchLine(line) {
         if (tab.results.length >= 200) return;
-        const m = line.match(/^([^\s/]+)\/(\S+)\s+(\S+)/);
+        const m = line.match(/^([^\s/]+)\/(\S+)\s+(\S+)(.*)$/);
         if (m) {
             const repo = m[1];
+            const aur = repo === "aur";
+            const stats = aur ? tab._aurStats(m[4] || "") : {};
             const arr = tab.results.slice();
             arr.push({
                 name: m[2],
@@ -142,7 +289,10 @@ ColumnLayout {
                 version: m[3],
                 desc: "",
                 installed: /\[(?:Installed|Установлено)[:\]]/.test(line),
-                aur: repo === "aur"
+                aur: aur,
+                installedVer: tab._installedVerFromHeader(line),
+                votes: stats.votes,
+                popularity: stats.popularity
             });
             tab.results = arr;
             tab._cur = arr.length - 1;
@@ -203,6 +353,23 @@ ColumnLayout {
         onExited: (exitCode) => tab.aurUpdates = tab.aurList.length
     }
 
+    Process { // ленивое получения версии установленного пакета
+        id: verProc
+        command: ["pacman", "-Q", "--", ""]
+        stdout: SplitParser {
+            onRead: (line) => tab._verLine(line)
+        }
+    }
+
+    Process { // ленивый AUR RPC: homepage пакета
+        id: aurInfoProc
+        command: ["curl", "-s", "--max-time", "15", "https://aur.archlinux.org/rpc/v5/info?arg[]="]
+        stdout: StdioCollector {
+            id: aurInfoOut
+        }
+        onExited: (exitCode) => tab._aurInfoDone(aurInfoOut.text)
+    }
+
     Timer { // дебаунс поиска
         id: searchTimer
         interval: 300
@@ -214,7 +381,7 @@ ColumnLayout {
     Item { // режим поиска
         visible: tab.searchMode
         Layout.fillWidth: true
-        Layout.preferredHeight: Theme.dp(352)
+        Layout.preferredHeight: Theme.dp(320)
 
         ListView {
             id: resultView
@@ -231,6 +398,11 @@ ColumnLayout {
                 required property var modelData
                 required property int index
 
+                readonly property bool pendingRemove: tab.pending === rowItem.modelData.name
+                readonly property string pkgIcon: rowItem.modelData.installed
+                    ? tab.iconForPkg(rowItem.modelData.name) : ""
+                readonly property bool hasIcon: rowItem.pkgIcon !== ""
+
                 width: resultView.width
                 height: Theme.dp(40)
 
@@ -241,6 +413,8 @@ ColumnLayout {
                     radius: Theme.radiusMd
                     color: rowItem.index === tab.sel ? Theme.accentContainer
                          : (rowMouse.containsMouse ? Theme.bgHover : "transparent")
+                    border.width: rowItem.pendingRemove ? Theme.dp(1) : 0
+                    border.color: Theme.error
 
                     Behavior on color {
                         ColorAnimation { duration: Theme.durQuick }
@@ -261,14 +435,22 @@ ColumnLayout {
                         anchors.rightMargin: Theme.dp(8)
                         spacing: Theme.dp(8)
 
-                        // глиф пакета
+                        // иконка приложения (установленные с резолвом) или глиф пакета
                         Item {
                             Layout.alignment: Qt.AlignVCenter
-                            implicitWidth: Theme.dp(24)
-                            implicitHeight: Theme.dp(24)
+                            implicitWidth: Theme.dp(28)
+                            implicitHeight: Theme.dp(28)
+
+                            AppIcon {
+                                anchors.centerIn: parent
+                                visible: rowItem.hasIcon
+                                source: rowItem.pkgIcon
+                                size: 26
+                            }
 
                             Icon {
                                 anchors.centerIn: parent
+                                visible: !rowItem.hasIcon
                                 name: "inventory_2"
                                 size: Theme.dp(16)
                                 color: rowItem.index === tab.sel ? Theme.fgAccentContainer : Theme.subtext
@@ -309,13 +491,15 @@ ColumnLayout {
                             implicitWidth: badgeText.implicitWidth + Theme.dp(14)
                             implicitHeight: Theme.dp(20)
                             radius: Theme.pill(height)
-                            color: Theme.bgTrack
+                            color: rowItem.pendingRemove ? Theme.errorContainer : Theme.bgTrack
+                            border.width: rowItem.pendingRemove ? Theme.dp(1) : 0
+                            border.color: Theme.error
 
                             Text {
                                 id: badgeText
                                 anchors.centerIn: parent
-                                text: tab.pending === rowItem.modelData.name ? "Ещё раз — удалить" : "Установлено"
-                                color: Theme.subtext
+                                text: rowItem.pendingRemove ? "Подтвердить удаление?" : "Установлено"
+                                color: rowItem.pendingRemove ? Theme.fgErrorContainer : Theme.subtext
                                 font.family: Theme.textFont
                                 font.pixelSize: Theme.fs(10)
                                 font.weight: Theme.typeWeight("labelSmall")
@@ -337,16 +521,63 @@ ColumnLayout {
         }
     }
 
-    Text { // подсказка по Enter
-        visible: tab.searchMode && tab.results.length > 0
+    // ── подвал выбранной строки: детали + ссылки ──────────────────────
+    ColumnLayout {
+        id: footer
+
+        visible: tab.searchMode && tab.selectedResult !== null
         Layout.fillWidth: true
         Layout.leftMargin: Theme.dp(8)
-        text: tab.hintText
-        color: Theme.subtextDim
-        elide: Text.ElideRight
-        font.family: Theme.textFont
-        font.pixelSize: Theme.typeSize("labelSmall")
-        font.weight: Theme.typeWeight("labelSmall")
+        Layout.rightMargin: Theme.dp(8)
+        spacing: Theme.dp(4)
+
+        Text { // repo · version · установлено · AUR-статистика
+            Layout.fillWidth: true
+            text: tab.detailsText
+            color: Theme.subtext
+            elide: Text.ElideRight
+            font.family: Theme.textFont
+            font.pixelSize: Theme.typeSize("labelSmall")
+            font.weight: Theme.typeWeight("labelSmall")
+        }
+
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: Theme.dp(6)
+
+            Text { // подсказка по Enter
+                id: hint
+                Layout.fillWidth: true
+                text: tab.hintText
+                color: hint.pendingHint ? Theme.error : Theme.subtextDim
+                elide: Text.ElideRight
+                font.family: Theme.textFont
+                font.pixelSize: Theme.typeSize("labelSmall")
+                font.weight: Theme.typeWeight("labelSmall")
+
+                readonly property bool pendingHint: tab.selectedResult !== null
+                    && tab.pending === tab.selectedResult.name
+            }
+
+            Chip {
+                visible: tab.selectedResult !== null && tab.selectedResult.aur
+                label: "AUR"
+                icon: "open_in_new"
+                onClicked: if (tab.selectedResult) tab.openAur(tab.selectedResult.name)
+            }
+            Chip {
+                visible: tab.selectedResult !== null && tab.selectedResult.aur
+                label: "Git"
+                icon: "link"
+                onClicked: if (tab.selectedResult) tab.openAurGit(tab.selectedResult.name)
+            }
+            Chip {
+                visible: tab.selectedResult !== null && !tab.selectedResult.aur
+                label: "archlinux.org"
+                icon: "open_in_new"
+                onClicked: if (tab.selectedResult) tab.openArch(tab.selectedResult.name)
+            }
+        }
     }
 
     ColumnLayout { // режим обновлений

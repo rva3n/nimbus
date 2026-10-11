@@ -5,6 +5,7 @@ import Quickshell.Io
 import Quickshell.Services.Notifications
 import Quickshell.Services.Pipewire
 import Quickshell.Services.Pam
+import Quickshell.Services.Polkit
 import "core"
 import "components"
 
@@ -13,10 +14,12 @@ ShellRoot {
 
     property string view: "idle"   // idle | panel | launcher | taskman
     property string panelPage: ""
-    property string launcherTab: "apps"    // apps | clipboard | emoji (вкладки лончера)
+    property string launcherTab: "apps"    // apps | clipboard | emoji | packages (вкладки лончера)
     property int taskmanTab: 0             // вкладка диспетчера (0/1/2)
     property bool locked: false
     property string pamError: ""
+    // Активный запрос polkit (AuthFlow) или null. Обновляется из PolkitAgent.
+    property var polkitFlow: null
 
     PamContext {
         id: pam
@@ -32,6 +35,31 @@ ShellRoot {
     onLockedChanged: {
         if (root.locked) { root.pamError = ""; pam.start(); }
         else { try { pam.abort(); } catch (e) {} }
+    }
+
+    // Polkit-агент: регистрируется в полките при загрузке шелла. Пока существует
+    // ровно один экземпляр, двойной регистрации не будет.
+    PolkitAgent {
+        id: polkit
+
+        // flow живёт в агенте; пробрасываем его в свойство шелла для UI.
+        onAuthenticationRequestStarted: root.polkitFlow = polkit.flow
+        onFlowChanged: root.polkitFlow = polkit.flow
+
+        onIsRegisteredChanged: {
+            if (polkit.isRegistered) console.log("Nimbus: polkit agent registered")
+            else console.warn("Nimbus: polkit agent not registered");
+        }
+    }
+
+    // Проверка после старта: регистрация в D-Bus асинхронная.
+    Timer {
+        interval: 2500
+        running: true
+        onTriggered: {
+            if (!polkit.isRegistered)
+                console.warn("Nimbus: polkit agent failed to register (isRegistered=false)");
+        }
     }
 
     // Bind PipeWire nodes so volume/mute changes are reactive in the UI.
@@ -91,6 +119,23 @@ ShellRoot {
         locked: root.locked
         pam: pam
         errorText: root.pamError
+    }
+
+    // Модальный polkit-промпт поверх всего (Overlay). Создаётся после Lockscreen,
+    // чтобы быть выше острова. LazyLoader нужен, т.к. components/qmldir не
+    // перечисляет PolkitPrompt (его трогать нельзя), а LazyLoader умеет
+    // подгружать не-Item (оконные) компоненты по source.
+    LazyLoader {
+        id: polkitLoader
+        active: true
+        source: "components/PolkitPrompt.qml"
+    }
+
+    Binding {
+        target: polkitLoader.item
+        property: "flow"
+        value: root.polkitFlow
+        when: polkitLoader.item !== null
     }
 
     // ── Actions ──────────────────────────────────────────────────────
@@ -163,6 +208,12 @@ ShellRoot {
                 root.closeOverlays();
             else
                 root.openLauncher("emoji");
+        }
+        function packages() {
+            if (root.view === "launcher" && root.launcherTab === "packages")
+                root.closeOverlays();
+            else
+                root.openLauncher("packages");
         }
         function pageSettings() { root.view = "panel"; root.panelPage = "settings"; }
         function weatherRefresh() { Weather.refresh(); }

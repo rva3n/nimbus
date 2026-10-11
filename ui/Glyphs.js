@@ -151,4 +151,5 @@ var cp = {
     "mouse": 0xe323,
     "keyboard": 0xe312,
     "desktop_windows": 0xe30c,
+    "inventory_2": 0xe1a1,
 };

@@ -39,8 +39,8 @@ PanelWindow {
                                  : (Osd.visible && view === "idle") ? "osd" : view
     readonly property bool big: mode === "panel" || mode === "launcher" || mode === "taskman"
     readonly property string page: win.shell ? win.shell.panelPage : ""
-    // ширина панели: лончер 470, настройки 620, диспетчер 920, остальное 404
-    readonly property int panelW: win.mode === "launcher" ? 470
+    // ширина панели: лончер 560, настройки 620, диспетчер 920, остальное 404
+    readonly property int panelW: win.mode === "launcher" ? 560
         : (win.page === "settings" ? 620
         : (win.mode === "taskman" ? 920 : 404))
     // активное окно во весь экран на этом output → остров уступает игрушке

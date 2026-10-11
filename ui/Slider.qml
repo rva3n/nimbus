@@ -1,8 +1,9 @@
 import QtQuick
 import "../core"
 
-// M3-слайдер: тонкий трек, круглая ручка. На ховере/перетаскивании ручка
-// растёт, вокруг появляется гало-state layer. Высота 24, зона мыши выше трека.
+// M3-слайдер в стиле «filled material»: толстый pill-трек, заливка акцентом,
+// крупная круглая ручка с контрастным кольцом. На ховере/нажатии ручка
+// немного масштабируется. Высота 24, зона мыши выше трека.
 Item {
     id: root
 
@@ -34,9 +35,11 @@ Item {
     // v = x / ширине трека
     function valueAt(px) { return root.clamp01(px / Math.max(1, root.width)) }
 
-    readonly property real _handleD: root.hot ? Theme.dp(18) : Theme.dp(16)
+    // геометрия «материала»
+    readonly property real _trackH: Theme.dp(16)
+    readonly property real _thumbD: Theme.dp(22)
     // ручка не вылезает за края трека
-    readonly property real _handleX: Math.max(root._handleD / 2, Math.min(root.width - root._handleD / 2, root.live * root.width))
+    readonly property real _thumbX: Math.max(root._thumbD / 2, Math.min(root.width - root._thumbD / 2, root.live * root.width))
 
     // значение приходит извне — доезжает плавно; при drag идёт напрямую
     Behavior on live {
@@ -48,31 +51,30 @@ Item {
         }
     }
 
-    Rectangle { // трек
+    Rectangle { // трек: тёмная утопленная поверхность
         anchors.verticalCenter: parent.verticalCenter
         width: root.width
-        height: Theme.dp(6)
+        height: root._trackH
         radius: height / 2
         color: Theme.bgTrack
     }
 
-    Rectangle { // заполненная часть, ведёт к центру ручки
+    Rectangle { // заполненная часть акцентом, ведёт к центру ручки
         anchors.verticalCenter: parent.verticalCenter
-        width: Math.max(0, root._handleX)
-        height: Theme.dp(6)
+        width: Math.max(0, root._thumbX)
+        height: root._trackH
         radius: height / 2
         color: Theme.accent
     }
 
-    // гало — круглая state-layer вокруг ручки (как в M3: полупрозрачный
-    // акцент), а не двухцветный колпак: тот давал тёмную «выемку» справа
+    // гало — мягкий state-layer под ручкой (как в M3)
     Rectangle {
         id: halo
         anchors.centerIn: handle
-        width: Theme.dp(32)
+        width: Theme.dp(38)
         height: width
         radius: width / 2
-        color: Theme.alpha(Theme.accent, area.pressed ? 0.16 : 0.12)
+        color: Theme.alpha(Theme.accent, area.pressed ? 0.18 : 0.12)
         opacity: root.hot ? 1 : 0
 
         Behavior on opacity {
@@ -84,23 +86,19 @@ Item {
         }
     }
 
-    Rectangle { // ручка
+    Rectangle { // ручка: крупный круг акцентом с контрастным кольцом
         id: handle
         anchors.verticalCenter: parent.verticalCenter
-        x: root._handleX - width / 2
-        width: root._handleD
-        height: root._handleD
+        x: root._thumbX - width / 2
+        width: root._thumbD
+        height: root._thumbD
         radius: width / 2
         color: Theme.accent
+        border.width: Theme.dp(2)
+        border.color: Theme.bgOpaque
+        scale: root.dragging ? 0.95 : (root.hovered ? 1.03 : 1)
 
-        Behavior on width {
-            NumberAnimation {
-                duration: Theme.ms(120)
-                easing.type: Easing.Bezier
-                easing.bezierCurve: Theme.curveDefaultSpatial
-            }
-        }
-        Behavior on height {
+        Behavior on scale {
             NumberAnimation {
                 duration: Theme.ms(120)
                 easing.type: Easing.Bezier

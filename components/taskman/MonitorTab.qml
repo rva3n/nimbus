@@ -3,11 +3,15 @@ import QtQuick.Layouts
 import "../../core"
 import "../../ui"
 
-// Вкладка «Монитор» диспетчера задач: плотная сводка в три колонки —
-// процессор с сеткой ядер, видеокарта с сетью, память с дисками — и карточка
-// температур во всю ширину. Внутренняя ширина панели 888, высота умещается
-// в ~640 без внешней прокрутки: паддинги карточек 12, строки 24–26,
-// spacing 2–10. Пустого места не держим — у каждой метрики свой ряд.
+// Вкладка «Монитор» диспетчера задач: материальная сводка в две колонки
+// карточек — процессор/ядра/диски слева, видеокарта/память/сеть справа —
+// и карточка температур во всю ширину внизу. Внутри карточек — просторные
+// ряды и толстые pill-бары, никаких разделителей: группируем отступами.
+// Внутренняя ширина панели 888, высота укладывается в ~640 без внешней
+// прокрутки: паддинги 16, строки 28–38, спейсинг 12–16.
+//
+// Разметку держим «в линию» (без inline-компонентов): в этой сборке
+// Quickshell они приводят к «Type … is not a type» при пересборке файла.
 ColumnLayout {
     id: monitor
 
@@ -20,7 +24,7 @@ ColumnLayout {
     property var tempView: []
 
     Layout.fillWidth: true
-    spacing: Theme.dp(10)
+    spacing: Theme.dp(16)
 
     Timer {
         id: viewSettle
@@ -137,18 +141,21 @@ ColumnLayout {
         return Theme.accent;
     }
 
-    // колонки сетки ядер: 12 и больше — 4×3, иначе три
-    readonly property int coreCols: SysStats.cores >= 12 ? 4
-                                    : SysStats.cores >= 6 ? 3 : 2
+    // округлённый процент с зажимом в 0..100
+    function pct(frac) {
+        return Math.round(Math.max(0, Math.min(1, isFinite(frac) ? frac : 0)) * 100) + "%";
+    }
+
+    // колонки списка ядер: до восьми — одна, дальше две, чтобы не тянуть вниз
+    readonly property int coreCols: SysStats.cores > 8 ? 2 : 1
 
     // есть ли вообще данные о видеокарте (иначе карточка целиком скрыта)
     readonly property bool hasGpu: SysStats.gpuTempC >= 0 || SysStats.gpuPowerW > 0
                                    || SysStats.gpuSclkMhz > 0 || SysStats.gpuFanRpm > 0
                                    || SysStats.vramTotal > 0 || SysStats.gpuBusy > 0
 
-    // колонки карточки температур: чем больше датчиков, тем больше колонок
-    readonly property int tempCols: monitor.tempView.length > 12 ? 4
-                                  : monitor.tempView.length > 8 ? 3 : 2
+    // колонки карточки температур: держим 2–3, чтобы имена датчиков не резались
+    readonly property int tempCols: monitor.tempView.length > 6 ? 3 : 2
 
     // датчики одной колонки при чтении «по строкам» слева направо
     function tempItems(col) {
@@ -168,231 +175,186 @@ ColumnLayout {
         return t.label || t.name || "";
     }
 
-    // ── локальные компоненты ──────────────────────────────────────────
-
-    // строка «подпись → значение»: bodySmall/subtext и bodyMedium/text
-    component StatRow: RowLayout {
-        id: sr
-
-        property string label: ""
-        property string value: ""
-        property color valueColor: Theme.text
-
-        Layout.fillWidth: true
-        implicitHeight: Theme.dp(26)
-        spacing: Theme.dp(8)
-
-        Text {
-            Layout.fillWidth: true
-            Layout.alignment: Qt.AlignVCenter
-            text: sr.label
-            color: Theme.subtext
-            elide: Text.ElideRight
-            font.family: Theme.textFont
-            font.pixelSize: Theme.typeSize("bodySmall")
-            font.weight: Theme.typeWeight("bodySmall")
-        }
-
-        Text {
-            Layout.alignment: Qt.AlignVCenter
-            text: sr.value
-            color: sr.valueColor
-            font.family: Theme.textFont
-            font.pixelSize: Theme.typeSize("bodyMedium")
-            font.weight: Theme.typeWeight("bodyMedium")
-        }
-    }
-
-    // бар заполнения: трек bgTrack + заливка с плавным изменением
-    component UsageBar: Item {
-        id: ub
-
-        property real frac: 0
-        property color fillColor: Theme.accent
-        property real thickness: Theme.dp(6)
-
-        Layout.fillWidth: true
-        implicitHeight: ub.thickness
-
-        Rectangle {
-            anchors.fill: parent
-            radius: Theme.pill(height)
-            color: Theme.bgTrack
-        }
-
-        Rectangle {
-            anchors.left: parent.left
-            anchors.top: parent.top
-            anchors.bottom: parent.bottom
-            width: parent.width * Math.max(0, Math.min(1, ub.frac))
-            radius: Theme.pill(height)
-            color: ub.fillColor
-
-            Behavior on width {
-                NumberAnimation {
-                    duration: Theme.ms(420)
-                    easing.type: Easing.Bezier
-                    easing.bezierCurve: Theme.curveDefaultSpatial
-                }
-            }
-        }
-    }
-
-    // блок «подпись + X / Y ГБ», под ним бар — ОЗУ, swap, VRAM, диски
-    component UsageBlock: ColumnLayout {
-        id: blk
-
-        property string label: ""
-        property string caption: ""
-        property real frac: 0
-        property color fillColor: Theme.accent
-
-        Layout.fillWidth: true
-        spacing: Theme.dp(3)
-
-        RowLayout {
-            Layout.fillWidth: true
-            spacing: Theme.dp(8)
-
-            Text {
-                Layout.fillWidth: true
-                Layout.alignment: Qt.AlignVCenter
-                text: blk.label
-                color: Theme.text
-                elide: Text.ElideRight
-                font.family: Theme.textFont
-                font.pixelSize: Theme.typeSize("bodyMedium")
-                font.weight: Theme.typeWeight("bodyMedium")
-            }
-
-            Text {
-                Layout.alignment: Qt.AlignVCenter
-                text: blk.caption
-                color: Theme.subtext
-                font.family: Theme.textFont
-                font.pixelSize: Theme.typeSize("bodySmall")
-                font.weight: Theme.typeWeight("bodySmall")
-            }
-        }
-
-        UsageBar {
-            frac: blk.frac
-            fillColor: blk.fillColor
-        }
-    }
-
-    // строка сети: стрелка, подпись и крупное значение скорости
-    component NetRow: RowLayout {
-        id: nr
-
-        property string icon: ""
-        property string label: ""
-        property string value: ""
-
-        Layout.fillWidth: true
-        implicitHeight: Theme.dp(30)
-        spacing: Theme.dp(8)
-
-        Icon {
-            Layout.alignment: Qt.AlignVCenter
-            name: nr.icon
-            size: Theme.dp(14)
-            color: Theme.accent
-        }
-
-        Text {
-            Layout.fillWidth: true
-            Layout.alignment: Qt.AlignVCenter
-            text: nr.label
-            color: Theme.subtext
-            elide: Text.ElideRight
-            font.family: Theme.textFont
-            font.pixelSize: Theme.typeSize("bodyMedium")
-            font.weight: Theme.typeWeight("bodyMedium")
-        }
-
-        Text {
-            Layout.alignment: Qt.AlignVCenter
-            text: nr.value
-            color: Theme.text
-            font.family: Theme.textFont
-            font.pixelSize: Theme.typeSize("titleSmall")
-            font.weight: Theme.typeWeight("titleSmall")
-        }
-    }
-
-    // ── три колонки метрик ────────────────────────────────────────────
+    // ── две колонки карточек ──────────────────────────────────────────
     RowLayout {
         Layout.fillWidth: true
-        spacing: Theme.dp(10)
+        spacing: Theme.dp(16)
 
-        // колонка 1: процессор и ядра
+        // колонка 1: процессор, ядра, диски
         ColumnLayout {
             Layout.fillWidth: true
             Layout.alignment: Qt.AlignTop
-            spacing: Theme.dp(10)
+            spacing: Theme.dp(16)
 
+            // ── Процессор: кольцо загрузки + строки характеристик ──────
             Card {
                 Layout.fillWidth: true
                 title: "Процессор"
-                pad: Theme.dp(12)
+                pad: Theme.dp(16)
 
                 RowLayout {
                     Layout.fillWidth: true
-                    spacing: Theme.dp(14)
+                    spacing: Theme.dp(18)
 
                     Ring {
                         Layout.alignment: Qt.AlignVCenter
-                        implicitWidth: Theme.dp(64)
-                        implicitHeight: Theme.dp(64)
+                        implicitWidth: Theme.dp(76)
+                        implicitHeight: Theme.dp(76)
                         value: SysStats.cpu
                         label: Math.round(SysStats.cpu * 100) + "%"
                     }
 
                     ColumnLayout {
                         Layout.fillWidth: true
-                        spacing: Theme.dp(2)
+                        spacing: Theme.dp(4)
 
-                        StatRow {
-                            label: "Частота"
-                            value: SysStats.cpuMaxMhz > 0
-                                   ? monitor.fmtGhz(SysStats.cpuCurMhz) + " / " + monitor.fmtGhz(SysStats.cpuMaxMhz) + " ГГц"
-                                   : "—"
+                        // строка «подпись → значение»
+                        RowLayout {
+                            Layout.fillWidth: true
+                            implicitHeight: Theme.dp(28)
+                            spacing: Theme.dp(8)
+
+                            Text {
+                                Layout.fillWidth: true
+                                Layout.alignment: Qt.AlignVCenter
+                                text: "Частота"
+                                color: Theme.subtext
+                                elide: Text.ElideRight
+                                font.family: Theme.textFont
+                                font.pixelSize: Theme.typeSize("bodySmall")
+                                font.weight: Theme.typeWeight("bodySmall")
+                            }
+                            Text {
+                                Layout.alignment: Qt.AlignVCenter
+                                text: SysStats.cpuMaxMhz > 0
+                                      ? monitor.fmtGhz(SysStats.cpuCurMhz) + " / " + monitor.fmtGhz(SysStats.cpuMaxMhz) + " ГГц"
+                                      : "—"
+                                color: Theme.text
+                                elide: Text.ElideRight
+                                font.family: Theme.textFont
+                                font.pixelSize: Theme.typeSize("bodyMedium")
+                                font.weight: Theme.typeWeight("bodyMedium")
+                            }
                         }
-                        StatRow {
-                            label: "Нагрузка"
-                            value: monitor.fmtLoad(SysStats.load1) + " / " + monitor.fmtLoad(SysStats.load5)
+
+                        RowLayout {
+                            Layout.fillWidth: true
+                            implicitHeight: Theme.dp(28)
+                            spacing: Theme.dp(8)
+
+                            Text {
+                                Layout.fillWidth: true
+                                Layout.alignment: Qt.AlignVCenter
+                                text: "Нагрузка"
+                                color: Theme.subtext
+                                elide: Text.ElideRight
+                                font.family: Theme.textFont
+                                font.pixelSize: Theme.typeSize("bodySmall")
+                                font.weight: Theme.typeWeight("bodySmall")
+                            }
+                            Text {
+                                Layout.alignment: Qt.AlignVCenter
+                                text: monitor.fmtLoad(SysStats.load1) + " / " + monitor.fmtLoad(SysStats.load5)
+                                color: Theme.text
+                                font.family: Theme.textFont
+                                font.pixelSize: Theme.typeSize("bodyMedium")
+                                font.weight: Theme.typeWeight("bodyMedium")
+                            }
                         }
-                        StatRow {
-                            label: "Температура"
-                            value: SysStats.tempC >= 0 && isFinite(SysStats.tempC)
-                                   ? Math.round(SysStats.tempC) + " °C" : "—"
-                            valueColor: monitor.tempTone(SysStats.tempC, 75, 85)
+
+                        RowLayout {
+                            Layout.fillWidth: true
+                            implicitHeight: Theme.dp(28)
+                            spacing: Theme.dp(8)
+
+                            Text {
+                                Layout.fillWidth: true
+                                Layout.alignment: Qt.AlignVCenter
+                                text: "Температура"
+                                color: Theme.subtext
+                                elide: Text.ElideRight
+                                font.family: Theme.textFont
+                                font.pixelSize: Theme.typeSize("bodySmall")
+                                font.weight: Theme.typeWeight("bodySmall")
+                            }
+                            Text {
+                                Layout.alignment: Qt.AlignVCenter
+                                text: SysStats.tempC >= 0 && isFinite(SysStats.tempC)
+                                      ? Math.round(SysStats.tempC) + " °C" : "—"
+                                color: monitor.tempTone(SysStats.tempC, 75, 85)
+                                font.family: Theme.textFont
+                                font.pixelSize: Theme.typeSize("bodyMedium")
+                                font.weight: Theme.typeWeight("bodyMedium")
+                            }
                         }
-                        StatRow {
-                            label: "Ядра"
-                            value: SysStats.cores > 0
-                                   ? SysStats.cores + " " + monitor.plural(SysStats.cores, "поток", "потока", "потоков")
-                                   : "—"
+
+                        RowLayout {
+                            Layout.fillWidth: true
+                            implicitHeight: Theme.dp(28)
+                            spacing: Theme.dp(8)
+
+                            Text {
+                                Layout.fillWidth: true
+                                Layout.alignment: Qt.AlignVCenter
+                                text: "Ядра"
+                                color: Theme.subtext
+                                elide: Text.ElideRight
+                                font.family: Theme.textFont
+                                font.pixelSize: Theme.typeSize("bodySmall")
+                                font.weight: Theme.typeWeight("bodySmall")
+                            }
+                            Text {
+                                Layout.alignment: Qt.AlignVCenter
+                                text: SysStats.cores > 0
+                                      ? SysStats.cores + " " + monitor.plural(SysStats.cores, "поток", "потока", "потоков")
+                                      : "—"
+                                color: Theme.text
+                                font.family: Theme.textFont
+                                font.pixelSize: Theme.typeSize("bodyMedium")
+                                font.weight: Theme.typeWeight("bodyMedium")
+                            }
                         }
-                        StatRow {
-                            label: "Сеанс"
-                            value: monitor.fmtUptime(SysStats.uptime)
+
+                        RowLayout {
+                            Layout.fillWidth: true
+                            implicitHeight: Theme.dp(28)
+                            spacing: Theme.dp(8)
+
+                            Text {
+                                Layout.fillWidth: true
+                                Layout.alignment: Qt.AlignVCenter
+                                text: "Сеанс"
+                                color: Theme.subtext
+                                elide: Text.ElideRight
+                                font.family: Theme.textFont
+                                font.pixelSize: Theme.typeSize("bodySmall")
+                                font.weight: Theme.typeWeight("bodySmall")
+                            }
+                            Text {
+                                Layout.alignment: Qt.AlignVCenter
+                                text: monitor.fmtUptime(SysStats.uptime)
+                                color: Theme.text
+                                font.family: Theme.textFont
+                                font.pixelSize: Theme.typeSize("bodyMedium")
+                                font.weight: Theme.typeWeight("bodyMedium")
+                            }
                         }
                     }
                 }
             }
 
+            // ── Ядра: компактный ряд «индекс + бар + %» ────────────────
             Card {
                 Layout.fillWidth: true
+                visible: SysStats.cores > 0
                 title: "Ядра"
-                pad: Theme.dp(12)
+                pad: Theme.dp(16)
 
                 GridLayout {
                     Layout.fillWidth: true
                     columns: monitor.coreCols
-                    columnSpacing: Theme.dp(8)
-                    rowSpacing: Theme.dp(6)
+                    columnSpacing: Theme.dp(20)
+                    rowSpacing: Theme.dp(4)
 
                     Repeater {
                         model: SysStats.cores
@@ -405,55 +367,520 @@ ColumnLayout {
                             readonly property real load: monitor.coreAt(coreCell.index)
 
                             Layout.fillWidth: true
-                            implicitHeight: Theme.dp(16)
-                            spacing: Theme.dp(4)
+                            implicitHeight: Theme.dp(24)
+                            spacing: Theme.dp(10)
 
-                            Text { // индекс ядра
+                            Text {
                                 Layout.alignment: Qt.AlignVCenter
-                                Layout.preferredWidth: Theme.dp(12)
+                                Layout.preferredWidth: Theme.dp(20)
                                 horizontalAlignment: Text.AlignRight
                                 text: String(coreCell.index)
                                 color: Theme.subtext
                                 font.family: Theme.textFont
-                                font.pixelSize: Theme.typeSize("labelSmall")
-                                font.weight: Theme.typeWeight("labelSmall")
+                                font.pixelSize: Theme.typeSize("labelMedium")
+                                font.weight: Theme.typeWeight("labelMedium")
                             }
 
-                            UsageBar {
+                            // мини pill-бар ядра: трек + заливка по порогам
+                            Item {
                                 Layout.fillWidth: true
                                 Layout.alignment: Qt.AlignVCenter
-                                thickness: Theme.dp(4)
-                                frac: coreCell.load
-                                fillColor: monitor.coreTone(coreCell.load)
+                                implicitHeight: Theme.dp(8)
+
+                                Rectangle {
+                                    anchors.fill: parent
+                                    radius: Theme.pill(height)
+                                    color: Theme.bgTrack
+                                }
+
+                                Rectangle {
+                                    anchors.left: parent.left
+                                    anchors.top: parent.top
+                                    anchors.bottom: parent.bottom
+                                    width: parent.width * Math.max(0, Math.min(1, coreCell.load))
+                                    radius: Theme.pill(height)
+                                    color: monitor.coreTone(coreCell.load)
+
+                                    Behavior on width {
+                                        NumberAnimation {
+                                            duration: Theme.ms(420)
+                                            easing.type: Easing.Bezier
+                                            easing.bezierCurve: Theme.curveDefaultSpatial
+                                        }
+                                    }
+                                }
                             }
 
-                            Text { // процент загрузки, до трёх знаков
+                            Text {
                                 Layout.alignment: Qt.AlignVCenter
-                                Layout.preferredWidth: Theme.dp(26)
+                                Layout.preferredWidth: Theme.dp(40)
                                 horizontalAlignment: Text.AlignRight
-                                text: Math.round(coreCell.load * 100) + "%"
+                                text: monitor.pct(coreCell.load)
                                 color: Theme.text
                                 font.family: Theme.textFont
-                                font.pixelSize: Theme.typeSize("labelSmall")
-                                font.weight: Theme.typeWeight("labelSmall")
+                                font.pixelSize: Theme.typeSize("labelMedium")
+                                font.weight: Theme.typeWeight("labelMedium")
                             }
+                        }
+                    }
+                }
+            }
+
+            // ── Диски: по метрике на точку монтирования ────────────────
+            Card {
+                Layout.fillWidth: true
+                visible: SysStats.disks.length > 0
+                title: "Диски"
+                pad: Theme.dp(16)
+
+                Repeater {
+                    model: SysStats.disks
+
+                    delegate: ColumnLayout {
+                        id: diskBlock
+
+                        required property var modelData
+
+                        Layout.fillWidth: true
+                        Layout.topMargin: Theme.dp(8)
+                        spacing: Theme.dp(7)
+
+                        Text {
+                            Layout.fillWidth: true
+                            text: diskBlock.modelData.mount
+                            color: Theme.text
+                            elide: Text.ElideRight
+                            font.family: Theme.textFont
+                            font.pixelSize: Theme.typeSize("labelLarge")
+                            font.weight: Theme.typeWeight("labelLarge")
+                        }
+
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: Theme.dp(12)
+
+                            Item {
+                                Layout.fillWidth: true
+                                implicitHeight: Theme.dp(12)
+
+                                Rectangle {
+                                    anchors.fill: parent
+                                    radius: Theme.pill(height)
+                                    color: Theme.bgTrack
+                                }
+
+                                Rectangle {
+                                    anchors.left: parent.left
+                                    anchors.top: parent.top
+                                    anchors.bottom: parent.bottom
+                                    width: parent.width * Math.max(0, Math.min(1, diskBlock.modelData.total > 0 ? diskBlock.modelData.used / diskBlock.modelData.total : 0))
+                                    radius: Theme.pill(height)
+                                    color: monitor.fillTone(diskBlock.modelData.total > 0 ? diskBlock.modelData.used / diskBlock.modelData.total : 0)
+
+                                    Behavior on width {
+                                        NumberAnimation {
+                                            duration: Theme.ms(420)
+                                            easing.type: Easing.Bezier
+                                            easing.bezierCurve: Theme.curveDefaultSpatial
+                                        }
+                                    }
+                                }
+                            }
+
+                            Text {
+                                Layout.alignment: Qt.AlignVCenter
+                                Layout.preferredWidth: Theme.dp(44)
+                                horizontalAlignment: Text.AlignRight
+                                text: monitor.pct(diskBlock.modelData.total > 0 ? diskBlock.modelData.used / diskBlock.modelData.total : 0)
+                                color: Theme.text
+                                font.family: Theme.textFont
+                                font.pixelSize: Theme.typeSize("titleSmall")
+                                font.weight: Theme.typeWeight("titleSmall")
+                            }
+                        }
+
+                        Text {
+                            Layout.fillWidth: true
+                            text: monitor.fmtGb(diskBlock.modelData.used) + " / " + monitor.fmtGb(diskBlock.modelData.total) + " ГБ"
+                            color: Theme.subtext
+                            elide: Text.ElideRight
+                            font.family: Theme.textFont
+                            font.pixelSize: Theme.typeSize("bodySmall")
+                            font.weight: Theme.typeWeight("bodySmall")
                         }
                     }
                 }
             }
         }
 
-        // колонка 2: видеокарта и сеть
+        // колонка 2: видеокарта, память, сеть
         ColumnLayout {
             Layout.fillWidth: true
             Layout.alignment: Qt.AlignTop
-            spacing: Theme.dp(10)
+            spacing: Theme.dp(16)
 
+            // ── Видеокарта: кольцо + характеристики + VRAM ─────────────
             Card {
                 Layout.fillWidth: true
                 visible: monitor.hasGpu
                 title: "Видеокарта"
-                pad: Theme.dp(12)
+                pad: Theme.dp(16)
+
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    spacing: Theme.dp(14)
+
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: Theme.dp(18)
+
+                        Ring {
+                            Layout.alignment: Qt.AlignVCenter
+                            implicitWidth: Theme.dp(76)
+                            implicitHeight: Theme.dp(76)
+                            value: SysStats.gpuBusy
+                            label: Math.round(SysStats.gpuBusy * 100) + "%"
+                        }
+
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: Theme.dp(4)
+
+                            RowLayout {
+                                Layout.fillWidth: true
+                                visible: SysStats.gpuTempC >= 0 && isFinite(SysStats.gpuTempC)
+                                implicitHeight: Theme.dp(28)
+                                spacing: Theme.dp(8)
+
+                                Text {
+                                    Layout.fillWidth: true
+                                    Layout.alignment: Qt.AlignVCenter
+                                    text: "Температура"
+                                    color: Theme.subtext
+                                    elide: Text.ElideRight
+                                    font.family: Theme.textFont
+                                    font.pixelSize: Theme.typeSize("bodySmall")
+                                    font.weight: Theme.typeWeight("bodySmall")
+                                }
+                                Text {
+                                    Layout.alignment: Qt.AlignVCenter
+                                    text: Math.round(SysStats.gpuTempC) + " °C"
+                                    color: monitor.tempTone(SysStats.gpuTempC, 80, 90)
+                                    font.family: Theme.textFont
+                                    font.pixelSize: Theme.typeSize("bodyMedium")
+                                    font.weight: Theme.typeWeight("bodyMedium")
+                                }
+                            }
+
+                            RowLayout {
+                                Layout.fillWidth: true
+                                visible: SysStats.gpuPowerW > 0
+                                implicitHeight: Theme.dp(28)
+                                spacing: Theme.dp(8)
+
+                                Text {
+                                    Layout.fillWidth: true
+                                    Layout.alignment: Qt.AlignVCenter
+                                    text: "Мощность"
+                                    color: Theme.subtext
+                                    elide: Text.ElideRight
+                                    font.family: Theme.textFont
+                                    font.pixelSize: Theme.typeSize("bodySmall")
+                                    font.weight: Theme.typeWeight("bodySmall")
+                                }
+                                Text {
+                                    Layout.alignment: Qt.AlignVCenter
+                                    text: Math.round(SysStats.gpuPowerW) + " Вт"
+                                    color: Theme.text
+                                    font.family: Theme.textFont
+                                    font.pixelSize: Theme.typeSize("bodyMedium")
+                                    font.weight: Theme.typeWeight("bodyMedium")
+                                }
+                            }
+
+                            RowLayout {
+                                Layout.fillWidth: true
+                                visible: SysStats.gpuSclkMhz > 0
+                                implicitHeight: Theme.dp(28)
+                                spacing: Theme.dp(8)
+
+                                Text {
+                                    Layout.fillWidth: true
+                                    Layout.alignment: Qt.AlignVCenter
+                                    text: "Частота"
+                                    color: Theme.subtext
+                                    elide: Text.ElideRight
+                                    font.family: Theme.textFont
+                                    font.pixelSize: Theme.typeSize("bodySmall")
+                                    font.weight: Theme.typeWeight("bodySmall")
+                                }
+                                Text {
+                                    Layout.alignment: Qt.AlignVCenter
+                                    text: SysStats.gpuSclkMhz + " МГц"
+                                    color: Theme.text
+                                    font.family: Theme.textFont
+                                    font.pixelSize: Theme.typeSize("bodyMedium")
+                                    font.weight: Theme.typeWeight("bodyMedium")
+                                }
+                            }
+
+                            RowLayout {
+                                Layout.fillWidth: true
+                                visible: SysStats.gpuFanRpm > 0
+                                implicitHeight: Theme.dp(28)
+                                spacing: Theme.dp(8)
+
+                                Text {
+                                    Layout.fillWidth: true
+                                    Layout.alignment: Qt.AlignVCenter
+                                    text: "Вентилятор"
+                                    color: Theme.subtext
+                                    elide: Text.ElideRight
+                                    font.family: Theme.textFont
+                                    font.pixelSize: Theme.typeSize("bodySmall")
+                                    font.weight: Theme.typeWeight("bodySmall")
+                                }
+                                Text {
+                                    Layout.alignment: Qt.AlignVCenter
+                                    text: SysStats.gpuFanRpm + " об/мин"
+                                    color: Theme.text
+                                    font.family: Theme.textFont
+                                    font.pixelSize: Theme.typeSize("bodyMedium")
+                                    font.weight: Theme.typeWeight("bodyMedium")
+                                }
+                            }
+                        }
+                    }
+
+                    // VRAM: подпись + бар с процентом + деталь
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        visible: SysStats.vramTotal > 0
+                        spacing: Theme.dp(7)
+
+                        Text {
+                            Layout.fillWidth: true
+                            text: "VRAM"
+                            color: Theme.text
+                            elide: Text.ElideRight
+                            font.family: Theme.textFont
+                            font.pixelSize: Theme.typeSize("labelLarge")
+                            font.weight: Theme.typeWeight("labelLarge")
+                        }
+
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: Theme.dp(12)
+
+                            Item {
+                                Layout.fillWidth: true
+                                implicitHeight: Theme.dp(12)
+
+                                Rectangle {
+                                    anchors.fill: parent
+                                    radius: Theme.pill(height)
+                                    color: Theme.bgTrack
+                                }
+
+                                Rectangle {
+                                    anchors.left: parent.left
+                                    anchors.top: parent.top
+                                    anchors.bottom: parent.bottom
+                                    width: parent.width * Math.max(0, Math.min(1, SysStats.vramFrac))
+                                    radius: Theme.pill(height)
+                                    color: monitor.fillTone(SysStats.vramFrac)
+
+                                    Behavior on width {
+                                        NumberAnimation {
+                                            duration: Theme.ms(420)
+                                            easing.type: Easing.Bezier
+                                            easing.bezierCurve: Theme.curveDefaultSpatial
+                                        }
+                                    }
+                                }
+                            }
+
+                            Text {
+                                Layout.alignment: Qt.AlignVCenter
+                                Layout.preferredWidth: Theme.dp(44)
+                                horizontalAlignment: Text.AlignRight
+                                text: monitor.pct(SysStats.vramFrac)
+                                color: Theme.text
+                                font.family: Theme.textFont
+                                font.pixelSize: Theme.typeSize("titleSmall")
+                                font.weight: Theme.typeWeight("titleSmall")
+                            }
+                        }
+
+                        Text {
+                            Layout.fillWidth: true
+                            text: monitor.fmtGb(SysStats.vramUsed) + " / " + monitor.fmtGb(SysStats.vramTotal) + " ГБ"
+                            color: Theme.subtext
+                            elide: Text.ElideRight
+                            font.family: Theme.textFont
+                            font.pixelSize: Theme.typeSize("bodySmall")
+                            font.weight: Theme.typeWeight("bodySmall")
+                        }
+                    }
+                }
+            }
+
+            // ── Память: ОЗУ и swap ─────────────────────────────────────
+            Card {
+                Layout.fillWidth: true
+                title: "Память"
+                pad: Theme.dp(16)
+
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    spacing: Theme.dp(16)
+
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        spacing: Theme.dp(7)
+
+                        Text {
+                            Layout.fillWidth: true
+                            text: "ОЗУ"
+                            color: Theme.text
+                            elide: Text.ElideRight
+                            font.family: Theme.textFont
+                            font.pixelSize: Theme.typeSize("labelLarge")
+                            font.weight: Theme.typeWeight("labelLarge")
+                        }
+
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: Theme.dp(12)
+
+                            Item {
+                                Layout.fillWidth: true
+                                implicitHeight: Theme.dp(12)
+
+                                Rectangle {
+                                    anchors.fill: parent
+                                    radius: Theme.pill(height)
+                                    color: Theme.bgTrack
+                                }
+
+                                Rectangle {
+                                    anchors.left: parent.left
+                                    anchors.top: parent.top
+                                    anchors.bottom: parent.bottom
+                                    width: parent.width * Math.max(0, Math.min(1, SysStats.memFrac))
+                                    radius: Theme.pill(height)
+                                    color: monitor.fillTone(SysStats.memFrac)
+
+                                    Behavior on width {
+                                        NumberAnimation {
+                                            duration: Theme.ms(420)
+                                            easing.type: Easing.Bezier
+                                            easing.bezierCurve: Theme.curveDefaultSpatial
+                                        }
+                                    }
+                                }
+                            }
+
+                            Text {
+                                Layout.alignment: Qt.AlignVCenter
+                                Layout.preferredWidth: Theme.dp(44)
+                                horizontalAlignment: Text.AlignRight
+                                text: monitor.pct(SysStats.memFrac)
+                                color: Theme.text
+                                font.family: Theme.textFont
+                                font.pixelSize: Theme.typeSize("titleSmall")
+                                font.weight: Theme.typeWeight("titleSmall")
+                            }
+                        }
+
+                        Text {
+                            Layout.fillWidth: true
+                            text: monitor.fmtGb(SysStats.memUsed) + " / " + monitor.fmtGb(SysStats.memTotal) + " ГБ"
+                            color: Theme.subtext
+                            elide: Text.ElideRight
+                            font.family: Theme.textFont
+                            font.pixelSize: Theme.typeSize("bodySmall")
+                            font.weight: Theme.typeWeight("bodySmall")
+                        }
+                    }
+
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        visible: SysStats.swapTotal > 0
+                        spacing: Theme.dp(7)
+
+                        Text {
+                            Layout.fillWidth: true
+                            text: "Swap"
+                            color: Theme.text
+                            elide: Text.ElideRight
+                            font.family: Theme.textFont
+                            font.pixelSize: Theme.typeSize("labelLarge")
+                            font.weight: Theme.typeWeight("labelLarge")
+                        }
+
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: Theme.dp(12)
+
+                            Item {
+                                Layout.fillWidth: true
+                                implicitHeight: Theme.dp(12)
+
+                                Rectangle {
+                                    anchors.fill: parent
+                                    radius: Theme.pill(height)
+                                    color: Theme.bgTrack
+                                }
+
+                                Rectangle {
+                                    anchors.left: parent.left
+                                    anchors.top: parent.top
+                                    anchors.bottom: parent.bottom
+                                    width: parent.width * Math.max(0, Math.min(1, SysStats.swapFrac))
+                                    radius: Theme.pill(height)
+                                    color: Theme.secondary
+
+                                    Behavior on width {
+                                        NumberAnimation {
+                                            duration: Theme.ms(420)
+                                            easing.type: Easing.Bezier
+                                            easing.bezierCurve: Theme.curveDefaultSpatial
+                                        }
+                                    }
+                                }
+                            }
+
+                            Text {
+                                Layout.alignment: Qt.AlignVCenter
+                                Layout.preferredWidth: Theme.dp(44)
+                                horizontalAlignment: Text.AlignRight
+                                text: monitor.pct(SysStats.swapFrac)
+                                color: Theme.text
+                                font.family: Theme.textFont
+                                font.pixelSize: Theme.typeSize("titleSmall")
+                                font.weight: Theme.typeWeight("titleSmall")
+                            }
+                        }
+
+                        Text {
+                            Layout.fillWidth: true
+                            text: monitor.fmtGb(SysStats.swapUsed) + " / " + monitor.fmtGb(SysStats.swapTotal) + " ГБ"
+                            color: Theme.subtext
+                            elide: Text.ElideRight
+                            font.family: Theme.textFont
+                            font.pixelSize: Theme.typeSize("bodySmall")
+                            font.weight: Theme.typeWeight("bodySmall")
+                        }
+                    }
+                }
+            }
+
+            // ── Сеть: приём и отдача ───────────────────────────────────
+            Card {
+                Layout.fillWidth: true
+                title: "Сеть"
+                pad: Theme.dp(16)
 
                 ColumnLayout {
                     Layout.fillWidth: true
@@ -461,136 +888,85 @@ ColumnLayout {
 
                     RowLayout {
                         Layout.fillWidth: true
-                        spacing: Theme.dp(14)
+                        implicitHeight: Theme.dp(38)
+                        spacing: Theme.dp(12)
 
-                        Ring {
+                        Rectangle {
                             Layout.alignment: Qt.AlignVCenter
-                            implicitWidth: Theme.dp(64)
-                            implicitHeight: Theme.dp(64)
-                            value: SysStats.gpuBusy
-                            label: Math.round(SysStats.gpuBusy * 100) + "%"
+                            implicitWidth: Theme.dp(38)
+                            implicitHeight: Theme.dp(38)
+                            radius: Theme.radiusMd
+                            color: Theme.bgTrack
+
+                            Icon {
+                                anchors.centerIn: parent
+                                name: "south"
+                                size: Theme.dp(18)
+                                color: Theme.accent
+                            }
                         }
 
-                        ColumnLayout {
+                        Text {
                             Layout.fillWidth: true
-                            spacing: Theme.dp(2)
+                            Layout.alignment: Qt.AlignVCenter
+                            text: "Скачивание"
+                            color: Theme.subtext
+                            elide: Text.ElideRight
+                            font.family: Theme.textFont
+                            font.pixelSize: Theme.typeSize("bodyMedium")
+                            font.weight: Theme.typeWeight("bodyMedium")
+                        }
 
-                            StatRow {
-                                visible: SysStats.gpuTempC >= 0 && isFinite(SysStats.gpuTempC)
-                                label: "Температура"
-                                value: Math.round(SysStats.gpuTempC) + " °C"
-                                valueColor: monitor.tempTone(SysStats.gpuTempC, 80, 90)
-                            }
-                            StatRow {
-                                visible: SysStats.gpuPowerW > 0
-                                label: "Мощность"
-                                value: Math.round(SysStats.gpuPowerW) + " Вт"
-                            }
-                            StatRow {
-                                visible: SysStats.gpuSclkMhz > 0
-                                label: "Частота"
-                                value: SysStats.gpuSclkMhz + " МГц"
-                            }
-                            StatRow {
-                                visible: SysStats.gpuFanRpm > 0
-                                label: "Вентилятор"
-                                value: SysStats.gpuFanRpm + " об/мин"
-                            }
+                        Text {
+                            Layout.alignment: Qt.AlignVCenter
+                            text: monitor.fmtSpeed(SysStats.netRx)
+                            color: Theme.text
+                            elide: Text.ElideRight
+                            font.family: Theme.textFont
+                            font.pixelSize: Theme.typeSize("titleMedium")
+                            font.weight: Theme.typeWeight("titleMedium")
                         }
                     }
 
-                    UsageBlock {
-                        visible: SysStats.vramTotal > 0
-                        label: "VRAM"
-                        caption: monitor.fmtGb(SysStats.vramUsed) + " / " + monitor.fmtGb(SysStats.vramTotal) + " ГБ"
-                        frac: SysStats.vramFrac
-                        fillColor: monitor.fillTone(SysStats.vramFrac)
-                    }
-                }
-            }
-
-            Card {
-                Layout.fillWidth: true
-                title: "Сеть"
-                pad: Theme.dp(12)
-
-                ColumnLayout {
-                    Layout.fillWidth: true
-                    spacing: Theme.dp(2)
-
-                    NetRow {
-                        icon: "south"
-                        label: "Скачивание"
-                        value: monitor.fmtSpeed(SysStats.netRx)
-                    }
-
-                    Divider {
+                    RowLayout {
                         Layout.fillWidth: true
-                    }
+                        implicitHeight: Theme.dp(38)
+                        spacing: Theme.dp(12)
 
-                    NetRow {
-                        icon: "north"
-                        label: "Отправка"
-                        value: monitor.fmtSpeed(SysStats.netTx)
-                    }
-                }
-            }
-        }
+                        Rectangle {
+                            Layout.alignment: Qt.AlignVCenter
+                            implicitWidth: Theme.dp(38)
+                            implicitHeight: Theme.dp(38)
+                            radius: Theme.radiusMd
+                            color: Theme.bgTrack
 
-        // колонка 3: память и диски
-        ColumnLayout {
-            Layout.fillWidth: true
-            Layout.alignment: Qt.AlignTop
-            spacing: Theme.dp(10)
+                            Icon {
+                                anchors.centerIn: parent
+                                name: "north"
+                                size: Theme.dp(18)
+                                color: Theme.accent
+                            }
+                        }
 
-            Card {
-                Layout.fillWidth: true
-                title: "Память"
-                pad: Theme.dp(12)
-
-                UsageBlock {
-                    label: "ОЗУ"
-                    caption: monitor.fmtGb(SysStats.memUsed) + " / " + monitor.fmtGb(SysStats.memTotal) + " ГБ"
-                    frac: SysStats.memFrac
-                    fillColor: monitor.fillTone(SysStats.memFrac)
-                }
-
-                UsageBlock {
-                    visible: SysStats.swapTotal > 0
-                    label: "Swap"
-                    caption: monitor.fmtGb(SysStats.swapUsed) + " / " + monitor.fmtGb(SysStats.swapTotal) + " ГБ"
-                    frac: SysStats.swapFrac
-                    fillColor: monitor.fillTone(SysStats.swapFrac)
-                }
-            }
-
-            Card {
-                Layout.fillWidth: true
-                visible: SysStats.disks.length > 0
-                title: "Диски"
-                pad: Theme.dp(12)
-
-                Repeater {
-                    model: SysStats.disks
-
-                    delegate: ColumnLayout {
-                        required property var modelData
-                        required property int index
-
-                        Layout.fillWidth: true
-                        spacing: Theme.dp(4)
-
-                        Divider {
-                            visible: index > 0
+                        Text {
                             Layout.fillWidth: true
-                            Layout.topMargin: Theme.dp(2)
+                            Layout.alignment: Qt.AlignVCenter
+                            text: "Отправка"
+                            color: Theme.subtext
+                            elide: Text.ElideRight
+                            font.family: Theme.textFont
+                            font.pixelSize: Theme.typeSize("bodyMedium")
+                            font.weight: Theme.typeWeight("bodyMedium")
                         }
 
-                        UsageBlock {
-                            label: modelData.mount
-                            caption: monitor.fmtGb(modelData.used) + " / " + monitor.fmtGb(modelData.total) + " ГБ"
-                            frac: modelData.total > 0 ? modelData.used / modelData.total : 0
-                            fillColor: monitor.fillTone(modelData.total > 0 ? modelData.used / modelData.total : 0)
+                        Text {
+                            Layout.alignment: Qt.AlignVCenter
+                            text: monitor.fmtSpeed(SysStats.netTx)
+                            color: Theme.text
+                            elide: Text.ElideRight
+                            font.family: Theme.textFont
+                            font.pixelSize: Theme.typeSize("titleMedium")
+                            font.weight: Theme.typeWeight("titleMedium")
                         }
                     }
                 }
@@ -598,22 +974,22 @@ ColumnLayout {
         }
     }
 
-    // ── температуры: 2–4 равные колонки мини-строк во всю ширину ──────
+    // ── температуры: 2–3 равные колонки строк во всю ширину ───────────
     Card {
         Layout.fillWidth: true
         title: "Температуры"
-        pad: Theme.dp(12)
+        pad: Theme.dp(16)
 
         RowLayout { // пока датчики не найдены
             visible: monitor.tempView.length === 0
             Layout.fillWidth: true
-            spacing: Theme.dp(8)
-            implicitHeight: Theme.dp(24)
+            spacing: Theme.dp(12)
+            implicitHeight: Theme.dp(34)
 
             Icon {
                 Layout.alignment: Qt.AlignVCenter
                 name: "device_thermostat"
-                size: Theme.dp(16)
+                size: Theme.dp(20)
                 color: Theme.subtext
             }
 
@@ -623,15 +999,15 @@ ColumnLayout {
                 text: "Датчики недоступны"
                 color: Theme.subtext
                 font.family: Theme.textFont
-                font.pixelSize: Theme.typeSize("bodySmall")
-                font.weight: Theme.typeWeight("bodySmall")
+                font.pixelSize: Theme.typeSize("bodyMedium")
+                font.weight: Theme.typeWeight("bodyMedium")
             }
         }
 
         RowLayout {
             visible: monitor.tempView.length > 0
             Layout.fillWidth: true
-            spacing: Theme.dp(16)
+            spacing: Theme.dp(28)
 
             Repeater {
                 model: monitor.tempCols
@@ -641,7 +1017,7 @@ ColumnLayout {
 
                     Layout.fillWidth: true
                     Layout.alignment: Qt.AlignTop
-                    spacing: Theme.dp(2)
+                    spacing: Theme.dp(4)
 
                     Repeater {
                         model: monitor.tempItems(index)
@@ -650,8 +1026,8 @@ ColumnLayout {
                             required property var modelData
 
                             Layout.fillWidth: true
-                            implicitHeight: Theme.dp(24)
-                            spacing: Theme.dp(8)
+                            implicitHeight: Theme.dp(30)
+                            spacing: Theme.dp(12)
 
                             Text {
                                 Layout.fillWidth: true
@@ -660,8 +1036,8 @@ ColumnLayout {
                                 color: Theme.subtext
                                 elide: Text.ElideRight
                                 font.family: Theme.textFont
-                                font.pixelSize: Theme.typeSize("labelSmall")
-                                font.weight: Theme.typeWeight("labelSmall")
+                                font.pixelSize: Theme.typeSize("bodySmall")
+                                font.weight: Theme.typeWeight("bodySmall")
                             }
 
                             Text {

@@ -340,6 +340,17 @@ RowLayout {
         }
     }
 
+    // мелкая приглушённая подпись-группа внутри карточки
+    component GroupCaption: Text {
+        Layout.fillWidth: true
+        Layout.topMargin: Theme.dp(6)
+        color: Theme.subtextDim
+        elide: Text.ElideRight
+        font.family: Theme.textFont
+        font.pixelSize: Theme.typeSize("labelMedium")
+        font.weight: Theme.typeWeight("labelMedium")
+    }
+
     // ── левая колонка: рейл разделов ──────────────────────────────────
     ColumnLayout {
         id: rail
@@ -763,7 +774,7 @@ RowLayout {
             }
         }
 
-        // 6. Композитор (окна, тени, анимации Umbriel)
+        // 6. Композитор (окна, раскладка, анимации, эффекты)
         ColumnLayout {
             visible: page.section === 5
             Layout.fillWidth: true
@@ -771,22 +782,13 @@ RowLayout {
 
             SectionHeader {
                 title: "Композитор"
-                caption: "Окна, тени и анимации Umbriel — применяется сразу"
+                caption: "Окна, раскладка, анимации и эффекты Umbriel — применяется сразу"
             }
 
             Card { // окна
                 Layout.fillWidth: true
                 title: "Окна"
 
-                ParamRow {
-                    label: "Зазор между окнами"
-                    min: 0
-                    max: 30
-                    value: page.umbVal("layout.gap", 7)
-                    displayMul: 1
-                    suffix: ""
-                    onCommitted: (v) => page.setUmb("src/appearance.toml", "layout", "gap", Math.round(v))
-                }
                 ParamRow {
                     label: "Скругление окон"
                     min: 0
@@ -814,11 +816,100 @@ RowLayout {
                     suffix: "%"
                     onCommitted: (v) => page.setUmb("src/appearance.toml", "appearance", "drag_opacity", v / 100)
                 }
+                ToggleRow {
+                    label: "Непрозрачный фуллскрин"
+                    checked: page.umbVal("appearance.opaque_fullscreen", false)
+                    onToggled: (v) => page.setUmb("src/appearance.toml", "appearance", "opaque_fullscreen", v ? "true" : "false")
+                }
+                ChoiceRow {
+                    label: "Режим раскладки"
+                    values: ["scrolling", "dwindle", "master"]
+                    labels: ["Прокрутка", "Двоичное", "Мастер"]
+                    value: page.umbVal("layout.mode", "dwindle")
+                    onCommitted: (v) => page.setUmb("src/appearance.toml", "layout", "mode", "\"" + v + "\"")
+                }
             }
 
-            Card { // тени и анимации
+            Card { // раскладка
                 Layout.fillWidth: true
-                title: "Тени и анимации"
+                title: "Раскладка"
+
+                ParamRow {
+                    label: "Зазор между окнами"
+                    min: 0
+                    max: 30
+                    value: page.umbVal("layout.gap", 7)
+                    displayMul: 1
+                    suffix: ""
+                    onCommitted: (v) => page.setUmb("src/appearance.toml", "layout", "gap", Math.round(v))
+                }
+                ParamRow {
+                    label: "Доля прокрутки по умолчанию"
+                    min: 0.1
+                    max: 1.0
+                    value: page.umbVal("layout.scrolling.default_extent_fraction", 0.5)
+                    displayMul: 100
+                    suffix: "%"
+                    onCommitted: (v) => page.setUmb("src/appearance.toml", "layout.scrolling", "default_extent_fraction", Math.round(v * 100) / 100)
+                }
+                ChoiceRow {
+                    label: "Центрирование активного"
+                    values: ["never", "always", "on_overflow"]
+                    labels: ["Никогда", "Всегда", "При переполнении"]
+                    value: page.umbVal("layout.scrolling.center_focused", "never")
+                    onCommitted: (v) => page.setUmb("src/appearance.toml", "layout.scrolling", "center_focused", "\"" + v + "\"")
+                }
+                ToggleRow {
+                    label: "Центрировать неполную полосу"
+                    checked: page.umbVal("layout.scrolling.center_underfull_strip", true)
+                    onToggled: (v) => page.setUmb("src/appearance.toml", "layout.scrolling", "center_underfull_strip", v ? "true" : "false")
+                }
+                ToggleRow {
+                    label: "Новые окна выходят из фуллскрина"
+                    checked: page.umbVal("layout.new_exits_fullscreen", false)
+                    onToggled: (v) => page.setUmb("src/appearance.toml", "layout", "new_exits_fullscreen", v ? "true" : "false")
+                }
+                ToggleRow {
+                    label: "Двоичное: новые к курсору"
+                    checked: page.umbVal("layout.dwindle.new_toward_cursor", false)
+                    onToggled: (v) => page.setUmb("src/appearance.toml", "layout.dwindle", "new_toward_cursor", v ? "true" : "false")
+                }
+                ToggleRow {
+                    label: "Двоичное: сохранять разделение"
+                    checked: page.umbVal("layout.dwindle.preserve_split", true)
+                    onToggled: (v) => page.setUmb("src/appearance.toml", "layout.dwindle", "preserve_split", v ? "true" : "false")
+                }
+                ChoiceRow {
+                    label: "Мастер: положение"
+                    values: ["left", "right", "center"]
+                    labels: ["Слева", "Справа", "По центру"]
+                    value: page.umbVal("layout.master.position", "left")
+                    onCommitted: (v) => page.setUmb("src/appearance.toml", "layout.master", "position", "\"" + v + "\"")
+                }
+                ParamRow {
+                    label: "Мастер: доля ширины"
+                    min: 0.1
+                    max: 0.9
+                    value: page.umbVal("layout.master.default_width_fraction", 0.55)
+                    displayMul: 100
+                    suffix: "%"
+                    onCommitted: (v) => page.setUmb("src/appearance.toml", "layout.master", "default_width_fraction", Math.round(v * 100) / 100)
+                }
+                ToggleRow {
+                    label: "Мастер: новые сверху"
+                    checked: page.umbVal("layout.master.new_on_top", true)
+                    onToggled: (v) => page.setUmb("src/appearance.toml", "layout.master", "new_on_top", v ? "true" : "false")
+                }
+                ToggleRow {
+                    label: "Мастер: новые становятся мастером"
+                    checked: page.umbVal("layout.master.new_becomes_master", false)
+                    onToggled: (v) => page.setUmb("src/appearance.toml", "layout.master", "new_becomes_master", v ? "true" : "false")
+                }
+            }
+
+            Card { // тени
+                Layout.fillWidth: true
+                title: "Тени"
 
                 ToggleRow {
                     label: "Тени окон"
@@ -834,10 +925,145 @@ RowLayout {
                     suffix: ""
                     onCommitted: (v) => page.setUmb("src/appearance.toml", "appearance.shadow", "softness", Math.round(v))
                 }
+            }
+
+            Card { // анимации
+                Layout.fillWidth: true
+                title: "Анимации"
+
                 ToggleRow {
                     label: "Анимации окон"
                     checked: page.umbVal("animation.enabled", true)
                     onToggled: (v) => page.setUmb("src/general.toml", "animation", "enabled", v ? "true" : "false")
+                }
+
+                GroupCaption { text: "Окна (открытие)" }
+                ParamRow {
+                    label: "Длительность"
+                    min: 50
+                    max: 1000
+                    value: page.umbVal("animation.windows_in.duration_ms", 220)
+                    displayMul: 1
+                    suffix: " мс"
+                    onCommitted: (v) => page.setUmb("src/general.toml", "animation.windows_in", "duration_ms", Math.round(v))
+                }
+                ChoiceRow {
+                    label: "Стиль"
+                    values: ["popin", "zoom", "slide", "fade", "none"]
+                    labels: ["Popin", "Zoom", "Slide", "Fade", "Нет"]
+                    value: page.umbVal("animation.windows_in.style", "popin")
+                    onCommitted: (v) => page.setUmb("src/general.toml", "animation.windows_in", "style", "\"" + v + "\"")
+                }
+
+                GroupCaption { text: "Окна (закрытие)" }
+                ParamRow {
+                    label: "Длительность"
+                    min: 50
+                    max: 1000
+                    value: page.umbVal("animation.windows_out.duration_ms", 180)
+                    displayMul: 1
+                    suffix: " мс"
+                    onCommitted: (v) => page.setUmb("src/general.toml", "animation.windows_out", "duration_ms", Math.round(v))
+                }
+                ChoiceRow {
+                    label: "Стиль"
+                    values: ["fade", "slide", "popin", "zoom"]
+                    labels: ["Fade", "Slide", "Popin", "Zoom"]
+                    value: page.umbVal("animation.windows_out.style", "fade")
+                    onCommitted: (v) => page.setUmb("src/general.toml", "animation.windows_out", "style", "\"" + v + "\"")
+                }
+
+                GroupCaption { text: "Окна (перемещение)" }
+                ParamRow {
+                    label: "Длительность"
+                    min: 50
+                    max: 1000
+                    value: page.umbVal("animation.windows_move.duration_ms", 250)
+                    displayMul: 1
+                    suffix: " мс"
+                    onCommitted: (v) => page.setUmb("src/general.toml", "animation.windows_move", "duration_ms", Math.round(v))
+                }
+
+                GroupCaption { text: "Рабочие пространства" }
+                ParamRow {
+                    label: "Длительность"
+                    min: 50
+                    max: 1000
+                    value: page.umbVal("animation.workspaces.duration_ms", 300)
+                    displayMul: 1
+                    suffix: " мс"
+                    onCommitted: (v) => page.setUmb("src/general.toml", "animation.workspaces", "duration_ms", Math.round(v))
+                }
+                ChoiceRow {
+                    label: "Стиль"
+                    values: ["slide", "reveal"]
+                    labels: ["Slide", "Reveal"]
+                    value: page.umbVal("animation.workspaces.style", "slide")
+                    onCommitted: (v) => page.setUmb("src/general.toml", "animation.workspaces", "style", "\"" + v + "\"")
+                }
+
+                GroupCaption { text: "Граница" }
+                ParamRow {
+                    label: "Длительность"
+                    min: 50
+                    max: 1000
+                    value: page.umbVal("animation.border.duration_ms", 180)
+                    displayMul: 1
+                    suffix: " мс"
+                    onCommitted: (v) => page.setUmb("src/general.toml", "animation.border", "duration_ms", Math.round(v))
+                }
+
+                GroupCaption { text: "Затемнение неактивных" }
+                ToggleRow {
+                    label: "Затемнять неактивные окна"
+                    checked: page.umbVal("animation.dim_unfocused.enabled", true)
+                    onToggled: (v) => page.setUmb("src/general.toml", "animation.dim_unfocused", "enabled", v ? "true" : "false")
+                }
+                ParamRow {
+                    label: "Затемнение"
+                    min: 0
+                    max: 1
+                    value: page.umbVal("animation.dim_unfocused.dim", 0.12)
+                    displayMul: 100
+                    suffix: "%"
+                    onCommitted: (v) => page.setUmb("src/general.toml", "animation.dim_unfocused", "dim", Math.round(v * 100) / 100)
+                }
+
+                GroupCaption { text: "Scratchpad" }
+                ToggleRow {
+                    label: "Анимация scratchpad"
+                    checked: page.umbVal("animation.scratchpad.enabled", false)
+                    onToggled: (v) => page.setUmb("src/general.toml", "animation.scratchpad", "enabled", v ? "true" : "false")
+                }
+                ParamRow {
+                    label: "Затемнение"
+                    min: 0
+                    max: 1
+                    value: page.umbVal("animation.scratchpad.dim", 0.5)
+                    displayMul: 100
+                    suffix: "%"
+                    onCommitted: (v) => page.setUmb("src/general.toml", "animation.scratchpad", "dim", Math.round(v * 100) / 100)
+                }
+                ToggleRow {
+                    label: "Размытие"
+                    checked: page.umbVal("animation.scratchpad.blur", true)
+                    onToggled: (v) => page.setUmb("src/general.toml", "animation.scratchpad", "blur", v ? "true" : "false")
+                }
+                ParamRow {
+                    label: "Масштаб"
+                    min: 0
+                    max: 1
+                    value: page.umbVal("animation.scratchpad.scale", 0.0)
+                    displayMul: 100
+                    suffix: "%"
+                    onCommitted: (v) => page.setUmb("src/general.toml", "animation.scratchpad", "scale", Math.round(v * 100) / 100)
+                }
+
+                GroupCaption { text: "Перетаскивание" }
+                ToggleRow {
+                    label: "Физика перетаскивания окон"
+                    checked: page.umbVal("animation.windows_drag.physics", true)
+                    onToggled: (v) => page.setUmb("src/general.toml", "animation.windows_drag", "physics", v ? "true" : "false")
                 }
             }
 
@@ -849,6 +1075,180 @@ RowLayout {
                     label: "Размытие фона"
                     checked: page.umbVal("appearance.blur.enabled", true)
                     onToggled: (v) => page.setUmb("src/appearance.toml", "appearance.blur", "enabled", v ? "true" : "false")
+                }
+                ChoiceRow {
+                    label: "Граница"
+                    values: ["", "off", "pulse", "audio"]
+                    labels: ["Выключено", "Выключено", "Pulse", "Audio"]
+                    value: page.umbVal("effects.border", "")
+                    onCommitted: (v) => page.setUmb("src/appearance.toml", "effects", "border", "\"" + v + "\"")
+                }
+                ChoiceRow {
+                    label: "Окно"
+                    values: ["", "off", "scanlines"]
+                    labels: ["Выключено", "Выключено", "Сканлайны"]
+                    value: page.umbVal("effects.window", "")
+                    onCommitted: (v) => page.setUmb("src/appearance.toml", "effects", "window", "\"" + v + "\"")
+                }
+                ChoiceRow {
+                    label: "Экран"
+                    values: ["", "off", "vignette"]
+                    labels: ["Выключено", "Выключено", "Виньетка"]
+                    value: page.umbVal("effects.screen", "")
+                    onCommitted: (v) => page.setUmb("src/appearance.toml", "effects", "screen", "\"" + v + "\"")
+                }
+                ChoiceRow {
+                    label: "Курсор"
+                    values: ["", "off", "glow", "trail", "trail-path"]
+                    labels: ["Выключено", "Выключено", "Свечение", "Шлейф", "Шлейф-путь"]
+                    value: page.umbVal("effects.cursor", "")
+                    onCommitted: (v) => page.setUmb("src/appearance.toml", "effects", "cursor", "\"" + v + "\"")
+                }
+                ParamRow {
+                    label: "Максимум FPS эффектов"
+                    min: 0
+                    max: 240
+                    value: page.umbVal("effects.max_fps", 60)
+                    displayMul: 1
+                    suffix: " fps"
+                    onCommitted: (v) => page.setUmb("src/appearance.toml", "effects", "max_fps", Math.round(v))
+                }
+            }
+
+            Card { // рабочие пространства
+                Layout.fillWidth: true
+                title: "Рабочие пространства"
+
+                ToggleRow {
+                    label: "Переключение туда-обратно"
+                    checked: page.umbVal("workspaces.back_and_forth", false)
+                    onToggled: (v) => page.setUmb("src/general.toml", "workspaces", "back_and_forth", v ? "true" : "false")
+                }
+                ToggleRow {
+                    label: "Пустое пространство сверху"
+                    checked: page.umbVal("workspaces.empty_above", false)
+                    onToggled: (v) => page.setUmb("src/general.toml", "workspaces", "empty_above", v ? "true" : "false")
+                }
+                ParamRow {
+                    label: "Масштаб обзора"
+                    min: 0.1
+                    max: 0.75
+                    value: page.umbVal("overview.zoom", 0.4)
+                    displayMul: 100
+                    suffix: "%"
+                    onCommitted: (v) => page.setUmb("src/general.toml", "overview", "zoom", Math.round(v * 100) / 100)
+                }
+                ToggleRow {
+                    label: "Размытие фона обзора"
+                    checked: page.umbVal("overview.background_blur", true)
+                    onToggled: (v) => page.setUmb("src/general.toml", "overview", "background_blur", v ? "true" : "false")
+                }
+                ToggleRow {
+                    label: "Обои рабочего пространства"
+                    checked: page.umbVal("overview.workspace_wallpaper", false)
+                    onToggled: (v) => page.setUmb("src/general.toml", "overview", "workspace_wallpaper", v ? "true" : "false")
+                }
+                ToggleRow {
+                    label: "Подсказки обзора"
+                    checked: page.umbVal("overview.shortcuts", true)
+                    onToggled: (v) => page.setUmb("src/general.toml", "overview", "shortcuts", v ? "true" : "false")
+                }
+            }
+
+            Card { // горячие углы
+                Layout.fillWidth: true
+                title: "Горячие углы"
+
+                GroupCaption { text: "Левый верхний" }
+                ToggleRow {
+                    label: "Включён"
+                    checked: page.umbVal("hot_corners.top_left.enabled", false)
+                    onToggled: (v) => page.setUmb("src/appearance.toml", "hot_corners.top_left", "enabled", v ? "true" : "false")
+                }
+                ChoiceRow {
+                    label: "Действие"
+                    values: ["overview-open", "overview-close", "overview-toggle"]
+                    labels: ["Обзор", "Закрыть обзор", "Переключить обзор"]
+                    value: page.umbVal("hot_corners.top_left.action", "overview-open")
+                    onCommitted: (v) => page.setUmb("src/appearance.toml", "hot_corners.top_left", "action", "\"" + v + "\"")
+                }
+                ParamRow {
+                    label: "Задержка"
+                    min: 0
+                    max: 2000
+                    value: page.umbVal("hot_corners.top_left.delay_ms", 500)
+                    displayMul: 1
+                    suffix: " мс"
+                    onCommitted: (v) => page.setUmb("src/appearance.toml", "hot_corners.top_left", "delay_ms", Math.round(v))
+                }
+
+                GroupCaption { text: "Правый верхний" }
+                ToggleRow {
+                    label: "Включён"
+                    checked: page.umbVal("hot_corners.top_right.enabled", false)
+                    onToggled: (v) => page.setUmb("src/appearance.toml", "hot_corners.top_right", "enabled", v ? "true" : "false")
+                }
+                ChoiceRow {
+                    label: "Действие"
+                    values: ["overview-open", "overview-close", "overview-toggle"]
+                    labels: ["Обзор", "Закрыть обзор", "Переключить обзор"]
+                    value: page.umbVal("hot_corners.top_right.action", "overview-open")
+                    onCommitted: (v) => page.setUmb("src/appearance.toml", "hot_corners.top_right", "action", "\"" + v + "\"")
+                }
+                ParamRow {
+                    label: "Задержка"
+                    min: 0
+                    max: 2000
+                    value: page.umbVal("hot_corners.top_right.delay_ms", 500)
+                    displayMul: 1
+                    suffix: " мс"
+                    onCommitted: (v) => page.setUmb("src/appearance.toml", "hot_corners.top_right", "delay_ms", Math.round(v))
+                }
+
+                GroupCaption { text: "Левый нижний" }
+                ToggleRow {
+                    label: "Включён"
+                    checked: page.umbVal("hot_corners.bottom_left.enabled", false)
+                    onToggled: (v) => page.setUmb("src/appearance.toml", "hot_corners.bottom_left", "enabled", v ? "true" : "false")
+                }
+                ChoiceRow {
+                    label: "Действие"
+                    values: ["overview-open", "overview-close", "overview-toggle"]
+                    labels: ["Обзор", "Закрыть обзор", "Переключить обзор"]
+                    value: page.umbVal("hot_corners.bottom_left.action", "overview-open")
+                    onCommitted: (v) => page.setUmb("src/appearance.toml", "hot_corners.bottom_left", "action", "\"" + v + "\"")
+                }
+                ParamRow {
+                    label: "Задержка"
+                    min: 0
+                    max: 2000
+                    value: page.umbVal("hot_corners.bottom_left.delay_ms", 500)
+                    displayMul: 1
+                    suffix: " мс"
+                    onCommitted: (v) => page.setUmb("src/appearance.toml", "hot_corners.bottom_left", "delay_ms", Math.round(v))
+                }
+
+                GroupCaption { text: "Правый нижний" }
+                ToggleRow {
+                    label: "Включён"
+                    checked: page.umbVal("hot_corners.bottom_right.enabled", false)
+                    onToggled: (v) => page.setUmb("src/appearance.toml", "hot_corners.bottom_right", "enabled", v ? "true" : "false")
+                }
+                ChoiceRow {
+                    label: "Действие"
+                    values: ["overview-open", "overview-close", "overview-toggle"]
+                    labels: ["Обзор", "Закрыть обзор", "Переключить обзор"]
+                    value: page.umbVal("hot_corners.bottom_right.action", "overview-open")
+                    onCommitted: (v) => page.setUmb("src/appearance.toml", "hot_corners.bottom_right", "action", "\"" + v + "\"")
+                }
+                ParamRow {
+                    label: "Задержка"
+                    min: 0
+                    max: 2000
+                    value: page.umbVal("hot_corners.bottom_right.delay_ms", 500)
+                    displayMul: 1
+                    suffix: " мс"
+                    onCommitted: (v) => page.setUmb("src/appearance.toml", "hot_corners.bottom_right", "delay_ms", Math.round(v))
                 }
             }
         }
@@ -889,6 +1289,77 @@ RowLayout {
                     value: page.umbVal("input.mouse.accel_profile", "flat")
                     onCommitted: (v) => page.setUmb("src/input.toml", "input.mouse", "accel_profile", "\"" + v + "\"")
                 }
+                ToggleRow {
+                    label: "Левша"
+                    checked: page.umbVal("input.mouse.left_handed", false)
+                    onToggled: (v) => page.setUmb("src/input.toml", "input.mouse", "left_handed", v ? "true" : "false")
+                }
+                ParamRow {
+                    label: "Шаг колеса прокрутки"
+                    min: 10
+                    max: 200
+                    value: page.umbVal("input.mouse.scroll_wheel_step", 60)
+                    displayMul: 1
+                    suffix: ""
+                    onCommitted: (v) => page.setUmb("src/input.toml", "input.mouse", "scroll_wheel_step", Math.round(v))
+                }
+                ToggleRow {
+                    label: "Перетаскивание за клиентскую область"
+                    checked: page.umbVal("input.client_window_drag", false)
+                    onToggled: (v) => page.setUmb("src/input.toml", "input", "client_window_drag", v ? "true" : "false")
+                }
+                ChoiceRow {
+                    label: "Перетаскивание переключает"
+                    values: ["none", "floating", "pinned"]
+                    labels: ["Ничего", "Плавающие", "Закреплённые"]
+                    value: page.umbVal("input.window_drag_toggle", "none")
+                    onCommitted: (v) => page.setUmb("src/input.toml", "input", "window_drag_toggle", "\"" + v + "\"")
+                }
+            }
+
+            Card { // тачпад
+                Layout.fillWidth: true
+                title: "Тачпад"
+
+                ToggleRow {
+                    label: "Тап"
+                    checked: page.umbVal("input.touchpad.tap", true)
+                    onToggled: (v) => page.setUmb("src/input.toml", "input.touchpad", "tap", v ? "true" : "false")
+                }
+                ChoiceRow {
+                    label: "Кнопки при тапе"
+                    values: ["left_right_middle", "left_middle_right"]
+                    labels: ["ЛКМ-ПКМ-СКМ", "ЛКМ-СКМ-ПКМ"]
+                    value: page.umbVal("input.touchpad.tap_button_map", "left_right_middle")
+                    onCommitted: (v) => page.setUmb("src/input.toml", "input.touchpad", "tap_button_map", "\"" + v + "\"")
+                }
+                ChoiceRow {
+                    label: "Метод нажатия"
+                    values: ["button_areas", "clickfinger"]
+                    labels: ["Кнопки", "Отпечаток"]
+                    value: page.umbVal("input.touchpad.click_method", "button_areas")
+                    onCommitted: (v) => page.setUmb("src/input.toml", "input.touchpad", "click_method", "\"" + v + "\"")
+                }
+                ToggleRow {
+                    label: "Левша"
+                    checked: page.umbVal("input.touchpad.left_handed", false)
+                    onToggled: (v) => page.setUmb("src/input.toml", "input.touchpad", "left_handed", v ? "true" : "false")
+                }
+                ToggleRow {
+                    label: "Натуральная прокрутка"
+                    checked: page.umbVal("input.touchpad.natural_scroll", true)
+                    onToggled: (v) => page.setUmb("src/input.toml", "input.touchpad", "natural_scroll", v ? "true" : "false")
+                }
+                ToggleRow {
+                    label: "Отключать при печати"
+                    checked: page.umbVal("input.touchpad.disable_while_typing", true)
+                    onToggled: (v) => page.setUmb("src/input.toml", "input.touchpad", "disable_while_typing", v ? "true" : "false")
+                }
+                ToggleRow {
+                    label: "Отключать при внешней мыши"
+                    checked: page.umbVal("input.touchpad.disable_on_external_mouse", false)
+                    onToggled: (v) => page.setUmb("src/input.toml", "input.touchpad", "disable_on_external_mouse", v ? "true" : "false")
+                }
             }
 
             Card { // клавиатура
@@ -922,15 +1393,30 @@ RowLayout {
                 }
             }
 
-            Card { // прочее
+            Card { // фокус
                 Layout.fillWidth: true
-                title: "Прочее"
+                title: "Фокус"
 
                 ToggleRow {
                     label: "Фокус следует за мышью"
                     checked: page.umbVal("input.focus.follows_mouse", true)
                     onToggled: (v) => page.setUmb("src/input.toml", "input.focus", "follows_mouse", v ? "true" : "false")
                 }
+                ParamRow {
+                    label: "Максимум прокрутки при следовании"
+                    min: 0
+                    max: 100
+                    value: page.umbVal("input.focus.follows_mouse_max_scroll", 0)
+                    displayMul: 1
+                    suffix: ""
+                    onCommitted: (v) => page.setUmb("src/input.toml", "input.focus", "follows_mouse_max_scroll", Math.round(v))
+                }
+            }
+
+            Card { // прочее
+                Layout.fillWidth: true
+                title: "Прочее"
+
                 ToggleRow {
                     label: "Вставка средней кнопкой"
                     checked: page.umbVal("input.middle_click_paste", true)
@@ -1002,6 +1488,102 @@ RowLayout {
                     onCommitted: (v) => {
                         if (page.outputName === "") return;
                         page.setUmb("src/appearance.toml", "output:" + page.outputName, "transform", "\"" + v + "\"");
+                    }
+                }
+                ToggleRow {
+                    label: "Циклические рабочие пространства"
+                    checked: page.umbVal("output." + page.outputName + ".cyclic_workspaces", true)
+                    onToggled: (v) => {
+                        if (page.outputName === "") return;
+                        page.setUmb("src/appearance.toml", "output:" + page.outputName, "cyclic_workspaces", v ? "true" : "false");
+                    }
+                }
+                ChoiceRow {
+                    label: "Ось рабочих пространств"
+                    values: ["vertical", "horizontal"]
+                    labels: ["Вертикально", "Горизонтально"]
+                    value: page.umbVal("output." + page.outputName + ".workspace_axis", "vertical")
+                    onCommitted: (v) => {
+                        if (page.outputName === "") return;
+                        page.setUmb("src/appearance.toml", "output:" + page.outputName, "workspace_axis", "\"" + v + "\"");
+                    }
+                }
+                ParamRow {
+                    label: "Минимум рабочих пространств"
+                    min: 1
+                    max: 10
+                    value: page.umbVal("output." + page.outputName + ".min_workspaces", 1)
+                    displayMul: 1
+                    suffix: ""
+                    onCommitted: (v) => {
+                        if (page.outputName === "") return;
+                        page.setUmb("src/appearance.toml", "output:" + page.outputName, "min_workspaces", Math.round(v));
+                    }
+                }
+                ChoiceRow {
+                    label: "HDR"
+                    values: ["off", "on", "auto", "fullscreen"]
+                    labels: ["Выкл", "Вкл", "Авто", "В полный экран"]
+                    value: page.umbVal("output." + page.outputName + ".hdr", "off")
+                    onCommitted: (v) => {
+                        if (page.outputName === "") return;
+                        page.setUmb("src/appearance.toml", "output:" + page.outputName, "hdr", "\"" + v + "\"");
+                    }
+                }
+                ChoiceRow {
+                    label: "Глубина цвета"
+                    values: [8, 10]
+                    labels: ["8 бит", "10 бит"]
+                    value: page.umbVal("output." + page.outputName + ".bit_depth", 8)
+                    onCommitted: (v) => {
+                        if (page.outputName === "") return;
+                        page.setUmb("src/appearance.toml", "output:" + page.outputName, "bit_depth", v);
+                    }
+                }
+                ParamRow {
+                    label: "Яркость SDR-белого"
+                    min: 80
+                    max: 1000
+                    value: page.umbVal("output." + page.outputName + ".sdr_white", 203)
+                    displayMul: 1
+                    suffix: " кд/м²"
+                    onCommitted: (v) => {
+                        if (page.outputName === "") return;
+                        page.setUmb("src/appearance.toml", "output:" + page.outputName, "sdr_white", Math.round(v));
+                    }
+                }
+                ToggleRow {
+                    label: "Прямой вывод (direct scanout)"
+                    checked: page.umbVal("output." + page.outputName + ".direct_scanout", false)
+                    onToggled: (v) => {
+                        if (page.outputName === "") return;
+                        page.setUmb("src/appearance.toml", "output:" + page.outputName, "direct_scanout", v ? "true" : "false");
+                    }
+                }
+                ToggleRow {
+                    label: "Разрывы (tearing)"
+                    checked: page.umbVal("output." + page.outputName + ".tearing", false)
+                    onToggled: (v) => {
+                        if (page.outputName === "") return;
+                        page.setUmb("src/appearance.toml", "output:" + page.outputName, "tearing", v ? "true" : "false");
+                    }
+                }
+                ChoiceRow {
+                    label: "Экранный эффект"
+                    values: ["", "off", "vignette"]
+                    labels: ["Выключено", "Выключено", "Виньетка"]
+                    value: page.umbVal("output." + page.outputName + ".screen_effect", "")
+                    onCommitted: (v) => {
+                        if (page.outputName === "") return;
+                        page.setUmb("src/appearance.toml", "output:" + page.outputName, "screen_effect", "\"" + v + "\"");
+                    }
+                }
+                ToggleRow {
+                    label: "Фокус при запуске"
+                    checked: page.umbVal("output." + page.outputName + ".focus_at_startup", true)
+                    onToggled: (v) => {
+                        if (page.outputName === "") return;
+                        page.setUmb("src/appearance.toml", "output:" + page.outputName, "focus_at_startup", v ? "true" : "false");
                     }
                 }
             }

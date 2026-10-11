@@ -90,10 +90,15 @@ Singleton {
     readonly property real _tintLift: 10
     readonly property real _tintTarget: 0.13
     readonly property color _containerSeed: root.cPrimaryContainer
+    readonly property real _containerHue: 0
     readonly property real _containerSatFloor: 0.22
     readonly property real _cardSatFloor: root.isLight ? root._containerSatFloor : Math.min(1, Math.max(root._containerSatFloor, root.mHigh.hslSaturation * 1.15))
     readonly property real _containerTone: root.isLight ? 30 : Math.max(30, root.toneOf(root.mHigh) + 2)
     readonly property real _containerInkTone: Math.min(98, Math.max(90, root._containerTone + 45))
+    // tertiary держит свою личность на шаг теплее акцента, а secondary-семейство
+    // расходится на шаг холоднее — как в Lucid
+    readonly property real _tertiaryHue: 14
+    readonly property real _secondaryHue: -20
     readonly property real _rampShift: root.surfaceTint <= 0 ? 0 : (root.isLight ? Math.max(0, root.toneOf(root.cLowest) - (100 - root.surfaceTint * root._tintLift)) : -(root.surfaceTint * root._tintLift))
 
     // ── Сырые роли ─────────────────────────────────────────────────────
@@ -196,9 +201,9 @@ Singleton {
     readonly property color fgPrimary: root.fgAccent
     readonly property color primaryContainer: root.accentContainer
     readonly property color fgPrimaryContainer: root.fgAccentContainer
-    readonly property color secondary: root.containerFill(root.withHue(root.cPrimary, -20), root.toneOf(root.cSecondary))
+    readonly property color secondary: root.containerFill(root.withHue(root.cPrimary, root._secondaryHue), root.toneOf(root.cSecondary))
     readonly property color fgSecondary: root.fgOnFill
-    readonly property color tertiary: root.containerFill(root.withHue(root.cPrimary, 14), root.isLight ? 42 : 80)
+    readonly property color tertiary: root.containerFill(root.withHue(root.cPrimary, root._tertiaryHue), root.isLight ? 42 : 80)
     readonly property color fgTertiary: root.fgOnFill
     readonly property color divider: root.alpha(root.cOutlineVariant, root.isLight ? 0.7 : 0.55)
 
@@ -259,8 +264,18 @@ Singleton {
         id: iconFontLoader
         source: "file://" + Quickshell.env("HOME") + "/nimbus/assets/fonts/MaterialSymbolsRounded.ttf"
     }
-    readonly property string textFont: "Roboto"
+    // Google Sans Flex (вариативный) тоже бандлится. Публичное имя семейства —
+    // textFont: на него завязаны все потребители, поэтому при любой ошибке
+    // загрузки оно откатывается на Noto Sans, а иконный loader не трогается.
+    FontLoader {
+        id: flexLoader
+        source: "file://" + Quickshell.env("HOME") + "/nimbus/assets/fonts/GoogleSansFlex.ttf"
+    }
     readonly property string textFontFallback: "Noto Sans"
+    readonly property string brandFamily: flexLoader.status === FontLoader.Ready ? flexLoader.name : "Google Sans"
+    readonly property bool flexActive: flexLoader.status === FontLoader.Ready
+    readonly property string fontFamily: root.flexActive ? root.brandFamily : root.textFontFallback
+    readonly property string textFont: root.fontFamily
     readonly property string iconFont: iconFontLoader.status === FontLoader.Ready ? iconFontLoader.name : "Material Symbols Rounded"
 
     readonly property real typeBaseline: 1.0
@@ -287,22 +302,24 @@ Singleton {
     readonly property int fontLabelMd: Math.round(12 * root.fontScale)
     readonly property int fontLabelSm: Math.round(11 * root.fontScale)
 
+    // role -> [px при 1.0x, вес, круглость терминалов]. Веса и размеры
+    // совпадают с Lucid; третий элемент (ROND) — из его же таблицы.
     readonly property var typeRoles: ({
-        "displayLarge": [52, 500],
-        "displayMedium": [42, 500],
-        "displaySmall": [32, 500],
-        "headlineLarge": [30, 500],
-        "headlineMedium": [26, 500],
-        "headlineSmall": [22, 500],
-        "titleLarge": [19, 500],
-        "titleMedium": [16, 560],
-        "titleSmall": [14, 560],
-        "bodyLarge": [15, 420],
-        "bodyMedium": [13, 420],
-        "bodySmall": [12, 420],
-        "labelLarge": [13, 560],
-        "labelMedium": [12, 560],
-        "labelSmall": [11, 560]
+        "displayLarge": [52, 500, 100],
+        "displayMedium": [42, 500, 100],
+        "displaySmall": [32, 500, 60],
+        "headlineLarge": [30, 500, 40],
+        "headlineMedium": [26, 500, 30],
+        "headlineSmall": [22, 500, 20],
+        "titleLarge": [19, 500, 0],
+        "titleMedium": [16, 560, 0],
+        "titleSmall": [14, 560, 0],
+        "bodyLarge": [15, 420, 0],
+        "bodyMedium": [13, 420, 0],
+        "bodySmall": [12, 420, 0],
+        "labelLarge": [13, 560, 0],
+        "labelMedium": [12, 560, 0],
+        "labelSmall": [11, 560, 0]
     })
 
     function typeSize(role) {
@@ -312,6 +329,65 @@ Singleton {
     function typeWeight(role) {
         var r = root.typeRoles[role] || root.typeRoles.bodyMedium;
         return r[1];
+    }
+    function typeRound(role) {
+        var r = root.typeRoles[role] || root.typeRoles.bodyMedium;
+        return r[2];
+    }
+
+    // Qt строит отдельный font engine (и mmap всего flex-файла) на каждый
+    // кортеж осей. opsz выбирает только оптический мастер, а не размер, поэтому
+    // квантование его по лестнице незаметно и схлопывает движки. Файл прибит к
+    // осям wght/opsz/ROND, поэтому GRAD и wdth не запрашиваются.
+    readonly property var _opszStops: [9, 13, 18, 28, 48, 96]
+
+    function _snap(px) {
+        var v = Math.max(6, Math.min(144, px));
+        var best = root._opszStops[0];
+        for (var i = 1; i < root._opszStops.length; i++) {
+            if (Math.abs(root._opszStops[i] - v) < Math.abs(best - v))
+                best = root._opszStops[i];
+        }
+        return best;
+    }
+
+    // Вариативные оси flex-текста; пусто для любого другого семейства, тогда
+    // вес берётся из font.weight как обычно.
+    function axes(px, wght, rond) {
+        if (!root.flexActive)
+            return ({});
+
+        return ({
+            "wght": Math.round((wght || 400) / 25) * 25,
+            "opsz": root._snap(px),
+            "ROND": Math.round((rond || 0) / 10) * 10
+        });
+    }
+
+    // Цифры стоят на базовой линии, поэтому центрирование строчного бокса
+    // оставляет число в бейдже задранным вверх. Это коррекция долей пикселя,
+    // измеренная по загруженному шрифту.
+    readonly property real digitCenterOffset: {
+        const tight = root._digitInk.tightBoundingRect;
+        if (tight.height <= 0)
+            return 0;
+
+        return (((root._digitBox.descent - root._digitBox.ascent) / 2) - tight.y - tight.height / 2) / 100;
+    }
+
+    property TextMetrics _digitInk: TextMetrics {
+        font.family: root.fontFamily
+        font.pixelSize: 100
+        font.bold: true
+        // цифра с плоским дном: круглые перескакивают базовую линию и тянули бы
+        // коррекцию не в ту сторону
+        text: "7"
+    }
+
+    property FontMetrics _digitBox: FontMetrics {
+        font.family: root.fontFamily
+        font.pixelSize: 100
+        font.bold: true
     }
 
     // ── Legacy-метрики старого острова ─────────────────────────────────
@@ -426,6 +502,7 @@ Singleton {
         var hh = h % 1;
         if (hh < 0)
             hh += 1;
+        hh = (hh + root._containerHue / 360) % 1;
         var s = Math.max(c.hslSaturation, floor === undefined ? root._containerSatFloor : floor);
         return root.atTone(Qt.hsla(hh, s, 0.5, c.a), tone);
     }
@@ -458,7 +535,15 @@ Singleton {
 
     function _mix(a, b, t) { return Qt.rgba(a.r * (1 - t) + b.r * t, a.g * (1 - t) + b.g * t, a.b * (1 - t) + b.b * t, 1) }
 
+    function _darken(c, t) { return root._mix(c, Qt.rgba(0, 0, 0, 1), t) }
+
+    function _lighten(c, t) { return root._mix(c, Qt.rgba(1, 1, 1, 1), t) }
+
     function alpha(c, a) { return Qt.rgba(c.r, c.g, c.b, a) }
+
+    // прозрачность по «стеклу»: в Nimbus blur-ползунок ведёт радиус Umbriel,
+    // поэтому альфа выводится из root.glass, а не из Lucid-формулы blurAmount
+    function withBlur(c) { return root.alpha(c, root.glass) }
 
     function toHex(c) {
         var r = Math.round(c.r * 255).toString(16).padStart(2, "0");

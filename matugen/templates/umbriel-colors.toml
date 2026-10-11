@@ -14,6 +14,4 @@ shadow = "#{{colors.primary.default.hex_stripped}}66"
 [colors.border]
 focused = "#{{colors.primary.default.hex_stripped}}FF"
 unfocused = "#{{colors.surface_variant.default.hex_stripped}}FF"
-scratchpad_focused = "#{{colors.tertiary.default.hex_stripped}}FF"
-scratchpad_unfocused = "#{{colors.surface_variant.default.hex_stripped}}FF"
 outer = "#{{colors.primary.default.hex_stripped}}40"

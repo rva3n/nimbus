@@ -104,8 +104,6 @@ Item {
                             anchors.centerIn: parent
                             size: 30
                             source: rowItem.modelData.icon ? Quickshell.iconPath(rowItem.modelData.icon, true) : ""
-                            tint: Theme.accentIcon
-                            tinted: Prefs.tintAppIcons
                         }
                     }
 

@@ -161,8 +161,6 @@ Row {
                             anchors.fill: parent
                             visible: appIcon.iconPath !== ""
                             source: appIcon.iconPath
-                            tint: wsPill.active ? Theme.fgAccentContainer : Theme.accentIcon
-                            tinted: Prefs.tintAppIcons
                             size: 13
                         }
                     }

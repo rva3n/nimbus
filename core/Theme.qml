@@ -168,9 +168,6 @@ Singleton {
     readonly property color fgAccent: root.fgOnFill
     readonly property color accentContainer: root.containerFill(root._containerSeed, root._containerTone, root._cardSatFloor)
     readonly property color fgAccentContainer: root.containerInk(root._containerSeed)
-    // Цвет материальных иконок приложений: акцент средней светлоты — M3 primary
-    // пастельный и на иконках читается почти как белый.
-    readonly property color accentIcon: root.atTone(root.accent, root.isLight ? 45 : 72)
     readonly property color accentMuted: root.atTone(root.withSat(root.cPrimary, 0.55), (root.toneOf(root.cPrimary) + root.toneOf(root.cOnSurfaceVariant)) / 2)
     readonly property color accentBorder: root.alpha(root.accent, 0.45)
     readonly property color secondaryContainer: root.accentContainer

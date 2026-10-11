@@ -21,7 +21,6 @@ Singleton {
         surfaceDarkness: -1,
         surfaceTint: -1,
         blurAmount: 45,
-        tintAppIcons: true,
         weatherAuto: true,
         weatherCity: "",
         weatherLat: 0,
@@ -52,7 +51,6 @@ Singleton {
             property real surfaceDarkness: -1
             property real surfaceTint: -1
             property real blurAmount: 45
-            property bool tintAppIcons: true
             property bool weatherAuto: true
             property string weatherCity: ""
             property real weatherLat: 0
@@ -69,7 +67,6 @@ Singleton {
     readonly property real surfaceDarkness: a.surfaceDarkness
     readonly property real surfaceTint: a.surfaceTint
     readonly property real blurAmount: a.blurAmount
-    readonly property bool tintAppIcons: a.tintAppIcons
     readonly property bool weatherAuto: a.weatherAuto
     readonly property string weatherCity: a.weatherCity
     readonly property real weatherLat: a.weatherLat

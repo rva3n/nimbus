@@ -17,6 +17,9 @@ Item {
     property var expanded: ({})
     // плоское дерево, построенное rebuild(): [{proc, depth, hasChildren, expanded}]
     property var model: []
+    // порядок строк между обновлениями: pid (строка) → индекс в прошлом out;
+    // пока не сброшен setSort(), соседи не пересортировываются при refresh
+    property var _order: ({})
     // всего процессов после фильтра (не только видимых в дереве)
     property int rowCount: 0
     // контекстное меню: процесс и точка открытия
@@ -116,6 +119,20 @@ Item {
         for (const r of roots)
             _max(r);
         const cmp = (a, b) => {
+            // стабильный порядок между обновлениями: если pid уже был в прошлой
+            // раскладке — сохраняем прежний относительный порядок; новый pid
+            // уходит после известных
+            const oa = tab._order[String(a.pid)];
+            const ob = tab._order[String(b.pid)];
+            const ha = oa !== undefined;
+            const hb = ob !== undefined;
+            if (ha && hb) {
+                if (oa !== ob)
+                    return oa - ob;
+            } else if (ha !== hb) {
+                return ha ? -1 : 1;
+            }
+            // новых/неизвестных сортируем по метрике
             if (tab.sortBy === "cpu" || tab.sortBy === "mem") {
                 const d = (subMax[String(b.pid)] || 0) - (subMax[String(a.pid)] || 0);
                 if (d !== 0) return d;
@@ -148,9 +165,23 @@ Item {
         const savedY = listView.contentY;
         tab.model = out;
         tab.rowCount = matched.length;
+        // запоминаем раскладку для следующего refresh (стабильный порядок)
+        const order = {};
+        for (let i = 0; i < out.length; i++)
+            order[String(out[i].proc.pid)] = i;
+        tab._order = order;
+        // синхронно восстанавливаем прокрутку, чтобы не мигнуть верхом кадра
+        listView.contentY = savedY;
         Qt.callLater(function() {
             listView.contentY = Math.min(savedY, Math.max(0, listView.contentHeight - listView.height));
         });
+    }
+
+    // ручная сортировка: сбрасываем замороженный порядок и переранжируем один раз
+    function setSort(k) {
+        tab._order = ({});
+        tab.sortBy = k;
+        tab.rebuild();
     }
 
     function toggleExpanded(pid) {
@@ -239,22 +270,22 @@ Item {
                 Chip {
                     label: "CPU"
                     selected: tab.sortBy === "cpu"
-                    onClicked: tab.sortBy = "cpu"
+                    onClicked: tab.setSort("cpu")
                 }
                 Chip {
                     label: "Память"
                     selected: tab.sortBy === "mem"
-                    onClicked: tab.sortBy = "mem"
+                    onClicked: tab.setSort("mem")
                 }
                 Chip {
                     label: "Имя"
                     selected: tab.sortBy === "name"
-                    onClicked: tab.sortBy = "name"
+                    onClicked: tab.setSort("name")
                 }
                 Chip {
                     label: "PID"
                     selected: tab.sortBy === "pid"
-                    onClicked: tab.sortBy = "pid"
+                    onClicked: tab.setSort("pid")
                 }
             }
 

@@ -4,19 +4,35 @@ import Quickshell
 import Quickshell.Io
 
 // Список процессов для диспетчера задач: ps каждые 2 секунды, действия через kill/renice.
+// Дерево строится по ppid во вкладке «Диспетчер»; здесь только «плоский» срез (ppid хранится).
 Singleton {
     id: p
 
-    property var items: []   // [{user, pid, ni, cpu, mem, stat, name}]
+    property var items: []   // [{user, pid, ppid, ni, cpu, mem, stat, args, name}]
     property bool loading: false
+
+    // накопитель текущего прогона ps — items меняется один раз за цикл
+    property var _buf: []
 
     Process {
         id: psProc
-        command: ["sh", "-c", "ps -eo user:16,pid,ni,pcpu,pmem,stat,comm --sort=-pcpu --no-headers 2>/dev/null | head -80"]
+        // имя берём из argv[0] (/proc/<pid>/cmdline, NUL-разделитель): comm у
+        // Proton-игр = MainThread, а args с пробелами в пути не разобрать.
+        command: ["bash", "-c",
+            "ps -eo user:16,pid,ppid,ni,pcpu,pmem,stat,args --sort=-pcpu --no-headers 2>/dev/null | " +
+            "while read -r user pid ppid ni cpu mem stat rest; do " +
+            "IFS= read -r -d '' name 2>/dev/null < \"/proc/$pid/cmdline\"; " +
+            "if [ -z \"$name\" ]; then name=\"${rest%% *}\"; fi; " +
+            "printf '%s\\t%s\\t%s\\t%s\\t%s\\t%s\\t%s\\t%s\\t%s\\n' " +
+            "\"$user\" \"$pid\" \"$ppid\" \"$ni\" \"$cpu\" \"$mem\" \"$stat\" \"$name\" \"$rest\"; " +
+            "done"]
         stdout: SplitParser {
             onRead: line => p._line(line)
         }
-        onExited: p.loading = false
+        onExited: {
+            p.items = p._buf;
+            p.loading = false;
+        }
     }
 
     Timer {
@@ -25,28 +41,41 @@ Singleton {
         repeat: true
         triggeredOnStart: true
         onTriggered: {
-            p.items = [];
+            p._buf = [];
             p.loading = true;
             psProc.running = false;
             psProc.running = true;
         }
     }
 
+    // имя исполняемого файла: argv[0] может быть путём с пробелами
+    // (S:\steamapps\common\The Witcher 3\...\witcher3.exe), поэтому режем по
+    // последнему разделителю пути, а не по первому пробелу
+    function _name(exe) {
+        let s = String(exe).trim();
+        if ((s.length >= 2) && ((s[0] === '"' && s[s.length - 1] === '"') || (s[0] === "'" && s[s.length - 1] === "'")))
+            s = s.slice(1, s.length - 1);
+        const parts = s.split(/[\\/]/);
+        const last = parts[parts.length - 1];
+        return last !== "" ? last : s;
+    }
+
     function _line(line) {
-        const m = line.match(/^(\S+)\s+(\d+)\s+(-?\d+)\s+([\d.,]+)\s+([\d.,]+)\s+(\S+)\s+(.+)$/);
-        if (!m)
+        const f = line.split("\t");
+        if (f.length < 9)
             return;
-        const arr = p.items.slice();
-        arr.push({
-            user: m[1],
-            pid: parseInt(m[2], 10),
-            ni: parseInt(m[3], 10),
-            cpu: parseFloat(String(m[4]).replace(",", ".")),
-            mem: parseFloat(String(m[5]).replace(",", ".")),
-            stat: m[6],
-            name: m[7]
+        const args = f[8];
+        p._buf.push({
+            user: f[0].trim(),
+            pid: parseInt(f[1], 10),
+            ppid: parseInt(f[2], 10),
+            ni: parseInt(f[3], 10),
+            cpu: parseFloat(String(f[4]).replace(",", ".")),
+            mem: parseFloat(String(f[5]).replace(",", ".")),
+            stat: f[6],
+            args: args,
+            name: p._name(f[7] !== "" ? f[7] : args)
         });
-        p.items = arr;
     }
 
     // ── действия над процессом (контекстное меню) ──────────────────────

@@ -12,10 +12,13 @@ Item {
     property var shell: null
     // выбранный процесс: pid переживает перерисовки списка
     property int selectedPid: -1
-    // последний непустой срез ProcList; сам ProcList каждые 2 с на время
-    // обновления обнуляет items — без «липкой» копии список сбрасывал бы
-    // прокрутку вверх на каждом цикле
-    property var rows: []
+    // сортировка списка и раскрытые в дереве узлы (ключ — строка pid)
+    property string sortBy: "cpu"
+    property var expanded: ({})
+    // плоское дерево, построенное rebuild(): [{proc, depth, hasChildren, expanded}]
+    property var model: []
+    // всего процессов после фильтра (не только видимых в дереве)
+    property int rowCount: 0
     // контекстное меню: процесс и точка открытия
     property var menuProc: null
     property real menuX: 0
@@ -34,34 +37,126 @@ Item {
     readonly property int colMem: Theme.dp(70)
     readonly property int colNi: Theme.dp(36)
     readonly property int colStat: Theme.dp(44)
+    readonly property int colName: Theme.dp(170)
     readonly property int menuW: Theme.dp(208)
-
-    // фильтр по имени и pid
-    readonly property var filtered: {
-        const q = tab.query.trim().toLowerCase();
-        if (q === "")
-            return tab.rows;
-        const out = [];
-        for (const p of tab.rows) {
-            if (String(p.name).toLowerCase().indexOf(q) !== -1 || String(p.pid).indexOf(q) !== -1)
-                out.push(p);
-        }
-        return out;
-    }
 
     property string query: ""
 
     // меню не должно висеть после ухода с вкладки
     onVisibleChanged: if (!tab.visible) tab.closeMenu()
 
-    // строки обновляем один раз за цикл — по завершении ps
+    // любые изменения фильтра или сортировки — сразу пересобрать дерево
+    onQueryChanged: tab.rebuild()
+    onSortByChanged: tab.rebuild()
+
+    // дерево перестраиваем один раз за цикл — по завершении ps
     Connections {
         target: ProcList
 
         function onLoadingChanged() {
             if (!ProcList.loading && ProcList.items.length > 0)
-                tab.rows = ProcList.items;
+                tab.rebuild();
         }
+    }
+
+    // сравнение соседей по выбранному полю
+    function _cmp(a, b) {
+        if (tab.sortBy === "mem")
+            return b.mem - a.mem;
+        if (tab.sortBy === "name")
+            return String(a.name).localeCompare(String(b.name), "ru");
+        if (tab.sortBy === "pid")
+            return a.pid - b.pid;
+        return b.cpu - a.cpu;
+    }
+
+    // перестройка плоского дерева из ProcList.items: фильтр → children по ppid →
+    // сортировка соседей → DFS-разворот с учётом раскрытых узлов
+    function rebuild() {
+        const list = ProcList.items || [];
+        const q = tab.query.trim().toLowerCase();
+        const matched = [];
+        for (const p of list) {
+            if (q === "") {
+                matched.push(p);
+                continue;
+            }
+            const pid = String(p.pid);
+            if (String(p.name).toLowerCase().indexOf(q) !== -1
+                    || String(p.args).toLowerCase().indexOf(q) !== -1
+                    || String(p.user).toLowerCase().indexOf(q) !== -1
+                    || pid.indexOf(q) === 0)
+                matched.push(p);
+        }
+
+        // ppid==pid или родитель не прошёл фильтр → узел становится корнем
+        const inSet = {};
+        for (const p of matched)
+            inSet[String(p.pid)] = true;
+        const children = {};
+        const roots = [];
+        for (const p of matched) {
+            const pp = String(p.ppid);
+            if (p.ppid === p.pid || !inSet[pp])
+                roots.push(p);
+            else
+                (children[pp] = children[pp] || []).push(p);
+        }
+        // для сортировки по cpu/mem берём максимум по поддереву: ветка с самым
+        // горячим процессом всплывает наверх (в дереве «своё» значение родителя
+        // обычно ноль и ничего не сортирует)
+        const subMax = {};
+        function _max(p) {
+            let m = tab.sortBy === "mem" ? p.mem : p.cpu;
+            for (const c of (children[String(p.pid)] || []))
+                m = Math.max(m, _max(c));
+            subMax[String(p.pid)] = m;
+            return m;
+        }
+        for (const r of roots)
+            _max(r);
+        const cmp = (a, b) => {
+            if (tab.sortBy === "cpu" || tab.sortBy === "mem") {
+                const d = (subMax[String(b.pid)] || 0) - (subMax[String(a.pid)] || 0);
+                if (d !== 0) return d;
+            }
+            return tab._cmp(a, b);
+        };
+        roots.sort(cmp);
+        for (const k in children)
+            children[k].sort(cmp);
+
+        const out = [];
+        const walk = (p, depth) => {
+            const kids = children[String(p.pid)] || [];
+            const ex = tab.expanded[String(p.pid)] !== false;
+            out.push({
+                proc: p,
+                depth: depth,
+                hasChildren: kids.length > 0,
+                expanded: ex
+            });
+            if (ex) {
+                for (const c of kids)
+                    walk(c, depth + 1);
+            }
+        };
+        for (const r of roots)
+            walk(r, 0);
+
+        // не теряем прокрутку при смене модели
+        const savedY = listView.contentY;
+        tab.model = out;
+        tab.rowCount = matched.length;
+        Qt.callLater(function() {
+            listView.contentY = Math.min(savedY, Math.max(0, listView.contentHeight - listView.height));
+        });
+    }
+
+    function toggleExpanded(pid) {
+        const k = String(pid);
+        tab.expanded[k] = !(tab.expanded[k] !== false);
+        tab.rebuild();
     }
 
     // склонение: 1 процесс, 2 процесса, 5 процессов
@@ -133,15 +228,41 @@ Item {
             TextField {
                 Layout.alignment: Qt.AlignVCenter
                 Layout.preferredWidth: Theme.dp(280)
-                placeholder: "Поиск по имени или PID"
+                placeholder: "Поиск по имени, команде или PID"
                 onTextChanged: tab.query = text
+            }
+
+            RowLayout {
+                Layout.alignment: Qt.AlignVCenter
+                spacing: Theme.dp(4)
+
+                Chip {
+                    label: "CPU"
+                    selected: tab.sortBy === "cpu"
+                    onClicked: tab.sortBy = "cpu"
+                }
+                Chip {
+                    label: "Память"
+                    selected: tab.sortBy === "mem"
+                    onClicked: tab.sortBy = "mem"
+                }
+                Chip {
+                    label: "Имя"
+                    selected: tab.sortBy === "name"
+                    onClicked: tab.sortBy = "name"
+                }
+                Chip {
+                    label: "PID"
+                    selected: tab.sortBy === "pid"
+                    onClicked: tab.sortBy = "pid"
+                }
             }
 
             Item { Layout.fillWidth: true }
 
             Text {
                 Layout.alignment: Qt.AlignVCenter
-                text: tab.filtered.length + " " + tab.procWord(tab.filtered.length)
+                text: tab.rowCount + " " + tab.procWord(tab.rowCount)
                 color: Theme.subtext
                 font.family: Theme.textFont
                 font.pixelSize: Theme.typeSize("labelSmall")
@@ -166,10 +287,27 @@ Item {
             Layout.rightMargin: tab.cellPad
             spacing: tab.cellGap
 
+            Item { // место под шеврон в строках дерева
+                Layout.preferredWidth: Theme.dp(16)
+                Layout.leftMargin: Theme.dp(4)
+            }
+
             Text {
-                Layout.fillWidth: true
+                Layout.preferredWidth: tab.colName
                 Layout.alignment: Qt.AlignVCenter
                 text: "Процесс"
+                color: Theme.subtext
+                font.family: Theme.textFont
+                font.pixelSize: Theme.typeSize("labelSmall")
+                font.weight: Theme.typeWeight("labelSmall")
+                elide: Text.ElideRight
+            }
+
+            Text {
+                Layout.fillWidth: true
+                Layout.minimumWidth: Theme.dp(180)
+                Layout.alignment: Qt.AlignVCenter
+                text: "Команда"
                 color: Theme.subtext
                 font.family: Theme.textFont
                 font.pixelSize: Theme.typeSize("labelSmall")
@@ -253,7 +391,7 @@ Item {
                 anchors.fill: parent
                 clip: true
                 boundsBehavior: Flickable.StopAtBounds
-                model: tab.filtered
+                model: tab.model
 
                 delegate: Item {
                     id: rowItem
@@ -261,7 +399,10 @@ Item {
                     required property var modelData
                     required property int index
 
-                    readonly property var proc: rowItem.modelData
+                    readonly property var proc: rowItem.modelData.proc
+                    readonly property int depth: rowItem.modelData.depth
+                    readonly property bool hasChildren: rowItem.modelData.hasChildren
+                    readonly property bool expanded: rowItem.modelData.expanded
                     readonly property bool selected: tab.selectedPid === rowItem.proc.pid
 
                     width: listView.width
@@ -284,8 +425,22 @@ Item {
                         anchors.rightMargin: tab.cellPad
                         spacing: tab.cellGap
 
+                        Item { // шеврон дерева (пустое место у листьев)
+                            Layout.preferredWidth: Theme.dp(16)
+                            Layout.leftMargin: Theme.dp(4 + Math.min(rowItem.depth, 5) * 14)
+                            Layout.alignment: Qt.AlignVCenter
+
+                            Icon {
+                                anchors.centerIn: parent
+                                visible: rowItem.hasChildren
+                                name: rowItem.expanded ? "expand_more" : "chevron_right"
+                                size: Theme.dp(16)
+                                color: rowItem.selected ? Theme.fgAccentContainer : Theme.subtext
+                            }
+                        }
+
                         Text { // имя процесса
-                            Layout.fillWidth: true
+                            Layout.preferredWidth: tab.colName
                             Layout.alignment: Qt.AlignVCenter
                             text: rowItem.proc.name
                             color: rowItem.selected ? Theme.fgAccentContainer : Theme.text
@@ -293,6 +448,18 @@ Item {
                             font.family: Theme.textFont
                             font.pixelSize: Theme.typeSize("titleSmall")
                             font.weight: Theme.typeWeight("titleSmall")
+                        }
+
+                        Text { // полная команда — видно игру/путь, а не comm
+                            Layout.fillWidth: true
+                            Layout.minimumWidth: Theme.dp(180)
+                            Layout.alignment: Qt.AlignVCenter
+                            text: rowItem.proc.args
+                            color: rowItem.selected ? Theme.fgAccentContainer : Theme.subtextDim
+                            elide: Text.ElideRight
+                            font.family: Theme.textFont
+                            font.pixelSize: Theme.typeSize("bodySmall")
+                            font.weight: Theme.typeWeight("bodySmall")
                         }
 
                         Text { // PID
@@ -375,6 +542,8 @@ Item {
                                 // позиция меню — точка клика, переведённая во вкладку
                                 const p = rowArea.mapToItem(tab, mouse.x, mouse.y);
                                 tab.openMenu(rowItem.proc, p.x, p.y);
+                            } else if (rowItem.hasChildren) {
+                                tab.toggleExpanded(rowItem.proc.pid);
                             }
                         }
                     }

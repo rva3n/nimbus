@@ -2,9 +2,9 @@ import QtQuick
 import "../core"
 
 // Слайдер в стиле yoru: толстый скруглённый (не пилюля) трек, заливка
-// акцентом, тонкая вертикальная ручка-риска на границе заливки и опциональная
-// иконка внутри заливки слева (как volume/brightness в control center).
-// Крупной круглой ручки и кольца нет.
+// акцентом, тонкая вертикальная ручка-риска на границе заливки, ВЫСТУПАЮЩАЯ
+// за пределы трека сверху и снизу, и опциональная иконка внутри заливки слева
+// (как volume/brightness в control center). Крупной круглой ручки и кольца нет.
 Item {
     id: root
 
@@ -28,7 +28,8 @@ Item {
     signal iconClicked()
 
     implicitWidth: Theme.dp(200)
-    // трек + небольшой запас под ховер-утолщение ручки
+    // высота задаётся треку; ручка намеренно выходит за границы root (root не
+    // клипует), как в yoru — она выше трека и торчит сверху и снизу
     implicitHeight: Theme.dp(32)
     opacity: root.enabled ? 1 : Theme.disabledContent
 
@@ -46,7 +47,8 @@ Item {
     readonly property real _trackH: Theme.dp(28)
     readonly property real _radius: Theme.dp(12)
     readonly property real _handleW: Theme.dp(3)
-    readonly property real _handleH: root._trackH - Theme.dp(10)
+    // ручка выше трека на dp(8): торчит ~dp(4) сверху и снизу (как в yoru)
+    readonly property real _handleH: root._trackH + Theme.dp(8)
     readonly property real _iconMargin: Theme.dp(10)
     readonly property real _iconSize: Theme.dp(16)
     // ширина заливки: по live — при drag напрямую, извне value доезжает плавно

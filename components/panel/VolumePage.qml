@@ -139,9 +139,19 @@ ColumnLayout {
 
     // громкость воспроизводящих приложений (playback: isStream && isSink)
     Card {
-        visible: volumePage.playbackStreams.length > 0
         Layout.fillWidth: true
         title: "Приложения"
+
+        Text { // пустое состояние — карточка всегда на виду
+            visible: volumePage.playbackStreams.length === 0
+            Layout.fillWidth: true
+            Layout.topMargin: Theme.dp(4)
+            text: "Ничего не воспроизводится"
+            color: Theme.subtextDim
+            font.family: Theme.textFont
+            font.pixelSize: Theme.typeSize("bodySmall")
+            font.weight: Theme.typeWeight("bodySmall")
+        }
 
         Repeater {
             model: volumePage.playbackStreams
@@ -206,9 +216,19 @@ ColumnLayout {
 
     // громкость захватывающих приложений (capture: isStream && !isSink)
     Card {
-        visible: volumePage.captureStreams.length > 0
         Layout.fillWidth: true
         title: "Микрофоны"
+
+        Text { // пустое состояние — карточка всегда на виду
+            visible: volumePage.captureStreams.length === 0
+            Layout.fillWidth: true
+            Layout.topMargin: Theme.dp(4)
+            text: "Нет активных микрофонов"
+            color: Theme.subtextDim
+            font.family: Theme.textFont
+            font.pixelSize: Theme.typeSize("bodySmall")
+            font.weight: Theme.typeWeight("bodySmall")
+        }
 
         Repeater {
             model: volumePage.captureStreams

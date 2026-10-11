@@ -19,7 +19,7 @@ RowLayout {
         Layout.preferredHeight: Theme.dp(28)
         radius: Theme.dp(12)
         color: Theme.bgTrack
-        clip: true
+        // без clip: ручка должна выступать за трек сверху и снизу (как в yoru)
 
         Rectangle { // заливка значения
             id: osdFill
@@ -27,6 +27,8 @@ RowLayout {
             height: parent.height
             radius: osdTrack.radius
             color: Theme.accent
+            // иконку клипуем по заливке (раньше это делал клип трека)
+            clip: true
             Behavior on width {
                 NumberAnimation {
                     duration: Theme.durDefaultEffects
@@ -47,9 +49,9 @@ RowLayout {
             }
         }
 
-        Rectangle { // тонкий вертикальный ползунок на границе заливки
+        Rectangle { // тонкий вертикальный ползунок: выше трека, торчит сверху и снизу
             width: Theme.dp(3)
-            height: osdTrack.height - Theme.dp(10)
+            height: osdTrack.height + Theme.dp(8)
             radius: 2
             anchors.verticalCenter: parent.verticalCenter
             x: Math.max(0, Math.min(osdTrack.width - width, osdFill.width - width / 2))

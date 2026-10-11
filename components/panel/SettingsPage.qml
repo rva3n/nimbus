@@ -525,6 +525,21 @@ RowLayout {
                     checked: Prefs.clockSeconds
                     onToggled: (v) => Prefs.set("clockSeconds", v)
                 }
+                ToggleRow {
+                    label: "Показывать часы"
+                    checked: Prefs.islandClock
+                    onToggled: (v) => Prefs.set("islandClock", v)
+                }
+                ToggleRow {
+                    label: "Показывать воркспейсы"
+                    checked: Prefs.islandWorkspaces
+                    onToggled: (v) => Prefs.set("islandWorkspaces", v)
+                }
+                ToggleRow {
+                    label: "Показывать трей"
+                    checked: Prefs.islandTray
+                    onToggled: (v) => Prefs.set("islandTray", v)
+                }
             }
         }
 

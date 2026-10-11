@@ -1,4 +1,4 @@
-//@ pragma IconTheme Tela-circle-grey
+//@ pragma IconTheme Papirus
 import QtQuick
 import Quickshell
 import Quickshell.Io

@@ -19,7 +19,7 @@ PanelWindow {
     id: win
     required property var modelData
     property var shell: null
-    property string view: "idle"        // idle | panel | launcher
+    property string view: "idle"        // idle | panel | launcher | taskman | tray
 
     screen: modelData
     color: "transparent"
@@ -31,18 +31,19 @@ PanelWindow {
     implicitHeight: Math.max(664, win.panelMax + Theme.dp(16))
     WlrLayershell.layer: WlrLayer.Overlay
     WlrLayershell.namespace: "nimbus-island"
-    WlrLayershell.keyboardFocus: (view === "launcher" || view === "panel" || view === "taskman")
+    WlrLayershell.keyboardFocus: (view === "launcher" || view === "panel" || view === "taskman" || view === "tray")
         ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
     mask: Region { item: pill; radius: pill.radius }
 
     readonly property string mode: (Notif.visible && view === "idle") ? "notif"
                                  : (Osd.visible && view === "idle") ? "osd" : view
-    readonly property bool big: mode === "panel" || mode === "launcher" || mode === "taskman"
+    readonly property bool big: mode === "panel" || mode === "launcher" || mode === "taskman" || mode === "tray"
     readonly property string page: win.shell ? win.shell.panelPage : ""
-    // ширина панели: лончер 560, настройки 620, диспетчер 920, остальное 404
+    // ширина панели: лончер 560, настройки 620, диспетчер 920, трей 360, остальное 404
     readonly property int panelW: win.mode === "launcher" ? 560
         : (win.page === "settings" ? 620
-        : (win.mode === "taskman" ? 920 : 404))
+        : (win.mode === "taskman" ? 920
+        : (win.mode === "tray" ? 360 : 404)))
     // активное окно во весь экран на этом output → остров уступает игрушке
     readonly property bool fullscreenActive: win.screen
         ? Umbriel.fullscreenFor(win.screen.name, win.screen.width, win.screen.height) : false
@@ -217,6 +218,12 @@ PanelWindow {
                         font.weight: Theme.typeWeight("titleLarge"); color: Theme.text
                         text: win.pageTitle
                     }
+                    Text { // заголовок вида «трей»
+                        visible: win.mode === "tray"
+                        font.family: Theme.textFont; font.pixelSize: Theme.typeSize("titleLarge")
+                        font.weight: Theme.typeWeight("titleLarge"); color: Theme.text
+                        text: "Трей"
+                    }
                     Item { Layout.fillWidth: true }
                     IconButton {
                         visible: win.mode === "panel" && win.page === ""
@@ -243,6 +250,18 @@ PanelWindow {
                 SettingsPage { win: win }
 
                 TaskManager { visible: win.mode === "taskman"; shell: win.shell; initialTab: win.shell ? win.shell.taskmanTab : 0 }
+
+                // Трей — вид острова: список живёт в той же капсуле под шапкой,
+                // как страницы панели. qmldir не объявляет TrayList, поэтому
+                // грузим по source (как TrayRow в IdlePill).
+                Loader {
+                    id: trayPage
+                    active: win.mode === "tray"
+                    source: "TrayList.qml"
+                    Layout.fillWidth: true
+                    Binding { target: trayPage.item; property: "shell"; value: win.shell; when: trayPage.item !== null }
+                    Binding { target: trayPage.item; property: "win"; value: win; when: trayPage.item !== null }
+                }
 
                 Launcher { active: win.mode === "launcher"; shell: win.shell; tab: win.shell ? win.shell.launcherTab : "apps" }
             }

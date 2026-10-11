@@ -162,6 +162,8 @@ Item {
             source: "TrayRow.qml"
             width: item ? item.implicitWidth : 0
             visible: width > 0
+            // клик по капсуле открывает вид острова «трей»
+            Binding { target: trayLoader.item; property: "shell"; value: holder.shell; when: trayLoader.item !== null }
         }
     }
 

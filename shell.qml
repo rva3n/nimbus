@@ -12,7 +12,7 @@ import "components"
 ShellRoot {
     id: root
 
-    property string view: "idle"   // idle | panel | launcher | taskman
+    property string view: "idle"   // idle | panel | launcher | taskman | tray
     property string panelPage: ""
     property string launcherTab: "apps"    // apps | clipboard | emoji | packages (вкладки лончера)
     property int taskmanTab: 0             // вкладка диспетчера (0/1/2)
@@ -153,6 +153,7 @@ ShellRoot {
     function togglePanel()    { if (root.view === "panel") { root.view = "idle"; root.panelPage = ""; } else { root.openPanel(); } }
     function toggleLauncher() { if (root.view === "launcher") { root.view = "idle"; } else { root.openLauncher(root.launcherTab); } }
     function taskman()        { if (root.view === "taskman") { root.view = "idle"; } else { root.view = "taskman"; root.panelPage = ""; } }
+    function toggleTray()     { if (root.view === "tray") root.closeOverlays(); else { root.view = "tray"; root.panelPage = ""; } }
     function closeOverlays()  { root.view = "idle"; root.panelPage = ""; }
     function lock()           { root.view = "idle"; root.panelPage = ""; Quickshell.execDetached(["umbriel", "msg", "dpms-on"]); root.locked = true; }
     function setPage(p)       { root.panelPage = p; }
@@ -198,6 +199,7 @@ ShellRoot {
         function launcher() { if (root.view === "launcher") { root.closeOverlays(); } else { root.openLauncher("apps"); } }
         function panel() { root.togglePanel() }
         function quicksettings() { root.togglePanel() }
+        function tray() { root.toggleTray() }
         function page(name: string) { root.view = "panel"; root.panelPage = name; }
         function pageRoot() { root.view = "panel"; root.panelPage = ""; }
         function pageWifi() { root.view = "panel"; root.panelPage = "wifi"; }

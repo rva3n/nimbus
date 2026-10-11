@@ -89,7 +89,7 @@ ColumnLayout {
     Column { // пины: обычный позиционер надёжнее лэйаута с Repeater
         visible: tab.fPins.length > 0
         Layout.fillWidth: true
-        spacing: 0
+        spacing: Theme.dp(4)
 
         Repeater {
             model: tab.fPins
@@ -115,7 +115,7 @@ ColumnLayout {
         Layout.preferredHeight: Math.min(Theme.dp(340), contentHeight)
         model: tab.fItems
         clip: true
-        spacing: 0
+        spacing: Theme.dp(4)
         boundsBehavior: Flickable.StopAtBounds
 
         // последняя позиция скролла (не считая восстановление после сброса модели)
@@ -251,12 +251,6 @@ ColumnLayout {
         width: parent ? parent.width : implicitWidth
         Layout.fillWidth: true
         spacing: 0
-
-        Divider { // между строками, кроме первой (верхней)
-            visible: ci.rowIndex > 0
-            Layout.fillWidth: true
-            leftInset: Theme.dp(52)
-        }
 
         Item {
             id: rowItem

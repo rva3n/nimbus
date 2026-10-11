@@ -645,16 +645,9 @@ Item {
                     onActivated: tab.runAction("cont")
                 }
 
-                Item { // разделитель между группами
+                Item { // отбивка между группами
                     width: parent.width
                     implicitHeight: Theme.dp(9)
-
-                    Divider {
-                        anchors.verticalCenter: parent.verticalCenter
-                        width: parent.width
-                        leftInset: Theme.dp(6)
-                        rightInset: Theme.dp(6)
-                    }
                 }
 
                 MenuRow {

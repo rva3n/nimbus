@@ -681,15 +681,9 @@ RowLayout {
                     }
                 }
 
-                Divider { // место — отдельно от ввода города
-                    Layout.fillWidth: true
-                    Layout.topMargin: Theme.dp(4)
-                    leftInset: Theme.dp(56)
-                }
-
                 RowLayout { // текущее место
                     Layout.fillWidth: true
-                    Layout.topMargin: Theme.dp(4)
+                    Layout.topMargin: Theme.dp(8)
                     spacing: Theme.dp(12)
 
                     Rectangle {

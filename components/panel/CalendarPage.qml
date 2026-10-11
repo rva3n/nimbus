@@ -115,14 +115,9 @@ ColumnLayout {
             }
         }
 
-        Divider {
-            Layout.fillWidth: true
-            Layout.topMargin: Theme.dp(6)
-            Layout.bottomMargin: Theme.dp(4)
-        }
-
         RowLayout { // Пн…Вс
             Layout.fillWidth: true
+            Layout.topMargin: Theme.dp(8)
             spacing: 0
 
             Repeater {

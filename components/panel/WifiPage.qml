@@ -36,7 +36,7 @@ ColumnLayout {
             Layout.fillWidth: true
             Layout.preferredHeight: win && win.wifiSel === "" ? 300 : 200
             model: win ? win.wifiList : []
-            clip: true; spacing: 0
+            clip: true; spacing: Theme.dp(4)
 
             delegate: Rectangle {
                 id: netRow
@@ -48,14 +48,6 @@ ColumnLayout {
                 color: netRow.sel ? Theme.accentContainer
                      : (netMouse.containsMouse ? Theme.bgHover : "transparent")
                 Behavior on color { ColorAnimation { duration: Theme.durDefaultEffects } }
-
-                Divider {
-                    anchors.top: parent.top
-                    anchors.left: parent.left
-                    anchors.right: parent.right
-                    visible: netRow.index > 0
-                    leftInset: Theme.dp(56)
-                }
 
                 RowLayout {
                     anchors.fill: parent

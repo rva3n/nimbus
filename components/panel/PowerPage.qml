@@ -20,23 +20,15 @@ ColumnLayout {
 
         ColumnLayout {
             Layout.fillWidth: true
-            spacing: 0
+            spacing: Theme.dp(4)
 
             PowerRow { Layout.fillWidth: true; icon: "lock"; label: "Заблокировать"; onClicked: if (win.shell) win.shell.lock() }
 
-            Divider { Layout.fillWidth: true; leftInset: Theme.dp(56) }
-
             PowerRow { Layout.fillWidth: true; icon: "logout"; label: "Выйти"; onClicked: Sys.logout() }
-
-            Divider { Layout.fillWidth: true; leftInset: Theme.dp(56) }
 
             PowerRow { Layout.fillWidth: true; icon: "bedtime"; label: "Спящий режим"; onClicked: Sys.suspend() }
 
-            Divider { Layout.fillWidth: true; leftInset: Theme.dp(56) }
-
             PowerRow { Layout.fillWidth: true; icon: "restart_alt"; label: "Перезагрузка"; onClicked: Sys.reboot() }
-
-            Divider { Layout.fillWidth: true; leftInset: Theme.dp(56) }
 
             PowerRow { Layout.fillWidth: true; icon: "power_settings_new"; label: "Выключение"; danger: true; onClicked: Sys.poweroff() }
         }

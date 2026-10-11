@@ -100,9 +100,8 @@ ColumnLayout {
                 required property var modelData
                 required property int index
                 Layout.fillWidth: true
-                spacing: 0
+                spacing: Theme.dp(4)
 
-                Divider { Layout.fillWidth: true; leftInset: Theme.dp(56); visible: index > 0 }
                 DeviceRow {
                     Layout.fillWidth: true
                     icon: "volume_up"
@@ -125,9 +124,8 @@ ColumnLayout {
                 required property var modelData
                 required property int index
                 Layout.fillWidth: true
-                spacing: 0
+                spacing: Theme.dp(4)
 
-                Divider { Layout.fillWidth: true; leftInset: Theme.dp(56); visible: index > 0 }
                 DeviceRow {
                     Layout.fillWidth: true
                     icon: "mic"
@@ -151,9 +149,7 @@ ColumnLayout {
                 required property var modelData
                 required property int index
                 Layout.fillWidth: true
-                spacing: 0
-
-                Divider { Layout.fillWidth: true; leftInset: Theme.dp(56); visible: index > 0 }
+                spacing: Theme.dp(4)
                 RowLayout { // строка приложения
                     Layout.fillWidth: true
                     Layout.preferredHeight: Theme.dp(56)
@@ -220,9 +216,7 @@ ColumnLayout {
                 required property var modelData
                 required property int index
                 Layout.fillWidth: true
-                spacing: 0
-
-                Divider { Layout.fillWidth: true; leftInset: Theme.dp(56); visible: index > 0 }
+                spacing: Theme.dp(4)
                 RowLayout { // строка приложения
                     Layout.fillWidth: true
                     Layout.preferredHeight: Theme.dp(56)

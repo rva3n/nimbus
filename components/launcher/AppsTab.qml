@@ -174,7 +174,7 @@ Item {
         anchors.fill: parent
         model: root.rows
         clip: true
-        spacing: 0
+        spacing: Theme.dp(4)
 
         delegate: Item {
             id: rowItem
@@ -183,7 +183,7 @@ Item {
             required property int index
 
             width: appList.width
-            height: Theme.dp(52) + (index < root.count - 1 ? 1 : 0)
+            height: Theme.dp(52)
 
             Rectangle {
                 id: row
@@ -278,16 +278,6 @@ Item {
                         onClicked: Apps.toggleHide(rowItem.modelData)
                     }
                 }
-            }
-
-            // разделитель между строками, с отступом от иконки
-            Divider {
-                anchors.left: parent.left
-                anchors.right: parent.right
-                anchors.bottom: parent.bottom
-                visible: rowItem.index < root.count - 1
-                leftInset: Theme.dp(58)
-                rightInset: Theme.dp(6)
             }
         }
     }

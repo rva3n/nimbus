@@ -135,30 +135,22 @@ RowLayout {
         ColumnLayout { // колонка A: система и процессор
             Layout.fillWidth: true
             Layout.alignment: Qt.AlignTop
-            spacing: 0
+            spacing: Theme.dp(4)
 
             InfoRow { icon: "info"; label: "ОС"; value: root.orDash(SysStats.distro) }
-            RowSep {}
             InfoRow { icon: "developer_board"; label: "Ядро"; value: root.orDash(SysStats.kernel) }
-            RowSep {}
             InfoRow { icon: "monitor"; label: "Платформа"; value: root.orDash(SysStats.host) }
-            RowSep {}
             InfoRow {
                 icon: "hourglass_top"; label: "Время работы"
                 value: SysStats.uptime > 0 ? root.fmtUptime(SysStats.uptime) : "—"
             }
-            RowSep {}
             InfoRow { icon: "memory"; label: "Процессор"; value: root.orDash(SysStats.cpuModel) }
-            RowSep {}
             InfoRow {
                 icon: "grid_view"; label: "Ядра/потоки"
                 value: SysStats.cores > 0 ? String(SysStats.cores) : "—"
             }
-            RowSep {}
             InfoRow { icon: "speed"; label: "Частота CPU"; value: root.fmtClock() }
-            RowSep {}
             InfoRow { icon: "storage"; label: "Память"; value: root.fmtGb(SysStats.memTotal) }
-            RowSep { visible: root.maxTempC > 0 }
             InfoRow {
                 visible: root.maxTempC > 0
                 icon: "device_thermostat"; label: "Темп. CPU"
@@ -169,10 +161,9 @@ RowLayout {
         ColumnLayout { // колонка B: видеокарта, диски, софт
             Layout.fillWidth: true
             Layout.alignment: Qt.AlignTop
-            spacing: 0
+            spacing: Theme.dp(4)
 
             InfoRow { icon: "graphic_eq"; label: "Видеокарта"; value: root.orDash(SysStats.gpuModel) }
-            RowSep {}
             Repeater { // каждый mount — отдельная строка
                 model: SysStats.disks
                 delegate: ColumnLayout {
@@ -180,23 +171,18 @@ RowLayout {
                     required property var modelData
 
                     Layout.fillWidth: true
-                    spacing: 0
+                    spacing: Theme.dp(4)
 
                     InfoRow {
                         icon: "storage"; label: diskCol.modelData.mount
                         value: root.fmtDisk(diskCol.modelData)
                     }
-                    RowSep {}
                 }
             }
             InfoRow { icon: "cloud"; label: "Шелл"; value: root.appName + " " + root.appVersion }
-            RowSep {}
             InfoRow { icon: "dashboard"; label: "Композитор"; value: root.compositorName }
-            RowSep {}
             InfoRow { icon: "settings"; label: "Движок"; value: root.engineName }
-            RowSep {}
             InfoRow { icon: "folder"; label: "Конфиг"; value: root.configPath }
-            RowSep {}
             InfoRow { icon: "flag"; label: "Лицензия"; value: root.licenseName }
         }
     }
@@ -251,12 +237,6 @@ RowLayout {
                 font.weight: Theme.typeWeight("bodyMedium")
             }
         }
-    }
-
-    // разделитель вровень с текстом (после контейнера иконки)
-    component RowSep: Divider {
-        Layout.fillWidth: true
-        leftInset: Theme.dp(38)
     }
 
     // мини-чип метаданных: labelSmall на bgTrack

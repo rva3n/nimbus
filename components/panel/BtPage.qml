@@ -35,7 +35,7 @@ ColumnLayout {
         ListView {
             Layout.fillWidth: true; Layout.preferredHeight: 260
             model: Sys.btDevices
-            clip: true; spacing: 0
+            clip: true; spacing: Theme.dp(4)
 
             delegate: Rectangle {
                 id: btRow
@@ -45,14 +45,6 @@ ColumnLayout {
                 radius: Theme.radiusMd
                 color: btMouse.containsMouse ? Theme.bgHover : "transparent"
                 Behavior on color { ColorAnimation { duration: Theme.durDefaultEffects } }
-
-                Divider {
-                    anchors.top: parent.top
-                    anchors.left: parent.left
-                    anchors.right: parent.right
-                    visible: btRow.index > 0
-                    leftInset: Theme.dp(56)
-                }
 
                 RowLayout {
                     anchors.fill: parent

@@ -272,7 +272,7 @@ ColumnLayout {
 
         ColumnLayout {
             Layout.fillWidth: true
-            spacing: 0
+            spacing: Theme.dp(4)
 
             Repeater {
                 model: Weather.daily.slice(0, 5)
@@ -282,12 +282,6 @@ ColumnLayout {
                     required property int index
                     Layout.fillWidth: true
                     spacing: 0
-
-                    Divider {
-                        visible: index > 0
-                        Layout.fillWidth: true
-                        leftInset: Theme.dp(36)
-                    }
 
                     RowLayout { // строка дня: колонки фиксированной ширины, без прижатий
                         Layout.fillWidth: true

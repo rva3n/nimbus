@@ -110,7 +110,9 @@ ColumnLayout {
 
         visible: tab.fItems.length > 0
         Layout.fillWidth: true
-        Layout.preferredHeight: Math.max(Theme.dp(96), Math.min(Theme.dp(340), contentHeight))
+        // высота строго по содержимому (кап 340): нижняя граница в 96dp
+        // оставляла фантомную пустую полосу под короткой историей.
+        Layout.preferredHeight: Math.min(Theme.dp(340), contentHeight)
         model: tab.fItems
         clip: true
         spacing: 0

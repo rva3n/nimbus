@@ -190,8 +190,10 @@ PanelWindow {
                 width: panelView.width
                 spacing: Theme.dp(14)
 
-                // header
+                // header — только для панели/трея: в лончере и диспетчере
+                // нулевая строка всё равно съедала спейсинг и сдвигала контент.
                 RowLayout {
+                    visible: win.mode === "panel" || win.mode === "tray"
                     Layout.fillWidth: true
                     IconButton {
                         icon: "arrow_back"
@@ -257,6 +259,9 @@ PanelWindow {
                 Loader {
                     id: trayPage
                     active: win.mode === "tray"
+                    // пустой Loader оставался видимым и добавлял спейсинг
+                    // ColumnLayout снизу (фантомный отступ под контентом).
+                    visible: active
                     source: "TrayList.qml"
                     Layout.fillWidth: true
                     Binding { target: trayPage.item; property: "shell"; value: win.shell; when: trayPage.item !== null }

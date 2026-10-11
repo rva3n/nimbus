@@ -1,64 +1,88 @@
 import QtQuick
 import "../core"
 
-// Круглая M3-кнопка-иконка Nimbus.
-// variant: standard | filled | tonal; size: s=32 | m=40.
+// M3 Expressive-кнопка-иконка Nimbus (порт lucidui/IconButton.qml). У checkable
+// глиф наполняется (fill) и кнопка квадратнеет; под нажатием углы стягиваются.
+// variant: standard | filled | tonal | outlined; size: xs=30 | s=36 | m=48;
+// widthKind: narrow | default | wide.
 Item {
     id: ib
 
-    property string icon: ""
-    property string size: "s"
     property string variant: "standard"
+    property string size: "s"
+    property string widthKind: "default"
+    property string icon: ""
+    property bool checkable: false
+    property bool checked: false
     property bool disabled: false
+    // -1 — взять fill из состояния (on/off), иначе фиксировать
+    property real iconFill: -1
+    property color tintOverride: "transparent"
+    property color containerOverride: "transparent"
+    property string tooltip: ""
 
     signal clicked()
+    signal rightClicked()
+    signal toggled(bool value)
 
-    readonly property int _dim: ib.size === "m" ? Theme.dp(40) : Theme.dp(32)
-    readonly property int _iconPx: Math.round(ib._dim * 0.55)
+    readonly property int btnH: ib.size === "xs" ? Theme.dp(30) : (ib.size === "m" ? Theme.dp(48) : Theme.dp(36))
+    readonly property int iconPx: ib.size === "xs" ? Theme.dp(18) : (ib.size === "m" ? Theme.dp(24) : Theme.dp(20))
+    readonly property int btnW: ib.widthKind === "narrow" ? Math.round(ib.btnH * 0.78) : (ib.widthKind === "wide" ? Math.round(ib.btnH * 1.3) : ib.btnH)
+    readonly property bool on: ib.checkable && ib.checked
 
-    readonly property color _container: {
+    readonly property color container: {
+        if (ib.containerOverride.a > 0)
+            return ib.containerOverride;
+
         if (ib.disabled)
-            return ib.variant === "standard" ? "transparent" : Theme.a(Theme.text, Theme.disabledContainer);
-        if (ib.variant === "filled")
-            return Theme.accent;
-        if (ib.variant === "tonal")
-            return Theme.accentContainer;
+            return (ib.variant === "standard" || ib.variant === "outlined") ? "transparent" : Theme.a(Theme.text, Theme.disabledContainer);
+
+        switch (ib.variant) {
+        case "filled":
+            return ib.checkable ? (ib.checked ? Theme.primary : Theme.bgTrack) : Theme.primary;
+        case "tonal":
+            return ib.checkable ? (ib.checked ? Theme.secondary : Theme.secondaryContainer) : Theme.secondaryContainer;
+        case "outlined":
+            return ib.on ? Theme.inverseSurface : "transparent";
+        }
         return "transparent";
     }
 
-    readonly property color _content: {
+    readonly property color content: {
+        if (ib.tintOverride.a > 0)
+            return ib.tintOverride;
+
         if (ib.disabled)
-            return ib.variant === "standard" ? Theme.subtextDim : Theme.a(Theme.text, Theme.disabledContent);
-        if (ib.variant === "filled")
-            return Theme.fgOnFill;
-        if (ib.variant === "tonal")
-            return Theme.fgAccentContainer;
-        return Theme.subtext;
+            return Theme.a(Theme.text, Theme.disabledContent);
+
+        switch (ib.variant) {
+        case "filled":
+            return ib.checkable ? (ib.checked ? Theme.fgPrimary : Theme.subtext) : Theme.fgPrimary;
+        case "tonal":
+            return ib.checkable ? (ib.checked ? Theme.fgSecondary : Theme.fgSecondaryContainer) : Theme.fgSecondaryContainer;
+        case "outlined":
+            return ib.on ? Theme.fgInverseSurface : Theme.subtext;
+        }
+        return ib.on ? Theme.primary : Theme.subtext;
     }
 
-    implicitWidth: ib._dim
-    implicitHeight: ib._dim
+    implicitWidth: ib.btnW
+    implicitHeight: ib.btnH
 
     Rectangle {
         id: box
 
         anchors.fill: parent
-        radius: Theme.radiusPill
-        color: ib._container
+        radius: area.pressed ? Math.min(Theme.pill(ib.btnH), Theme.rad(10)) : (ib.on && ib.variant !== "standard" ? Math.min(Theme.pill(ib.btnH), Theme.rad(12)) : Theme.pill(ib.btnH))
+        color: ib.container
+        border.width: ib.variant === "outlined" && !ib.on ? 1 : 0
+        border.color: Theme.outline
 
-        // state layer: standard — тонкий слой, filled/tonal — поверх заливки
-        Rectangle {
-            anchors.fill: parent
-            radius: box.radius
-            color: ib._content
-            opacity: ib.disabled ? 0 : (area.pressed ? Theme.statePressed : (area.containsMouse ? Theme.stateHover : 0))
-
-            Behavior on opacity {
-                NumberAnimation {
-                    duration: Theme.ms(100)
-                    easing.type: Theme.easeStandard
-                }
-
+        Behavior on radius {
+            NumberAnimation {
+                duration: Theme.durFastSpatial
+                easing.type: Easing.Bezier
+                easing.bezierCurve: Theme.curveDefaultSpatial
             }
 
         }
@@ -70,14 +94,34 @@ Item {
 
         }
 
+        StateLayer {
+            id: area
+
+            radius: box.radius
+            tint: ib.content
+            disabled: ib.disabled
+            acceptedButtons: Qt.LeftButton | Qt.RightButton
+            onClicked: (mouse) => {
+                if (mouse.button === Qt.RightButton) {
+                    ib.rightClicked();
+                    return ;
+                }
+                if (ib.checkable)
+                    ib.toggled(!ib.checked);
+
+                ib.clicked();
+            }
+        }
+
     }
 
     Icon {
         anchors.centerIn: parent
         name: ib.icon
-        size: ib._iconPx
-        color: ib._content
-        scale: (area.pressed && !ib.disabled) ? 0.92 : 1
+        size: ib.iconPx
+        color: ib.content
+        fill: ib.iconFill >= 0 ? ib.iconFill : (ib.on ? 1 : 0)
+        scale: area.pressed ? 0.92 : 1
 
         Behavior on scale {
             NumberAnimation {
@@ -88,16 +132,6 @@ Item {
 
         }
 
-    }
-
-    MouseArea {
-        id: area
-
-        anchors.fill: parent
-        hoverEnabled: true
-        enabled: !ib.disabled
-        cursorShape: Qt.PointingCursor
-        onClicked: ib.clicked()
     }
 
 }

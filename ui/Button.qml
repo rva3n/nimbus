@@ -1,144 +1,116 @@
 import QtQuick
-import QtQuick.Layouts
 import "../core"
 
-// M3 Expressive-кнопка Nimbus: пилюля, при нажатии сжимается, выбранная
-// (checkable) становится скруглённым квадратом.
-// variant: filled | tonal | outlined | text; size: s=32 | m=40.
+// M3 Expressive-кнопка Nimbus (порт lucidui/Button.qml). Пилюля в покое,
+// под нажатием углы стягиваются; checkable при выборе становится квадратнее.
+// variant: filled | tonal | outlined | text | elevated; size: xs=30 | s=36 | m=48.
 Item {
     id: btn
 
-    property string text: ""
-    property string icon: ""
     property string variant: "filled"
     property string size: "s"
-    property bool disabled: false
+    property string text: ""
+    property string icon: ""
     property bool checkable: false
     property bool checked: false
+    property bool disabled: false
+    property bool danger: false
+    property color containerOverride: "transparent"
+    property color contentOverride: "transparent"
 
     signal clicked()
     signal toggled(bool value)
 
-    readonly property bool _selected: btn.checkable && btn.checked
+    readonly property int h: btn.size === "xs" ? Theme.dp(30) : (btn.size === "m" ? Theme.dp(48) : Theme.dp(36))
+    readonly property int pad: btn.size === "xs" ? Theme.dp(12) : (btn.size === "m" ? Theme.dp(24) : Theme.dp(16))
+    readonly property int iconPx: btn.size === "m" ? Theme.dp(22) : (btn.size === "xs" ? Theme.dp(17) : Theme.dp(19))
+    readonly property bool selected: btn.checkable && btn.checked
     readonly property bool _hasIcon: btn.icon !== ""
     readonly property bool _hasText: btn.text !== ""
-    readonly property int _h: btn.size === "m" ? Theme.dp(40) : Theme.dp(32)
-    readonly property int _padH: btn.size === "m" ? Theme.dp(24) : Theme.dp(16)
-    readonly property int _iconPx: btn.size === "m" ? Theme.dp(20) : Theme.dp(18)
+    readonly property real restRadius: btn.selected ? (btn.size === "m" ? Theme.rad(16) : Theme.rad(12)) : Theme.pill(btn.h)
+    readonly property real pressRadius: btn.size === "m" ? Theme.rad(12) : Theme.rad(8)
 
-    // форма: покой — пилюля, нажатие — плотнее, выбор — квадратнее
-    readonly property real _restRadius: btn._selected ? (btn.size === "m" ? Theme.shapeLg : Theme.shapeMd) : Theme.radiusPill
-    readonly property real _pressRadius: btn.size === "m" ? Theme.shapeMd : Theme.shapeSm
+    readonly property color container: {
+        if (btn.containerOverride.a > 0)
+            return btn.containerOverride;
 
-    readonly property color _container: {
         if (btn.disabled)
-            return (btn.variant === "outlined" || btn.variant === "text") ? "transparent" : Theme.a(Theme.text, Theme.disabledContainer);
+            return (btn.variant === "text" || btn.variant === "outlined") ? "transparent" : Theme.a(Theme.text, Theme.disabledContainer);
+
+        if (btn.danger)
+            return btn.variant === "filled" ? Theme.error : (btn.variant === "tonal" ? Theme.errorContainer : "transparent");
 
         if (btn.checkable) {
-            if (btn._selected) {
-                switch (btn.variant) {
-                case "filled": return Theme.accent;
-                case "tonal": return Theme.accent;
-                case "text": return Theme.accentContainer;
-                default: return Theme.inverseSurface; // outlined
-                }
-            }
-            switch (btn.variant) {
-            case "filled": return Theme.bgTrack;
-            case "tonal": return Theme.accentContainer;
-            default: return "transparent"; // outlined / text
-            }
-        }
+            if (btn.variant === "filled")
+                return btn.checked ? Theme.primary : Theme.bgTrack;
 
-        switch (btn.variant) {
-        case "filled": return Theme.accent;
-        case "tonal": return Theme.accentContainer;
-        default: return "transparent"; // outlined / text
+            if (btn.variant === "tonal")
+                return btn.checked ? Theme.secondary : Theme.secondaryContainer;
+
+            if (btn.variant === "outlined")
+                return btn.checked ? Theme.inverseSurface : "transparent";
+
         }
+        switch (btn.variant) {
+        case "filled":
+            return Theme.primary;
+        case "tonal":
+            return Theme.secondaryContainer;
+        case "elevated":
+            return Theme.bgTile;
+        }
+        return "transparent";
     }
 
-    readonly property color _content: {
+    readonly property color content: {
+        if (btn.contentOverride.a > 0)
+            return btn.contentOverride;
+
         if (btn.disabled)
-            return btn.variant === "outlined" ? Theme.subtextDim : Theme.a(Theme.text, Theme.disabledContent);
+            return Theme.a(Theme.text, Theme.disabledContent);
+
+        if (btn.danger)
+            return btn.variant === "filled" ? Theme.fgError : (btn.variant === "tonal" ? Theme.fgErrorContainer : Theme.error);
 
         if (btn.checkable) {
-            if (btn._selected) {
-                switch (btn.variant) {
-                case "outlined": return Theme.fgInverseSurface;
-                case "text": return Theme.fgAccentContainer;
-                default: return Theme.fgOnFill; // filled / tonal
-                }
-            }
-            switch (btn.variant) {
-            case "filled": return Theme.subtext;
-            case "tonal": return Theme.fgAccentContainer;
-            case "outlined": return Theme.text;
-            default: return Theme.accent; // text
-            }
-        }
+            if (btn.variant === "filled")
+                return btn.checked ? Theme.fgPrimary : Theme.subtext;
 
+            if (btn.variant === "tonal")
+                return btn.checked ? Theme.fgSecondary : Theme.fgSecondaryContainer;
+
+            if (btn.variant === "outlined")
+                return btn.checked ? Theme.fgInverseSurface : Theme.subtext;
+
+        }
         switch (btn.variant) {
-        case "filled": return Theme.fgOnFill;
-        case "tonal": return Theme.fgAccentContainer;
-        case "outlined": return Theme.text;
-        default: return Theme.accent; // text
+        case "filled":
+            return Theme.fgPrimary;
+        case "tonal":
+            return Theme.fgSecondaryContainer;
+        case "outlined":
+            return Theme.subtext;
         }
+        return Theme.primary;
     }
 
-    readonly property color _border: {
-        if (btn.variant !== "outlined")
-            return "transparent";
-        if (btn.disabled)
-            return Theme.a(Theme.text, Theme.disabledContainer);
-        if (btn.checkable && btn._selected)
-            return "transparent";
-        return Theme.outline;
-    }
-
-    implicitWidth: row.implicitWidth + btn._padH * 2
-    implicitHeight: btn._h
-    scale: (area.pressed && !btn.disabled) ? 0.97 : 1
-
-    Behavior on scale {
-        NumberAnimation {
-            duration: Theme.durQuick
-            easing.type: Easing.Bezier
-            easing.bezierCurve: Theme.curveEffects
-        }
-
-    }
+    implicitHeight: btn.h
+    implicitWidth: row.implicitWidth + btn.pad * 2 - (btn._hasIcon && btn._hasText ? Theme.dp(4) : 0)
 
     Rectangle {
         id: box
 
         anchors.fill: parent
-        radius: area.pressed ? btn._pressRadius : btn._restRadius
-        color: btn._container
-        border.width: btn.variant === "outlined" ? 1 : 0
-        border.color: btn._border
-
-        // state layer (ховер/нажатие) поверх контейнера, под содержимым
-        Rectangle {
-            anchors.fill: parent
-            radius: box.radius
-            color: btn._content
-            opacity: btn.disabled ? 0 : (area.pressed ? Theme.statePressed : (area.containsMouse ? Theme.stateHover : 0))
-
-            Behavior on opacity {
-                NumberAnimation {
-                    duration: Theme.ms(100)
-                    easing.type: Theme.easeStandard
-                }
-
-            }
-
-        }
+        radius: area.pressed ? btn.pressRadius : btn.restRadius
+        color: btn.container
+        border.width: btn.variant === "outlined" && !btn.selected ? 1 : 0
+        border.color: btn.disabled ? Theme.a(Theme.text, Theme.disabledContainer) : Theme.outline
 
         Behavior on radius {
             NumberAnimation {
                 duration: Theme.durFastSpatial
                 easing.type: Easing.Bezier
-                easing.bezierCurve: Theme.curveFastSpatial
+                easing.bezierCurve: Theme.curveDefaultSpatial
             }
 
         }
@@ -150,49 +122,47 @@ Item {
 
         }
 
+        StateLayer {
+            id: area
+
+            radius: box.radius
+            tint: btn.content
+            disabled: btn.disabled
+            onClicked: {
+                if (btn.checkable) {
+                    btn.checked = !btn.checked;
+                    btn.toggled(btn.checked);
+                }
+                btn.clicked();
+            }
+        }
+
     }
 
-    RowLayout {
+    Row {
         id: row
 
         anchors.centerIn: parent
+        anchors.horizontalCenterOffset: (btn._hasIcon && btn._hasText) ? -Theme.dp(2) : 0
         spacing: Theme.dp(8)
 
         Icon {
             visible: btn._hasIcon
-            Layout.alignment: Qt.AlignVCenter
+            anchors.verticalCenter: parent.verticalCenter
             name: btn.icon
-            size: btn._iconPx
-            color: btn._content
+            size: btn.iconPx
+            color: btn.content
+            fill: btn.selected ? 1 : 0
         }
 
-        Text {
+        LText {
             visible: btn._hasText
-            Layout.alignment: Qt.AlignVCenter
+            anchors.verticalCenter: parent.verticalCenter
             text: btn.text
-            color: btn._content
-            font.family: Theme.textFont
-            font.pixelSize: Theme.typeSize("labelLarge")
-            font.weight: Theme.typeWeight("labelLarge")
+            role: btn.size === "m" ? "titleSmall" : "labelLarge"
+            color: btn.content
         }
 
-    }
-
-    MouseArea {
-        id: area
-
-        anchors.fill: parent
-        hoverEnabled: true
-        enabled: !btn.disabled
-        cursorShape: Qt.PointingCursor
-
-        onClicked: {
-            if (btn.checkable) {
-                btn.checked = !btn.checked;
-                btn.toggled(btn.checked);
-            }
-            btn.clicked();
-        }
     }
 
 }

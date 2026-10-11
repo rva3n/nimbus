@@ -23,7 +23,7 @@ Item {
     property bool animateFill: true
     property bool animateColor: true
 
-    readonly property real _fill: Math.max(0, Math.min(1, icon.fill))
+    property real _fill: Math.max(0, Math.min(1, icon.fill))
     // алиас для имён, которых нет в наборе путей
     readonly property string _resolved: Aliases.alias[icon.name] !== undefined ? Aliases.alias[icon.name] : icon.name
     readonly property var paths: Symbols.p[icon._resolved] || null

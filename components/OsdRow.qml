@@ -29,11 +29,12 @@ RowLayout {
     Rectangle { // трек
         Layout.alignment: Qt.AlignVCenter
         Layout.preferredWidth: Theme.dp(140)
-        Layout.preferredHeight: Theme.dp(6)
+        Layout.preferredHeight: Theme.dp(12)
         radius: Theme.radiusPill
         color: Theme.bgTrack
 
         Rectangle { // заливка значения
+            id: osdFill
             width: (osdRow.muted && osdRow.kind === "volume") ? 0 : parent.width * osdRow.value
             height: parent.height
             radius: Theme.radiusPill
@@ -45,6 +46,17 @@ RowLayout {
                     easing.bezierCurve: Theme.curveEffects
                 }
             }
+        }
+
+        Rectangle { // бегунок (как у ui/Slider)
+            width: Theme.dp(18)
+            height: Theme.dp(18)
+            radius: width / 2
+            anchors.verticalCenter: parent.verticalCenter
+            x: Math.max(0, Math.min(parent.width - width, osdFill.width - width / 2))
+            color: Theme.accent
+            border.width: Theme.dp(2)
+            border.color: Theme.bgOpaque
         }
     }
 

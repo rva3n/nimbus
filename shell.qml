@@ -121,6 +121,15 @@ ShellRoot {
         errorText: root.pamError
     }
 
+    // Переключатель окон (Alt+Tab-аналог). Overlay; создаётся ПЕРЕД polkit-промптом,
+    // чтобы polkit при одновременной видимости оставался выше. LazyLoader — по той же
+    // причине, что и polkit: components/qmldir не перечисляет Switcher (его трогать нельзя).
+    LazyLoader {
+        id: switcherLoader
+        active: true
+        source: "components/Switcher.qml"
+    }
+
     // Модальный polkit-промпт поверх всего (Overlay). Создаётся после Lockscreen,
     // чтобы быть выше острова. LazyLoader нужен, т.к. components/qmldir не
     // перечисляет PolkitPrompt (его трогать нельзя), а LazyLoader умеет
@@ -209,6 +218,9 @@ ShellRoot {
             else
                 root.openLauncher("emoji");
         }
+        function switcher() { if (switcherLoader.item) switcherLoader.item.summon(1) }
+        function switcherBack() { if (switcherLoader.item) switcherLoader.item.summon(-1) }
+        function switcherClose() { if (switcherLoader.item) switcherLoader.item.close() }
         function packages() {
             if (root.view === "launcher" && root.launcherTab === "packages")
                 root.closeOverlays();

@@ -1,11 +1,14 @@
 pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Layouts
+import Quickshell
+import Quickshell.Io
 import "../../core"
 import "../../ui"
 
 // Вкладка «Буфер»: закреплённые сверху, затем история cliphist. Клик/Enter —
-// копирование, pin/delete — как в ClipRow. Индексы: сначала pins, затем items.
+// копирование и (если есть wtype) вставка Ctrl+V в вернувшее фокус окно,
+// pin/delete — как в ClipRow. Индексы: сначала pins, затем items.
 // Единый ритм строк (как в AppsTab): строка 48, превью 44×32, divider с
 // отступом от превью (52), кнопки справа у края (margin 4, spacing 4).
 ColumnLayout {
@@ -15,8 +18,13 @@ ColumnLayout {
     property int sel: 0
     property var shell: null
     property bool active: false
+    // есть ли wtype в PATH — как в EmojiTab; без него просто копируем
+    property bool haveWtype: false
 
     signal hovered(int index)
+
+    // экранирование одинарных кавычек для sh
+    function shq(s) { return "'" + String(s).replace(/'/g, "'\\''") + "'" }
 
     // фильтр по тексту/превью, регистронезависимо
     function matches(it) {
@@ -37,6 +45,14 @@ ColumnLayout {
             itemsView.positionViewAtIndex(tab.sel - tab.fPins.length, ListView.Contain);
     }
 
+    // вставка в приложение, которое вернёт фокус после закрытия оверлея:
+    // Ctrl+V через wtype (как EmojiTab). Без wtype ничего не делаем — текст
+    // уже в буфере, падения нет.
+    function pasteInto() {
+        if (!tab.haveWtype) return;
+        Quickshell.execDetached(["sh", "-c", "setsid -f sh -c 'sleep 0.25; wtype -M ctrl v -m ctrl'"]);
+    }
+
     function activate(index) {
         if (index < tab.fPins.length) {
             const p = tab.fPins[index];
@@ -46,6 +62,15 @@ ColumnLayout {
             if (it) Clip.copy(it.id, it.type);
         }
         if (tab.shell) tab.shell.closeOverlays();
+        tab.pasteInto();
+    }
+
+    // есть ли wtype в PATH (проба как в EmojiTab)
+    Process {
+        id: wtypeCheck
+        command: ["sh", "-c", "command -v wtype >/dev/null 2>&1"]
+        running: true
+        onExited: (exitCode) => tab.haveWtype = exitCode === 0
     }
 
     // ── Закреплённые ──────────────────────────────────────────────────
@@ -91,11 +116,30 @@ ColumnLayout {
         spacing: 0
         boundsBehavior: Flickable.StopAtBounds
 
+        // последняя позиция скролла (не считая восстановление после сброса модели)
+        property real _lastY: 0
+        property bool _restoring: false
+        onContentYChanged: if (!itemsView._restoring) itemsView._lastY = contentY
+
         delegate: ClipRow {
             baseIndex: tab.fPins.length
             selected: tab.sel === rowIndex
             onHovered: (i) => tab.hovered(i)
             onActivated: (i) => tab.activate(i)
+        }
+    }
+
+    // fItems пересобирается при обновлении Clip.items — ListView сбрасывает
+    // contentY в 0; запоминаем и возвращаем позицию (как ProcessesTab)
+    Connections {
+        target: Clip
+        function onItemsChanged() {
+            const y = itemsView._lastY;
+            itemsView._restoring = true;
+            Qt.callLater(function() {
+                itemsView.contentY = Math.min(y, Math.max(0, itemsView.contentHeight - itemsView.height));
+                itemsView._restoring = false;
+            });
         }
     }
 

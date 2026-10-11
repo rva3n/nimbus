@@ -14,7 +14,7 @@ RowLayout {
     id: page
 
     property var win: null
-    // выбранный раздел: 0 — интерфейс, 1 — островок, 2 — питание,
+    // выбранный раздел: 0 — шелл, 1 — островок, 2 — питание,
     // 3 — уведомления, 4 — погода, 5 — композитор, 6 — ввод, 7 — экран
     property int section: 0
 
@@ -350,7 +350,7 @@ RowLayout {
 
         NavItem {
             icon: "tune"
-            label: "Интерфейс"
+            label: "Шелл"
             selected: page.section === 0
             onClicked: page.section = 0
         }
@@ -411,8 +411,8 @@ RowLayout {
             spacing: Theme.dp(10)
 
             SectionHeader {
-                title: "Интерфейс"
-                caption: "Размер, форма и движение элементов"
+                title: "Шелл"
+                caption: "Оформление Nimbus: масштаб, форма, движение и цвет"
             }
 
             Card { // масштаб

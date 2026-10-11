@@ -148,4 +148,7 @@ var cp = {
     "grid_view": 0xe9b0,
     "tune": 0xe429,
     "widgets": 0xe1bd,
+    "mouse": 0xe323,
+    "keyboard": 0xe312,
+    "desktop_windows": 0xe30c,
 };

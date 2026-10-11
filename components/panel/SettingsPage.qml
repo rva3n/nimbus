@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
+import Quickshell.Io
 import "../../core"
 import "../../ui"
 import ".."
@@ -14,15 +15,63 @@ RowLayout {
 
     property var win: null
     // выбранный раздел: 0 — интерфейс, 1 — островок, 2 — питание,
-    // 3 — уведомления, 4 — погода
+    // 3 — уведомления, 4 — погода, 5 — композитор, 6 — ввод, 7 — экран
     property int section: 0
+
+    // имя монитора, на котором открыта панель (для раздела «Экран»)
+    readonly property string outputName: page.win && page.win.screen ? String(page.win.screen.name) : ""
+    // текущие значения настроек Umbriel, прочитанные из umbriel-settings.py
+    property var umb: ({})
 
     visible: win !== null && win.mode === "panel" && win.page === "settings"
     Layout.fillWidth: true
     spacing: Theme.dp(16)
 
-    // при каждом открытии страницы — первый раздел
-    onVisibleChanged: if (visible) page.section = 0
+    // при каждом открытии страницы — первый раздел и свежие настройки Umbriel
+    onVisibleChanged: if (visible) { page.section = 0; page.reloadUmb() }
+
+    // смена раздела — подтягиваем актуальные значения из конфигов Umbriel
+    onSectionChanged: page.reloadUmb()
+
+    // однократное чтение настроек Umbriel (один JSON в строке)
+    Process {
+        id: umbRead
+
+        command: ["python3", Quickshell.env("HOME") + "/nimbus/scripts/umbriel-settings.py", "read"]
+        running: true
+        stdout: SplitParser {
+            onRead: (line) => {
+                try { page.umb = JSON.parse(line); } catch (e) {}
+            }
+        }
+    }
+
+    // отложенный повторный опрос после записи (config-reload асинхронен)
+    Timer {
+        id: umbReloadTimer
+
+        interval: 600
+        onTriggered: page.reloadUmb()
+    }
+
+    // перезапустить чтение настроек Umbriel
+    function reloadUmb() {
+        umbRead.running = false;
+        umbRead.running = true;
+    }
+
+    // значение из прочитанных настроек Umbriel или запасное
+    function umbVal(key, fallback) {
+        const v = page.umb[key];
+        return v === undefined ? fallback : v;
+    }
+
+    // записать значение в конфиг Umbriel (file, section, key, tomlValue) и обновить
+    function setUmb(file, section, key, tomlValue) {
+        Quickshell.execDetached(["python3", Quickshell.env("HOME") + "/nimbus/scripts/umbriel-settings.py",
+                                 "set", file, section, key, String(tomlValue)]);
+        umbReloadTimer.restart();
+    }
 
     function applyCity() {
         Prefs.set("weatherCity", cityField.text.trim());
@@ -236,9 +285,9 @@ RowLayout {
         property string label: ""
         property var values: []
         property var labels: []
-        property int value: 0
+        property var value: 0
 
-        signal committed(int v)
+        signal committed(var v)
 
         function _idx() {
             for (let i = 0; i < cr.values.length; i++)
@@ -328,6 +377,24 @@ RowLayout {
             label: "Погода"
             selected: page.section === 4
             onClicked: page.section = 4
+        }
+        NavItem {
+            icon: "dashboard"
+            label: "Композитор"
+            selected: page.section === 5
+            onClicked: page.section = 5
+        }
+        NavItem {
+            icon: "keyboard"
+            label: "Ввод"
+            selected: page.section === 6
+            onClicked: page.section = 6
+        }
+        NavItem {
+            icon: "desktop_windows"
+            label: "Экран"
+            selected: page.section === 7
+            onClicked: page.section = 7
         }
     }
 
@@ -682,6 +749,250 @@ RowLayout {
                         icon: "refresh"
                         disabled: Weather.loading
                         onClicked: Weather.refresh()
+                    }
+                }
+            }
+        }
+
+        // 6. Композитор (окна, тени, анимации Umbriel)
+        ColumnLayout {
+            visible: page.section === 5
+            Layout.fillWidth: true
+            spacing: Theme.dp(10)
+
+            SectionHeader {
+                title: "Композитор"
+                caption: "Окна, тени и анимации Umbriel — применяется сразу"
+            }
+
+            Card { // окна
+                Layout.fillWidth: true
+                title: "Окна"
+
+                ParamRow {
+                    label: "Зазор между окнами"
+                    min: 0
+                    max: 30
+                    value: page.umbVal("layout.gap", 7)
+                    displayMul: 1
+                    suffix: ""
+                    onCommitted: (v) => page.setUmb("src/appearance.toml", "layout", "gap", Math.round(v))
+                }
+                ParamRow {
+                    label: "Скругление окон"
+                    min: 0
+                    max: 40
+                    value: page.umbVal("appearance.corner_radius", 18)
+                    displayMul: 1
+                    suffix: ""
+                    onCommitted: (v) => page.setUmb("src/appearance.toml", "appearance", "corner_radius", Math.round(v))
+                }
+                ParamRow {
+                    label: "Толщина границы"
+                    min: 0
+                    max: 10
+                    value: page.umbVal("appearance.border_width", 2)
+                    displayMul: 1
+                    suffix: ""
+                    onCommitted: (v) => page.setUmb("src/appearance.toml", "appearance", "border_width", Math.round(v))
+                }
+                ParamRow {
+                    label: "Прозрачность при перетаскивании"
+                    min: 30
+                    max: 100
+                    value: Math.round(page.umbVal("appearance.drag_opacity", 0.75) * 100)
+                    displayMul: 1
+                    suffix: "%"
+                    onCommitted: (v) => page.setUmb("src/appearance.toml", "appearance", "drag_opacity", v / 100)
+                }
+            }
+
+            Card { // тени и анимации
+                Layout.fillWidth: true
+                title: "Тени и анимации"
+
+                ToggleRow {
+                    label: "Тени окон"
+                    checked: page.umbVal("appearance.shadow.enabled", true)
+                    onToggled: (v) => page.setUmb("src/appearance.toml", "appearance.shadow", "enabled", v ? "true" : "false")
+                }
+                ParamRow {
+                    label: "Мягкость тени"
+                    min: 0
+                    max: 100
+                    value: page.umbVal("appearance.shadow.softness", 50)
+                    displayMul: 1
+                    suffix: ""
+                    onCommitted: (v) => page.setUmb("src/appearance.toml", "appearance.shadow", "softness", Math.round(v))
+                }
+                ToggleRow {
+                    label: "Анимации окон"
+                    checked: page.umbVal("animation.enabled", true)
+                    onToggled: (v) => page.setUmb("src/general.toml", "animation", "enabled", v ? "true" : "false")
+                }
+            }
+
+            Card { // эффекты
+                Layout.fillWidth: true
+                title: "Эффекты"
+
+                ToggleRow {
+                    label: "Размытие фона"
+                    checked: page.umbVal("appearance.blur.enabled", true)
+                    onToggled: (v) => page.setUmb("src/appearance.toml", "appearance.blur", "enabled", v ? "true" : "false")
+                }
+            }
+        }
+
+        // 7. Ввод (мышь, клавиатура, фокус Umbriel)
+        ColumnLayout {
+            visible: page.section === 6
+            Layout.fillWidth: true
+            spacing: Theme.dp(10)
+
+            SectionHeader {
+                title: "Ввод"
+                caption: "Мышь, клавиатура, фокус Umbriel"
+            }
+
+            Card { // мышь
+                Layout.fillWidth: true
+                title: "Мышь"
+
+                ParamRow {
+                    label: "Чувствительность"
+                    min: -1
+                    max: 1
+                    value: page.umbVal("input.mouse.sensitivity", 0)
+                    displayMul: 100
+                    suffix: "%"
+                    onCommitted: (v) => page.setUmb("src/input.toml", "input.mouse", "sensitivity", Math.round(v * 100) / 100)
+                }
+                ToggleRow {
+                    label: "Натуральная прокрутка"
+                    checked: page.umbVal("input.mouse.natural_scroll", false)
+                    onToggled: (v) => page.setUmb("src/input.toml", "input.mouse", "natural_scroll", v ? "true" : "false")
+                }
+                ChoiceRow {
+                    label: "Ускорение курсора"
+                    values: ["flat", "adaptive"]
+                    labels: ["Выключено", "Адаптивное"]
+                    value: page.umbVal("input.mouse.accel_profile", "flat")
+                    onCommitted: (v) => page.setUmb("src/input.toml", "input.mouse", "accel_profile", "\"" + v + "\"")
+                }
+            }
+
+            Card { // клавиатура
+                Layout.fillWidth: true
+                title: "Клавиатура"
+
+                ParamRow {
+                    label: "Задержка повтора"
+                    min: 150
+                    max: 1000
+                    value: page.umbVal("input.keyboard.repeat_delay", 600)
+                    displayMul: 1
+                    suffix: " мс"
+                    onCommitted: (v) => page.setUmb("src/input.toml", "input.keyboard", "repeat_delay", Math.round(v))
+                }
+                ParamRow {
+                    label: "Скорость повтора"
+                    min: 10
+                    max: 80
+                    value: page.umbVal("input.keyboard.repeat_rate", 25)
+                    displayMul: 1
+                    suffix: " /с"
+                    onCommitted: (v) => page.setUmb("src/input.toml", "input.keyboard", "repeat_rate", Math.round(v))
+                }
+                ChoiceRow {
+                    label: "Переключение раскладок"
+                    values: ["grp:alt_shift_toggle", "grp:win_space_toggle", "grp:caps_toggle", "grp:ctrl_shift_toggle"]
+                    labels: ["Alt+Shift", "Super+Space", "Caps Lock", "Ctrl+Shift"]
+                    value: page.umbVal("input.keyboard.options", "grp:alt_shift_toggle")
+                    onCommitted: (v) => page.setUmb("src/input.toml", "input.keyboard", "options", "\"" + v + "\"")
+                }
+            }
+
+            Card { // прочее
+                Layout.fillWidth: true
+                title: "Прочее"
+
+                ToggleRow {
+                    label: "Фокус следует за мышью"
+                    checked: page.umbVal("input.focus.follows_mouse", true)
+                    onToggled: (v) => page.setUmb("src/input.toml", "input.focus", "follows_mouse", v ? "true" : "false")
+                }
+                ToggleRow {
+                    label: "Вставка средней кнопкой"
+                    checked: page.umbVal("input.middle_click_paste", true)
+                    onToggled: (v) => page.setUmb("src/input.toml", "input", "middle_click_paste", v ? "true" : "false")
+                }
+                ToggleRow {
+                    label: "Прятать курсор при печати"
+                    checked: page.umbVal("input.cursor.hide_when_typing", false)
+                    onToggled: (v) => page.setUmb("src/input.toml", "input.cursor", "hide_when_typing", v ? "true" : "false")
+                }
+            }
+        }
+
+        // 8. Экран (монитор этого окна)
+        ColumnLayout {
+            visible: page.section === 7
+            Layout.fillWidth: true
+            spacing: Theme.dp(10)
+
+            SectionHeader {
+                title: "Экран"
+                caption: "Монитор этого окна: " + page.outputName
+            }
+
+            Card {
+                Layout.fillWidth: true
+                title: page.outputName !== "" ? page.outputName : "Экран"
+
+                ParamRow {
+                    label: "Масштаб"
+                    min: 75
+                    max: 200
+                    value: Math.round(page.umbVal("output." + page.outputName + ".scale", 1.0) * 100)
+                    displayMul: 1
+                    suffix: "%"
+                    onCommitted: (v) => {
+                        if (page.outputName === "") return;
+                        const rounded = Math.round(v / 5) * 5;
+                        page.setUmb("src/appearance.toml", "output:" + page.outputName, "scale", rounded / 100);
+                    }
+                }
+                ChoiceRow {
+                    id: freqRow
+                    label: "Частота"
+                    values: page.umbVal("output." + page.outputName + ".modes", [])
+                    labels: page.umbVal("output." + page.outputName + ".modes", [])
+                    value: page.umbVal("output." + page.outputName + ".mode", "")
+                    visible: freqRow.values.length > 0
+                    onCommitted: (v) => {
+                        if (page.outputName === "") return;
+                        page.setUmb("src/appearance.toml", "output:" + page.outputName, "mode", "\"" + v + "\"");
+                    }
+                }
+                ChoiceRow {
+                    label: "VRR"
+                    values: ["disabled", "always", "fullscreen"]
+                    labels: ["Выключен", "Всегда", "В полный экран"]
+                    value: page.umbVal("output." + page.outputName + ".vrr", "fullscreen")
+                    onCommitted: (v) => {
+                        if (page.outputName === "") return;
+                        page.setUmb("src/appearance.toml", "output:" + page.outputName, "vrr", "\"" + v + "\"");
+                    }
+                }
+                ChoiceRow {
+                    label: "Поворот"
+                    values: ["normal", "90", "180", "270"]
+                    labels: ["Обычный", "90°", "180°", "270°"]
+                    value: page.umbVal("output." + page.outputName + ".transform", "normal")
+                    onCommitted: (v) => {
+                        if (page.outputName === "") return;
+                        page.setUmb("src/appearance.toml", "output:" + page.outputName, "transform", "\"" + v + "\"");
                     }
                 }
             }

@@ -26,6 +26,9 @@ Singleton {
         idleSuspendMin: 60,
         islandLayout: true,
         islandWeather: true,
+        islandClock: true,
+        islandWorkspaces: true,
+        islandTray: true,
         clockSeconds: true,
         toastSeconds: 5,
         weatherAuto: true,
@@ -63,6 +66,9 @@ Singleton {
             property int idleSuspendMin: 60
             property bool islandLayout: true
             property bool islandWeather: true
+            property bool islandClock: true
+            property bool islandWorkspaces: true
+            property bool islandTray: true
             property bool clockSeconds: true
             property int toastSeconds: 5
             property bool weatherAuto: true
@@ -86,6 +92,9 @@ Singleton {
     readonly property int idleSuspendMin: a.idleSuspendMin
     readonly property bool islandLayout: a.islandLayout
     readonly property bool islandWeather: a.islandWeather
+    readonly property bool islandClock: a.islandClock
+    readonly property bool islandWorkspaces: a.islandWorkspaces
+    readonly property bool islandTray: a.islandTray
     readonly property bool clockSeconds: a.clockSeconds
     readonly property int toastSeconds: a.toastSeconds
     readonly property bool weatherAuto: a.weatherAuto

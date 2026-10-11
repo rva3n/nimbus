@@ -17,7 +17,7 @@ Rectangle {
 
     default property alias content: layout.data
 
-    radius: Theme.radiusXl
+    radius: Math.max(Theme.radiusXl, Theme.dp(24))
     // глубина стекла следует за ползунком «Размытие фона» (Theme.glassCard)
     color: Theme.alpha(Theme.mHigh, Theme.glassCard)
     border.width: 1

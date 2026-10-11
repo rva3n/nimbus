@@ -263,7 +263,7 @@ Singleton {
     readonly property string textFontFallback: "Noto Sans"
     readonly property string iconFont: iconFontLoader.status === FontLoader.Ready ? iconFontLoader.name : "Material Symbols Rounded"
 
-    readonly property real typeBaseline: 0.9
+    readonly property real typeBaseline: 1.0
     readonly property real fontScale: root.typeBaseline * root.uiScale
 
     readonly property int fontLabel: Math.round(11 * root.fontScale)

@@ -108,10 +108,12 @@ Item {
             id: wsRow
             anchors.verticalCenter: parent.verticalCenter
             output: holder.output
+            visible: Prefs.islandWorkspaces
         }
 
         Rectangle { // чип часов с секундами: клик → вкладка «управление»
             id: clockChip
+            visible: Prefs.islandClock
             anchors.verticalCenter: parent.verticalCenter
             implicitWidth: clockText.implicitWidth + Theme.dp(16)
             implicitHeight: Theme.dp(22)
@@ -160,6 +162,7 @@ Item {
             id: trayLoader
             anchors.verticalCenter: parent.verticalCenter
             source: "TrayRow.qml"
+            active: Prefs.islandTray
             width: item ? item.implicitWidth : 0
             visible: width > 0
             // клик по капсуле открывает вид острова «трей»

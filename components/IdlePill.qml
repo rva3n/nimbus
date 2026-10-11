@@ -110,18 +110,6 @@ Item {
             output: holder.output
         }
 
-        // Системный трей: отдельный файл TrayRow.qml. Грузим через Loader с
-        // явным source, потому что components/qmldir (его здесь не трогаем) не
-        // объявляет TrayRow, а соседние .qml при наличии qmldir не видны как типы.
-        // Ширину берём с содержимого: на пустом трее она 0 и ряд не занимает места.
-        Loader {
-            id: trayLoader
-            anchors.verticalCenter: parent.verticalCenter
-            source: "TrayRow.qml"
-            width: item ? item.implicitWidth : 0
-            visible: width > 0
-        }
-
         Rectangle { // чип часов с секундами: клик → вкладка «управление»
             id: clockChip
             anchors.verticalCenter: parent.verticalCenter
@@ -162,6 +150,18 @@ Item {
                 cursorShape: Qt.PointingHandCursor
                 onClicked: if (holder.shell) holder.shell.setTab("calendar")
             }
+        }
+
+        // Системный трей — правый край idle-ряда, после часов. Отдельный файл
+        // TrayRow.qml: грузим через Loader с явным source, потому что qmldir
+        // (его здесь не трогаем) не объявляет TrayRow. Ширину берём с
+        // содержимого: на пустом трее она 0 и капсула не занимает места.
+        Loader {
+            id: trayLoader
+            anchors.verticalCenter: parent.verticalCenter
+            source: "TrayRow.qml"
+            width: item ? item.implicitWidth : 0
+            visible: width > 0
         }
     }
 

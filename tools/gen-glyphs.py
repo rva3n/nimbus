@@ -31,6 +31,7 @@ hourglass_top flag timer_off calendar_month text_fields rounded_corner opacity m
 queue_music album add_circle history content_paste edit_note snowing ac_unit sentiment_satisfied
 apps dashboard grid_view tune widgets
 mouse keyboard desktop_windows inventory_2
+calculate
 """.split()
 
 

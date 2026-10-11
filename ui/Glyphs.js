@@ -152,4 +152,5 @@ var cp = {
     "keyboard": 0xe312,
     "desktop_windows": 0xe30c,
     "inventory_2": 0xe1a1,
+    "calculate": 0xea5f,
 };

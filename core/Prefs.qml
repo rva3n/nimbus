@@ -21,6 +21,13 @@ Singleton {
         surfaceDarkness: -1,
         surfaceTint: -1,
         blurAmount: 45,
+        idleScreenMin: 10,
+        idleLockMin: 0,
+        idleSuspendMin: 60,
+        islandLayout: true,
+        islandWeather: true,
+        clockSeconds: true,
+        toastSeconds: 5,
         weatherAuto: true,
         weatherCity: "",
         weatherLat: 0,
@@ -51,6 +58,13 @@ Singleton {
             property real surfaceDarkness: -1
             property real surfaceTint: -1
             property real blurAmount: 45
+            property int idleScreenMin: 10
+            property int idleLockMin: 0
+            property int idleSuspendMin: 60
+            property bool islandLayout: true
+            property bool islandWeather: true
+            property bool clockSeconds: true
+            property int toastSeconds: 5
             property bool weatherAuto: true
             property string weatherCity: ""
             property real weatherLat: 0
@@ -67,6 +81,13 @@ Singleton {
     readonly property real surfaceDarkness: a.surfaceDarkness
     readonly property real surfaceTint: a.surfaceTint
     readonly property real blurAmount: a.blurAmount
+    readonly property int idleScreenMin: a.idleScreenMin
+    readonly property int idleLockMin: a.idleLockMin
+    readonly property int idleSuspendMin: a.idleSuspendMin
+    readonly property bool islandLayout: a.islandLayout
+    readonly property bool islandWeather: a.islandWeather
+    readonly property bool clockSeconds: a.clockSeconds
+    readonly property int toastSeconds: a.toastSeconds
     readonly property bool weatherAuto: a.weatherAuto
     readonly property string weatherCity: a.weatherCity
     readonly property real weatherLat: a.weatherLat

@@ -13,7 +13,7 @@ Singleton {
 
     Timer {
         id: hideTimer
-        interval: 4500
+        interval: Math.max(2, Prefs.toastSeconds) * 1000
         onTriggered: root.visible = false
     }
 

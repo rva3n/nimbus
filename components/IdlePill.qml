@@ -30,7 +30,7 @@ Item {
 
         Rectangle { // чип раскладки клавиатуры
             id: layoutChip
-            visible: Umbriel.keyboardLayout !== ""
+            visible: Umbriel.keyboardLayout !== "" && Prefs.islandLayout
             anchors.verticalCenter: parent.verticalCenter
             implicitWidth: layoutText.implicitWidth + Theme.dp(16)
             implicitHeight: Theme.dp(22)
@@ -51,7 +51,7 @@ Item {
 
         Rectangle { // чип погоды: клик → вкладка «погода»
             id: weatherChip
-            visible: Weather.hasData && isFinite(Weather.temp)
+            visible: Weather.hasData && isFinite(Weather.temp) && Prefs.islandWeather
             anchors.verticalCenter: parent.verticalCenter
             implicitWidth: weatherRow.implicitWidth + Theme.dp(16)
             implicitHeight: Theme.dp(22)
@@ -140,7 +140,7 @@ Item {
                 font.weight: Theme.typeWeight("titleSmall")
                 font.features: ({ "tnum": 1 })  // табличные цифры: ширина не дёргается каждую секунду
                 color: Theme.fgAccentContainer
-                text: Qt.formatDateTime(holder.now, "HH:mm:ss")
+                text: Qt.formatDateTime(holder.now, Prefs.clockSeconds ? "HH:mm:ss" : "HH:mm")
             }
 
             MouseArea {

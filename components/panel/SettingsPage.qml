@@ -13,7 +13,8 @@ RowLayout {
     id: page
 
     property var win: null
-    // выбранный раздел: 0 — интерфейс, 1 — погода
+    // выбранный раздел: 0 — интерфейс, 1 — островок, 2 — питание,
+    // 3 — уведомления, 4 — погода
     property int section: 0
 
     visible: win !== null && win.mode === "panel" && win.page === "settings"
@@ -25,6 +26,12 @@ RowLayout {
 
     function applyCity() {
         Prefs.set("weatherCity", cityField.text.trim());
+    }
+
+    // Применить таймауты питания (hypridle) — сразу после смены настроек.
+    function applyIdle() {
+        Quickshell.execDetached(["sh", Quickshell.env("HOME") + "/nimbus/scripts/set-idle.sh",
+                                 String(Prefs.idleScreenMin), String(Prefs.idleLockMin), String(Prefs.idleSuspendMin)]);
     }
 
     // ── локальные компоненты ──────────────────────────────────────────
@@ -191,6 +198,99 @@ RowLayout {
         }
     }
 
+    // строка-переключатель: подпись + Switch
+    component ToggleRow: RowLayout {
+        id: tr
+
+        property string label: ""
+        property bool checked: false
+
+        signal toggled(bool value)
+
+        Layout.fillWidth: true
+        Layout.preferredHeight: Theme.dp(40)
+        spacing: Theme.dp(8)
+
+        Text {
+            Layout.fillWidth: true
+            text: tr.label
+            color: Theme.text
+            elide: Text.ElideRight
+            font.family: Theme.textFont
+            font.pixelSize: Theme.typeSize("bodyLarge")
+            font.weight: Theme.typeWeight("bodyLarge")
+        }
+
+        Switch {
+            id: sw
+            Layout.alignment: Qt.AlignVCenter
+            checked: tr.checked
+            onToggled: tr.toggled(sw.checked)
+        }
+    }
+
+    // строка выбора из набора значений: ‹ значение ›
+    component ChoiceRow: RowLayout {
+        id: cr
+
+        property string label: ""
+        property var values: []
+        property var labels: []
+        property int value: 0
+
+        signal committed(int v)
+
+        function _idx() {
+            for (let i = 0; i < cr.values.length; i++)
+                if (cr.values[i] === cr.value) return i;
+            return 0;
+        }
+        function _step(d) {
+            const i = cr._idx();
+            const ni = Math.max(0, Math.min(cr.values.length - 1, i + d));
+            const nv = cr.values[ni];
+            if (nv !== cr.value) cr.committed(nv);
+        }
+
+        Layout.fillWidth: true
+        Layout.preferredHeight: Theme.dp(40)
+        spacing: Theme.dp(8)
+
+        Text {
+            Layout.fillWidth: true
+            text: cr.label
+            color: Theme.text
+            elide: Text.ElideRight
+            font.family: Theme.textFont
+            font.pixelSize: Theme.typeSize("bodyLarge")
+            font.weight: Theme.typeWeight("bodyLarge")
+        }
+
+        IconButton {
+            icon: "chevron_left"
+            size: "s"
+            variant: "standard"
+            onClicked: cr._step(-1)
+        }
+
+        Text {
+            text: cr.labels[cr._idx()] || ""
+            color: Theme.subtext
+            horizontalAlignment: Text.AlignHCenter
+            Layout.preferredWidth: Theme.dp(64)
+            font.family: Theme.textFont
+            font.pixelSize: Theme.typeSize("labelMedium")
+            font.weight: Theme.typeWeight("labelMedium")
+        }
+
+        IconButton {
+            icon: "chevron_right"
+            size: "s"
+            variant: "standard"
+            onClicked: cr._step(1)
+        }
+    }
+
     // ── левая колонка: рейл разделов ──────────────────────────────────
     ColumnLayout {
         id: rail
@@ -206,10 +306,28 @@ RowLayout {
             onClicked: page.section = 0
         }
         NavItem {
-            icon: "sunny"
-            label: "Погода"
+            icon: "widgets"
+            label: "Островок"
             selected: page.section === 1
             onClicked: page.section = 1
+        }
+        NavItem {
+            icon: "power"
+            label: "Питание"
+            selected: page.section === 2
+            onClicked: page.section = 2
+        }
+        NavItem {
+            icon: "notifications"
+            label: "Уведомления"
+            selected: page.section === 3
+            onClicked: page.section = 3
+        }
+        NavItem {
+            icon: "sunny"
+            label: "Погода"
+            selected: page.section === 4
+            onClicked: page.section = 4
         }
     }
 
@@ -311,9 +429,121 @@ RowLayout {
             }
         }
 
-        // 2. Погода
+        // 2. Островок
         ColumnLayout {
             visible: page.section === 1
+            Layout.fillWidth: true
+            spacing: Theme.dp(10)
+
+            SectionHeader {
+                title: "Островок"
+                caption: "Что показывать в капсуле"
+            }
+
+            Card {
+                Layout.fillWidth: true
+
+                ToggleRow {
+                    label: "Показывать раскладку клавиатуры"
+                    checked: Prefs.islandLayout
+                    onToggled: (v) => Prefs.set("islandLayout", v)
+                }
+                ToggleRow {
+                    label: "Показывать погоду"
+                    checked: Prefs.islandWeather
+                    onToggled: (v) => Prefs.set("islandWeather", v)
+                }
+                ToggleRow {
+                    label: "Секунды в часах"
+                    checked: Prefs.clockSeconds
+                    onToggled: (v) => Prefs.set("clockSeconds", v)
+                }
+            }
+        }
+
+        // 3. Питание
+        ColumnLayout {
+            visible: page.section === 2
+            Layout.fillWidth: true
+            spacing: Theme.dp(10)
+
+            SectionHeader {
+                title: "Питание"
+                caption: "Что и когда делать при бездействии"
+            }
+
+            Card {
+                Layout.fillWidth: true
+
+                ChoiceRow {
+                    label: "Гасить экран через"
+                    values: [0, 1, 2, 5, 10, 15, 30, 60]
+                    labels: ["Никогда", "1 мин", "2 мин", "5 мин", "10 мин", "15 мин", "30 мин", "60 мин"]
+                    value: Prefs.idleScreenMin
+                    onCommitted: (v) => { Prefs.set("idleScreenMin", v); page.applyIdle() }
+                }
+                ChoiceRow {
+                    label: "Блокировать через"
+                    values: [0, 1, 2, 5, 10, 15, 30]
+                    labels: ["Никогда", "1 мин", "2 мин", "5 мин", "10 мин", "15 мин", "30 мин"]
+                    value: Prefs.idleLockMin
+                    onCommitted: (v) => { Prefs.set("idleLockMin", v); page.applyIdle() }
+                }
+                ChoiceRow {
+                    label: "Уходить в сон через"
+                    values: [0, 15, 30, 60, 120, 180]
+                    labels: ["Никогда", "15 мин", "30 мин", "60 мин", "2 часа", "3 часа"]
+                    value: Prefs.idleSuspendMin
+                    onCommitted: (v) => { Prefs.set("idleSuspendMin", v); page.applyIdle() }
+                }
+
+                Text {
+                    Layout.fillWidth: true
+                    Layout.topMargin: Theme.dp(2)
+                    text: "Работает через hypridle (Umbriel): гашение — DPMS, блокировка — экран Nimbus, сон — systemd. Если монитор гаснет раньше выбранного — это его собственный таймер в прошивке."
+                    color: Theme.subtextDim
+                    wrapMode: Text.WordWrap
+                    font.family: Theme.textFont
+                    font.pixelSize: Theme.typeSize("bodySmall")
+                    font.weight: Theme.typeWeight("bodySmall")
+                }
+            }
+        }
+
+        // 4. Уведомления
+        ColumnLayout {
+            visible: page.section === 3
+            Layout.fillWidth: true
+            spacing: Theme.dp(10)
+
+            SectionHeader {
+                title: "Уведомления"
+                caption: "Тосты и режим «не беспокоить»"
+            }
+
+            Card {
+                Layout.fillWidth: true
+
+                ToggleRow {
+                    label: "Не беспокоить (DND)"
+                    checked: Prefs.dnd
+                    onToggled: (v) => Prefs.set("dnd", v)
+                }
+                ParamRow {
+                    label: "Длительность тоста"
+                    min: 2
+                    max: 10
+                    value: Prefs.toastSeconds
+                    displayMul: 1
+                    suffix: " сек"
+                    onCommitted: (v) => Prefs.set("toastSeconds", Math.round(v))
+                }
+            }
+        }
+
+        // 5. Погода
+        ColumnLayout {
+            visible: page.section === 4
             Layout.fillWidth: true
             spacing: Theme.dp(10)
 

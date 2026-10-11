@@ -314,5 +314,13 @@ PanelWindow {
                 event.accepted = true;
             }
         }
+        Keys.onReleased: (event) => {
+            if (!switcher.open) return;
+            // по-виндовому: отпустил Alt — сразу переключаемся на выбранное окно
+            if (event.key === Qt.Key_Alt || event.key === Qt.Key_Meta) {
+                switcher.activate();
+                event.accepted = true;
+            }
+        }
     }
 }

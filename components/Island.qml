@@ -121,6 +121,55 @@ PanelWindow {
         return u;
     }
 
+    // Круглая ghost-кнопка-иконка панели, как в yoru: приглушённый круг
+    // Theme.alpha(mHigh, 0.10) и белая иконка 18.
+    component GhostButton: Item {
+        id: gb
+
+        property string icon: ""
+
+        signal clicked()
+
+        implicitWidth: Theme.dp(36)
+        implicitHeight: Theme.dp(36)
+
+        Rectangle {
+            anchors.fill: parent
+            radius: width / 2
+            color: Theme.alpha(Theme.mHigh, 0.10)
+
+            Rectangle { // state layer
+                anchors.fill: parent
+                radius: parent.radius
+                color: Theme.text
+                opacity: gbArea.pressed ? Theme.statePressed : (gbArea.containsMouse ? Theme.stateHover : 0)
+
+                Behavior on opacity {
+                    NumberAnimation {
+                        duration: Theme.ms(100)
+                        easing.type: Theme.easeStandard
+                    }
+                }
+            }
+        }
+
+        Icon {
+            anchors.centerIn: parent
+            name: gb.icon
+            size: Theme.dp(18)
+            color: Theme.text
+        }
+
+        MouseArea {
+            id: gbArea
+
+            anchors.fill: parent
+            hoverEnabled: true
+            cursorShape: Qt.PointingCursor
+            onClicked: gb.clicked()
+        }
+    }
+
     // Настоящая тень: обёртка с запасом, layer.effect рисует капсулу
     // с гауссовой тенью (в Umbriel теней слоёв нет — делаем сами).
     Item {
@@ -150,14 +199,15 @@ PanelWindow {
             y: shadowHost.padTop
             width: win.big ? Theme.dp(win.panelW) : (idlePill.implicitWidth + Theme.pad * 2)
         height: win.big ? Math.min(contentCol.implicitHeight + Theme.dp(32), win.panelMax) : Math.max(Theme.height, idlePill.implicitHeight + Theme.dp(6))
-        radius: win.big ? Theme.radiusXl : height / 2
-        color: Theme.bg
+        radius: win.big ? Math.max(Theme.radiusXl, Theme.dp(28)) : height / 2
+        color: win.big ? Theme.alpha(Theme.mContainer, 0.97) : Theme.bg
         border.width: 1
         border.color: Theme.a(Theme.outline, 0.25)
         clip: true
         Behavior on width { NumberAnimation { duration: Theme.durMedium; easing.type: Easing.Bezier; easing.bezierCurve: Theme.curveDefaultSpatial } }
         Behavior on height { NumberAnimation { duration: Theme.durMedium; easing.type: Easing.Bezier; easing.bezierCurve: Theme.curveDefaultSpatial } }
         Behavior on radius { NumberAnimation { duration: Theme.durMedium; easing.type: Easing.Bezier; easing.bezierCurve: Theme.curveDefaultSpatial } }
+        Behavior on color { ColorAnimation { duration: Theme.durMedium } }
 
         // ── IDLE / OSD / NOTIF ───────────────────────────────────────
         IdlePill {
@@ -204,13 +254,13 @@ PanelWindow {
                         spacing: 0
                         visible: win.mode === "panel" && win.page === ""
                         Text {
-                            font.family: Theme.textFont; font.pixelSize: Theme.typeSize("headlineSmall")
-                            font.weight: Theme.typeWeight("headlineSmall"); color: Theme.text
+                            font.family: Theme.textFont; font.pixelSize: Theme.typeSize("titleLarge")
+                            font.weight: Font.Bold; color: Theme.text
                             text: Qt.formatDateTime(win.now, "HH:mm")
                         }
                         Text {
                             font.family: Theme.textFont; font.pixelSize: Theme.typeSize("bodySmall")
-                            color: Theme.subtext
+                            color: Theme.subtextDim
                             text: win.now.toLocaleDateString(Qt.locale("ru_RU"), "dddd, d MMMM")
                         }
                     }
@@ -227,12 +277,12 @@ PanelWindow {
                         text: "Трей"
                     }
                     Item { Layout.fillWidth: true }
-                    IconButton {
+                    GhostButton {
                         visible: win.mode === "panel" && win.page === ""
                         icon: "settings"
                         onClicked: if (win.shell) win.shell.setPage(win.page === "settings" ? "" : "settings")
                     }
-                    IconButton {
+                    GhostButton {
                         visible: win.mode === "panel"
                         icon: "power_settings_new"
                         onClicked: if (win.shell) win.shell.setPage(win.page === "power" ? "" : "power")

@@ -3,8 +3,9 @@ import QtQuick.Layouts
 import "../core"
 import "../ui"
 
-// Строка управления: ведущая иконка 40×40 (клик — iconClicked), M3-слайдер,
-// проценты справа. Фон прозрачный, ховер — bgHover (внутри ui/Card).
+// Строка управления в стиле yoru: слайдер с иконкой ВНУТРИ заливки,
+// проценты справа. Клик по иконке — iconClicked (mute/переключение).
+// Фон прозрачный, ховер — bgHover (внутри ui/Card).
 Rectangle {
     id: sl
     property string icon: ""
@@ -30,31 +31,13 @@ Rectangle {
         anchors.rightMargin: Theme.dp(8)
         spacing: Theme.dp(8)
 
-        Rectangle { // ведущая иконка; клик — mute/переключение
-            implicitWidth: Theme.dp(40)
-            implicitHeight: Theme.dp(40)
-            radius: Theme.radiusMd
-            color: Theme.bgTrack
-
-            Icon {
-                anchors.centerIn: parent
-                name: sl.icon
-                size: Theme.dp(20)
-                color: Theme.subtext
-            }
-
-            MouseArea {
-                anchors.fill: parent
-                cursorShape: Qt.PointingHandCursor
-                onClicked: sl.iconClicked()
-            }
-        }
-
         Slider {
             Layout.fillWidth: true
+            icon: sl.icon
             value: sl.value
             onMoved: (v) => sl.moved(v)
             onCommitted: (v) => sl.committed(v)
+            onIconClicked: sl.iconClicked()
         }
 
         Text {

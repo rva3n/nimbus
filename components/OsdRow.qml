@@ -3,7 +3,8 @@ import QtQuick.Layouts
 import "../core"
 import "../ui"
 
-// OSD-строка: контейнер иконки источника + трек значения + процент/«mute».
+// OSD-строка в стиле yoru: толстый трек с акцентной заливкой, иконка внутри
+// заливки слева, тонкий вертикальный ползунок на границе; процент справа.
 RowLayout {
     id: osdRow
     property string kind: "volume"
@@ -11,33 +12,20 @@ RowLayout {
     property bool muted: false
     spacing: Theme.dp(10)
 
-    Rectangle { // контейнер иконки источника
-        Layout.alignment: Qt.AlignVCenter
-        implicitWidth: Theme.dp(26)
-        implicitHeight: Theme.dp(26)
-        radius: Theme.radiusPill
-        color: Theme.accentContainer
-
-        Icon {
-            anchors.centerIn: parent
-            name: osdRow.kind === "volume" ? (osdRow.muted ? "volume_off" : "volume_up") : "brightness_6"
-            size: Theme.dp(16)
-            color: Theme.fgAccentContainer
-        }
-    }
-
     Rectangle { // трек
+        id: osdTrack
         Layout.alignment: Qt.AlignVCenter
-        Layout.preferredWidth: Theme.dp(140)
-        Layout.preferredHeight: Theme.dp(12)
-        radius: Theme.radiusPill
+        Layout.preferredWidth: Theme.dp(160)
+        Layout.preferredHeight: Theme.dp(28)
+        radius: Theme.dp(12)
         color: Theme.bgTrack
+        clip: true
 
         Rectangle { // заливка значения
             id: osdFill
-            width: (osdRow.muted && osdRow.kind === "volume") ? 0 : parent.width * osdRow.value
+            width: (osdRow.muted && osdRow.kind === "volume") ? 0 : osdTrack.width * osdRow.value
             height: parent.height
-            radius: Theme.radiusPill
+            radius: osdTrack.radius
             color: Theme.accent
             Behavior on width {
                 NumberAnimation {
@@ -46,17 +34,26 @@ RowLayout {
                     easing.bezierCurve: Theme.curveEffects
                 }
             }
+
+            Icon { // иконка внутри заливки (как у yoru)
+                x: Theme.dp(10)
+                anchors.verticalCenter: parent.verticalCenter
+                width: Theme.dp(16)
+                height: Theme.dp(16)
+                visible: osdFill.width > Theme.dp(32)
+                name: osdRow.kind === "volume" ? (osdRow.muted ? "volume_off" : "volume_up") : "brightness_6"
+                size: Theme.dp(16)
+                color: Theme.fgAccent
+            }
         }
 
-        Rectangle { // бегунок (как у ui/Slider)
-            width: Theme.dp(18)
-            height: Theme.dp(18)
-            radius: width / 2
+        Rectangle { // тонкий вертикальный ползунок на границе заливки
+            width: Theme.dp(3)
+            height: osdTrack.height - Theme.dp(10)
+            radius: 2
             anchors.verticalCenter: parent.verticalCenter
-            x: Math.max(0, Math.min(parent.width - width, osdFill.width - width / 2))
-            color: Theme.accent
-            border.width: Theme.dp(2)
-            border.color: Theme.bgOpaque
+            x: Math.max(0, Math.min(osdTrack.width - width, osdFill.width - width / 2))
+            color: Theme.text
         }
     }
 

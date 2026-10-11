@@ -1,9 +1,10 @@
 import QtQuick
 import "../core"
 
-// M3-слайдер в стиле «filled material»: толстый pill-трек, заливка акцентом,
-// крупная круглая ручка с контрастным кольцом. На ховере/нажатии ручка
-// немного масштабируется. Высота 24, зона мыши выше трека.
+// Слайдер в стиле yoru: толстый скруглённый (не пилюля) трек, заливка
+// акцентом, тонкая вертикальная ручка-риска на границе заливки и опциональная
+// иконка внутри заливки слева (как volume/brightness в control center).
+// Крупной круглой ручки и кольца нет.
 Item {
     id: root
 
@@ -15,14 +16,20 @@ Item {
     // ведём сами, чтобы анимация live не перехватывала запись в onPressed
     // (pressed у MouseArea объявляется после pressedChanged)
     property bool dragging: false
+    // иконка внутри заливки (volume_up, brightness_6, ...); "" — без иконки
+    property string icon: ""
+
     readonly property bool hovered: area.containsMouse
     readonly property bool hot: root.enabled && (root.hovered || root.dragging)
 
     signal moved(real v)
     signal committed(real v)
+    // клик по иконке внутри заливки (mute/переключение у вызывающего кода)
+    signal iconClicked()
 
     implicitWidth: Theme.dp(200)
-    implicitHeight: Theme.dp(24)
+    // трек + небольшой запас под ховер-утолщение ручки
+    implicitHeight: Theme.dp(32)
     opacity: root.enabled ? 1 : Theme.disabledContent
 
     Component.onCompleted: root.live = root.value
@@ -35,11 +42,18 @@ Item {
     // v = x / ширине трека
     function valueAt(px) { return root.clamp01(px / Math.max(1, root.width)) }
 
-    // геометрия «материала»
-    readonly property real _trackH: Theme.dp(16)
-    readonly property real _thumbD: Theme.dp(22)
-    // ручка не вылезает за края трека
-    readonly property real _thumbX: Math.max(root._thumbD / 2, Math.min(root.width - root._thumbD / 2, root.live * root.width))
+    // геометрия: толстый rounded-rect трек, тонкая ручка-риска, иконка в заливке
+    readonly property real _trackH: Theme.dp(28)
+    readonly property real _radius: Theme.dp(12)
+    readonly property real _handleW: Theme.dp(3)
+    readonly property real _handleH: root._trackH - Theme.dp(10)
+    readonly property real _iconMargin: Theme.dp(10)
+    readonly property real _iconSize: Theme.dp(16)
+    // ширина заливки: по live — при drag напрямую, извне value доезжает плавно
+    readonly property real _fillW: Math.max(0, Math.min(root.width, root.live * root.width))
+    // иконка видна, только если заливка достаточно широка, чтобы её вместить
+    readonly property bool _iconShown: root.icon !== ""
+        && root._fillW > root._iconMargin + root._iconSize + Theme.dp(6)
 
     // значение приходит извне — доезжает плавно; при drag идёт напрямую
     Behavior on live {
@@ -55,54 +69,44 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
         width: root.width
         height: root._trackH
-        radius: height / 2
+        radius: root._radius
         color: Theme.bgTrack
     }
 
-    Rectangle { // заполненная часть акцентом, ведёт к центру ручки
+    Rectangle { // заливка акцентом, тянется до границы ручки
+        id: fill
         anchors.verticalCenter: parent.verticalCenter
-        width: Math.max(0, root._thumbX)
+        width: root._fillW
         height: root._trackH
-        radius: height / 2
+        radius: root._radius
         color: Theme.accent
+        clip: true
+
+        Icon { // иконка внутри заливки слева (тёмный «ink» на акценте)
+            id: iconItem
+            anchors.verticalCenter: parent.verticalCenter
+            x: root._iconMargin
+            visible: root._iconShown
+            name: root.icon
+            size: root._iconSize
+            color: Theme.fgAccent
+        }
     }
 
-    // гало — мягкий state-layer под ручкой (как в M3)
-    Rectangle {
-        id: halo
-        anchors.centerIn: handle
-        width: Theme.dp(38)
-        height: width
-        radius: width / 2
-        color: Theme.alpha(Theme.accent, area.pressed ? 0.18 : 0.12)
-        opacity: root.hot ? 1 : 0
+    Rectangle { // ручка: тонкая вертикальная риска на границе заливки
+        id: handle
+        anchors.verticalCenter: parent.verticalCenter
+        x: root._fillW - width / 2
+        width: root._handleW
+        height: root.hot ? root._handleH + Theme.dp(4) : root._handleH
+        radius: Theme.dp(2)
+        color: Theme.text
 
-        Behavior on opacity {
+        Behavior on height {
             NumberAnimation {
                 duration: Theme.ms(120)
                 easing.type: Easing.Bezier
                 easing.bezierCurve: Theme.curveEffects
-            }
-        }
-    }
-
-    Rectangle { // ручка: крупный круг акцентом с контрастным кольцом
-        id: handle
-        anchors.verticalCenter: parent.verticalCenter
-        x: root._thumbX - width / 2
-        width: root._thumbD
-        height: root._thumbD
-        radius: width / 2
-        color: Theme.accent
-        border.width: Theme.dp(2)
-        border.color: Theme.bgOpaque
-        scale: root.dragging ? 0.95 : (root.hovered ? 1.03 : 1)
-
-        Behavior on scale {
-            NumberAnimation {
-                duration: Theme.ms(120)
-                easing.type: Easing.Bezier
-                easing.bezierCurve: Theme.curveDefaultSpatial
             }
         }
     }
@@ -134,5 +138,19 @@ Item {
             root.dragging = false;
             root.committed(root.live);
         }
+    }
+
+    // клик по иконке (mute и т.п.) — объявлен поверх area, перехватывает только
+    // область иконки, поэтому не мешает перетаскиванию заливки. Позиция
+    // повторяет iconItem (fill.x == 0), т.к. anchor к вложенному элементу нельзя.
+    MouseArea {
+        id: iconArea
+        x: root._iconMargin - Theme.dp(4)
+        width: root._iconSize + Theme.dp(8)
+        height: root._iconSize + Theme.dp(8)
+        anchors.verticalCenter: parent.verticalCenter
+        visible: root._iconShown
+        cursorShape: Qt.PointingHandCursor
+        onClicked: root.iconClicked()
     }
 }

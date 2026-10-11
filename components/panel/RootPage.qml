@@ -5,9 +5,9 @@ import "../../core"
 import ".."
 import "../../ui"
 
-// Корневая страница панели: сетка плиток быстрых настроек (Wi-Fi, Bluetooth,
-// звук, яркость, DND, таймеры) и уведомления. Дизайн — как в yoru: тёмная
-// карточка, безрамочные плитки 2×N, круглые контейнеры иконок.
+// Корневая страница панели: слайдеры громкости/яркости, сетка плиток быстрых
+// настроек (Wi-Fi, Bluetooth, DND, таймеры) и уведомления. Дизайн — как в yoru:
+// тёмная карточка, безрамочные плитки 2×N, круглые контейнеры иконок.
 ColumnLayout {
     id: rootPage
 
@@ -16,10 +16,6 @@ ColumnLayout {
     visible: win !== null && win.mode === "panel" && win.page === ""
     Layout.fillWidth: true
     spacing: 14
-
-    // Активный аудиовыход для подписи плитки «Звук».
-    readonly property var sink: Pipewire.defaultAudioSink
-    readonly property string sinkLabel: sink ? (sink.description || sink.name || "Вывод") : "Вывод"
 
     // mm:ss для подписи плитки «Таймеры».
     function fmtTimer(sec) {
@@ -152,6 +148,29 @@ ColumnLayout {
         }
     }
 
+    // ── Слайдеры громкости и яркости (в стиле yoru, прямо под шапкой) ──
+    ColumnLayout {
+        Layout.fillWidth: true
+        spacing: Theme.dp(10)
+
+        Slider {
+            Layout.fillWidth: true
+            icon: Pipewire.defaultAudioSink && Pipewire.defaultAudioSink.audio.muted ? "volume_off" : "volume_up"
+            value: Pipewire.defaultAudioSink ? Pipewire.defaultAudioSink.audio.volume : 0
+            onMoved: (v) => { if (Pipewire.defaultAudioSink) Pipewire.defaultAudioSink.audio.volume = v; }
+            onCommitted: (v) => { if (Pipewire.defaultAudioSink) Pipewire.defaultAudioSink.audio.volume = v; }
+            onIconClicked: if (rootPage.win && rootPage.win.shell) rootPage.win.shell.togglePage("volume")
+        }
+
+        Slider {
+            Layout.fillWidth: true
+            icon: "brightness_6"
+            value: Sys.brightnessFraction
+            onCommitted: (v) => { Sys.setBrightnessPct(v * 100); }
+            onIconClicked: if (rootPage.win && rootPage.win.shell) rootPage.win.shell.togglePage("brightness")
+        }
+    }
+
     // ── Плитки быстрых настроек: 2 колонки × N строк, как в yoru ──────
     GridLayout {
         Layout.fillWidth: true
@@ -186,20 +205,6 @@ ColumnLayout {
         }
 
         QuickTile {
-            icon: "volume_up"
-            label: "Звук"
-            subtitle: rootPage.sinkLabel
-            onTapped: if (rootPage.win && rootPage.win.shell) rootPage.win.shell.togglePage("volume")
-        }
-
-        QuickTile {
-            icon: "brightness_6"
-            label: "Яркость"
-            subtitle: Math.round(Sys.brightnessFraction * 100) + "%"
-            onTapped: if (rootPage.win && rootPage.win.shell) rootPage.win.shell.togglePage("brightness")
-        }
-
-        QuickTile {
             icon: "do_not_disturb_on"
             label: "DND"
             active: Notif.dnd
@@ -216,40 +221,15 @@ ColumnLayout {
         }
     }
 
-    // ── Уведомления ───────────────────────────────────────────────────
+    // ── Уведомления: карточка видна только при наличии истории ─────────
     Card {
+        visible: Notif.history.length > 0
         Layout.fillWidth: true
         title: "Уведомления"
-        actionIcon: Notif.history.length > 0 ? "delete" : ""
+        actionIcon: "delete"
         onActionClicked: Notif.clearAll()
 
-        // пустое состояние: карточка видна всегда
         ColumnLayout {
-            visible: !Notif.history || Notif.history.length === 0
-            Layout.fillWidth: true
-            Layout.topMargin: Theme.dp(10)
-            Layout.bottomMargin: Theme.dp(10)
-            spacing: Theme.dp(6)
-
-            Icon {
-                Layout.alignment: Qt.AlignHCenter
-                name: "bedtime"
-                size: Theme.dp(36)
-                color: Theme.subtextDim
-            }
-
-            Text {
-                Layout.alignment: Qt.AlignHCenter
-                text: "Всё тихо"
-                color: Theme.subtextDim
-                font.family: Theme.textFont
-                font.pixelSize: Theme.typeSize("bodyMedium")
-                font.weight: Theme.typeWeight("bodyMedium")
-            }
-        }
-
-        ColumnLayout {
-            visible: Notif.history && Notif.history.length > 0
             Layout.fillWidth: true
             spacing: 0
 
@@ -261,12 +241,6 @@ ColumnLayout {
                     required property int index
                     Layout.fillWidth: true
                     spacing: 0
-
-                    Divider {
-                        visible: index > 0
-                        Layout.fillWidth: true
-                        leftInset: Theme.dp(56)
-                    }
 
                     NotifItem {
                         Layout.fillWidth: true

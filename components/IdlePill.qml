@@ -246,7 +246,7 @@ Item {
         // тон — по Prefs.goWarnPct/error-порогу 85. Клик — страница «opencode».
         Item {
             id: goOuter
-            visible: GoUsage.ready && GoUsage.chipOut(Prefs.goChipMode) !== null
+            visible: Prefs.islandGo && GoUsage.ready && GoUsage.chipOut(Prefs.goChipMode) !== null
             implicitWidth: goRow.implicitWidth + Theme.dp(18)
             implicitHeight: Theme.dp(24)
             scale: goArea.pressed ? 0.96 : 1

@@ -845,6 +845,11 @@ RowLayout {
                     checked: Prefs.islandTray
                     onToggled: (v) => Prefs.set("islandTray", v)
                 }
+                ToggleRow {
+                    label: "Показывать чип OpenCode"
+                    checked: Prefs.islandGo
+                    onToggled: (v) => Prefs.set("islandGo", v)
+                }
             }
 
 

@@ -7,12 +7,17 @@ import "../../core"
 import "../../ui"
 import ".."
 
-// Звук: общая громкость и карточки вывода/ввода и приложений.
+// Звук: Lucid-анатомия control-centre — мастер-слайдер, устройства вывода/ввода
+// как связные группы DeviceRow (стыкующиеся углы, spacing 0, один Card на
+// группу), приложения и микрофоны отдельными карточками со строками.
 ColumnLayout {
     id: volumePage
+
     property var win: null
+
     visible: win !== null && win.mode === "panel" && win.page === "volume"
-    Layout.fillWidth: true; spacing: 10
+    Layout.fillWidth: true
+    spacing: Theme.dp(10)
 
     // application.name (lowercase) → имя иконки; тот же приём, что и в
     // WorkspacesRow/Switcher, плюс сопоставление по Name десктоп-файла, потому
@@ -59,6 +64,22 @@ ColumnLayout {
         return p["application.name"] || n.description || n.name || "";
     }
 
+    // иконка устройства по имени/порту — наушники/HDMI/колонка
+    function devIcon(n) {
+        const s = ((n.description || "") + " " + (n.name || "")).toLowerCase();
+        if (s.indexOf("head") >= 0 || s.indexOf("bluez") >= 0) return "headphones";
+        if (s.indexOf("hdmi") >= 0 || s.indexOf("display") >= 0) return "tv";
+        return "speaker";
+    }
+
+    // положение строки в связной группе (стыкующиеся углы DeviceRow)
+    function groupPos(i, n) {
+        if (n <= 1) return "single";
+        if (i === 0) return "top";
+        if (i === n - 1) return "bottom";
+        return "middle";
+    }
+
     // playback-потоки: isStream && isSink; capture-потоки: isStream && !isSink
     readonly property var playbackStreams: {
         const out = [];
@@ -89,50 +110,78 @@ ColumnLayout {
         }
     }
 
-    // устройства вывода звука
+    // устройства вывода звука — одна связная группа
     Card {
         Layout.fillWidth: true
         title: "Вывод звука"
 
-        Repeater {
-            model: win ? win.outputs : []
-            delegate: ColumnLayout {
-                required property var modelData
-                required property int index
-                Layout.fillWidth: true
-                spacing: Theme.dp(4)
+        ColumnLayout {
+            Layout.fillWidth: true
+            spacing: 0
 
-                DeviceRow {
+            Repeater {
+                id: outRep
+
+                model: volumePage.win ? volumePage.win.outputs : []
+
+                delegate: DeviceRow {
+                    required property var modelData
+                    required property int index
+
                     Layout.fillWidth: true
-                    icon: "volume_up"
+                    icon: volumePage.devIcon(modelData)
                     devName: modelData.description || modelData.name
-                    selected: !!(win && win.sink && win.sink.id === modelData.id)
+                    position: volumePage.groupPos(index, outRep.count)
+                    selected: !!(volumePage.win && volumePage.win.sink && volumePage.win.sink.id === modelData.id)
                     onClicked: Sys.setDefaultAudio(modelData.id)
                 }
+            }
+
+            LText {
+                visible: outRep.count === 0
+                Layout.fillWidth: true
+                Layout.topMargin: Theme.dp(4)
+                role: "bodySmall"
+                color: Theme.subtextDim
+                text: "Нет устройств вывода"
             }
         }
     }
 
-    // устройства ввода
+    // устройства ввода — одна связная группа
     Card {
         Layout.fillWidth: true
         title: "Микрофон"
 
-        Repeater {
-            model: win ? win.inputs : []
-            delegate: ColumnLayout {
-                required property var modelData
-                required property int index
-                Layout.fillWidth: true
-                spacing: Theme.dp(4)
+        ColumnLayout {
+            Layout.fillWidth: true
+            spacing: 0
 
-                DeviceRow {
+            Repeater {
+                id: inRep
+
+                model: volumePage.win ? volumePage.win.inputs : []
+
+                delegate: DeviceRow {
+                    required property var modelData
+                    required property int index
+
                     Layout.fillWidth: true
                     icon: "mic"
                     devName: modelData.description || modelData.name
-                    selected: !!(win && win.source && win.source.id === modelData.id)
+                    position: volumePage.groupPos(index, inRep.count)
+                    selected: !!(volumePage.win && volumePage.win.source && volumePage.win.source.id === modelData.id)
                     onClicked: Sys.setDefaultAudio(modelData.id)
                 }
+            }
+
+            LText {
+                visible: inRep.count === 0
+                Layout.fillWidth: true
+                Layout.topMargin: Theme.dp(4)
+                role: "bodySmall"
+                color: Theme.subtextDim
+                text: "Нет устройств ввода"
             }
         }
     }
@@ -142,72 +191,100 @@ ColumnLayout {
         Layout.fillWidth: true
         title: "Приложения"
 
-        Text { // пустое состояние — карточка всегда на виду
+        LText { // пустое состояние — карточка всегда на виду
             visible: volumePage.playbackStreams.length === 0
             Layout.fillWidth: true
             Layout.topMargin: Theme.dp(4)
-            text: "Ничего не воспроизводится"
+            role: "bodySmall"
             color: Theme.subtextDim
-            font.family: Theme.textFont
-            font.pixelSize: Theme.typeSize("bodySmall")
-            font.weight: Theme.typeWeight("bodySmall")
+            text: "Ничего не воспроизводится"
         }
 
         Repeater {
             model: volumePage.playbackStreams
-            delegate: ColumnLayout {
-                required property var modelData
-                required property int index
-                Layout.fillWidth: true
-                spacing: Theme.dp(4)
-                RowLayout { // строка приложения
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: Theme.dp(56)
-                    Layout.leftMargin: Theme.dp(8); Layout.rightMargin: Theme.dp(8)
-                    spacing: Theme.dp(8)
 
-                    Rectangle { // иконка приложения 40×40, внутри AppIcon 20 / глиф
-                        readonly property string iconPath: volumePage.iconFor(modelData)
-                        implicitWidth: Theme.dp(40); implicitHeight: Theme.dp(40)
-                        radius: Theme.radiusMd
+            delegate: Item {
+                required property var modelData
+
+                Layout.fillWidth: true
+                implicitHeight: Theme.dp(56)
+
+                RowLayout {
+                    anchors.fill: parent
+                    anchors.leftMargin: Theme.dp(8)
+                    anchors.rightMargin: Theme.dp(8)
+                    spacing: Theme.dp(10)
+
+                    Rectangle { // иконка приложения 40×40
+                        Layout.alignment: Qt.AlignVCenter
+                        implicitWidth: Theme.dp(40)
+                        implicitHeight: Theme.dp(40)
+                        radius: Theme.rad(12)
                         color: Theme.bgTrack
+
+                        readonly property string iconPath: volumePage.iconFor(modelData)
 
                         Icon {
                             anchors.centerIn: parent
                             visible: parent.iconPath === ""
-                            name: "graphic_eq"; size: Theme.dp(20)
+                            name: "graphic_eq"
+                            size: Theme.dp(20)
                             color: Theme.subtext
                         }
                         AppIcon {
                             anchors.centerIn: parent
                             visible: parent.iconPath !== ""
                             source: parent.iconPath
-                            size: 20
+                            size: 22
                         }
                     }
-                    Text {
-                        Layout.preferredWidth: Theme.dp(100); elide: Text.ElideRight
-                        font.family: Theme.textFont; font.pixelSize: Theme.typeSize("bodyMedium")
-                        font.weight: Theme.typeWeight("bodyMedium"); color: Theme.text
-                        text: volumePage.streamName(modelData)
+
+                    ColumnLayout {
+                        Layout.preferredWidth: Theme.dp(92)
+                        Layout.alignment: Qt.AlignVCenter
+                        spacing: Theme.dp(1)
+
+                        LText {
+                            Layout.fillWidth: true
+                            role: "bodyLarge"
+                            weight: 480
+                            color: Theme.text
+                            elide: Text.ElideRight
+                            text: volumePage.streamName(modelData)
+                        }
+
+                        LText {
+                            Layout.fillWidth: true
+                            visible: !!(modelData.audio && modelData.audio.muted)
+                            role: "bodySmall"
+                            color: Theme.subtext
+                            text: "Без звука"
+                        }
                     }
+
                     Slider {
                         Layout.fillWidth: true
+                        size: "s"
                         value: modelData.audio ? modelData.audio.volume : 0
                         onMoved: (v) => { if (modelData.audio) modelData.audio.volume = v; }
                         onCommitted: (v) => { if (modelData.audio) modelData.audio.volume = v; }
                     }
+
+                    LText {
+                        Layout.preferredWidth: Theme.dp(34)
+                        Layout.alignment: Qt.AlignVCenter
+                        horizontalAlignment: Text.AlignRight
+                        role: "bodySmall"
+                        tabular: true
+                        color: Theme.subtext
+                        text: modelData.audio ? Math.round(modelData.audio.volume * 100) + "%" : "0%"
+                    }
+
                     IconButton {
                         Layout.alignment: Qt.AlignVCenter
                         size: "s"
                         icon: (modelData.audio && modelData.audio.muted) ? "volume_off" : "volume_up"
                         onClicked: { if (modelData.audio) modelData.audio.muted = !modelData.audio.muted; }
-                    }
-                    Text {
-                        Layout.preferredWidth: Theme.dp(34); horizontalAlignment: Text.AlignRight
-                        font.family: Theme.textFont; font.pixelSize: Theme.typeSize("bodySmall")
-                        font.weight: Theme.typeWeight("bodySmall"); color: Theme.subtext
-                        text: modelData.audio ? Math.round(modelData.audio.volume * 100) + "%" : "0%"
                     }
                 }
             }
@@ -219,72 +296,100 @@ ColumnLayout {
         Layout.fillWidth: true
         title: "Микрофоны"
 
-        Text { // пустое состояние — карточка всегда на виду
+        LText { // пустое состояние — карточка всегда на виду
             visible: volumePage.captureStreams.length === 0
             Layout.fillWidth: true
             Layout.topMargin: Theme.dp(4)
-            text: "Нет активных микрофонов"
+            role: "bodySmall"
             color: Theme.subtextDim
-            font.family: Theme.textFont
-            font.pixelSize: Theme.typeSize("bodySmall")
-            font.weight: Theme.typeWeight("bodySmall")
+            text: "Нет активных микрофонов"
         }
 
         Repeater {
             model: volumePage.captureStreams
-            delegate: ColumnLayout {
-                required property var modelData
-                required property int index
-                Layout.fillWidth: true
-                spacing: Theme.dp(4)
-                RowLayout { // строка приложения
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: Theme.dp(56)
-                    Layout.leftMargin: Theme.dp(8); Layout.rightMargin: Theme.dp(8)
-                    spacing: Theme.dp(8)
 
-                    Rectangle { // иконка приложения 40×40, внутри AppIcon 20 / глиф
-                        readonly property string iconPath: volumePage.iconFor(modelData)
-                        implicitWidth: Theme.dp(40); implicitHeight: Theme.dp(40)
-                        radius: Theme.radiusMd
+            delegate: Item {
+                required property var modelData
+
+                Layout.fillWidth: true
+                implicitHeight: Theme.dp(56)
+
+                RowLayout {
+                    anchors.fill: parent
+                    anchors.leftMargin: Theme.dp(8)
+                    anchors.rightMargin: Theme.dp(8)
+                    spacing: Theme.dp(10)
+
+                    Rectangle { // иконка приложения 40×40
+                        Layout.alignment: Qt.AlignVCenter
+                        implicitWidth: Theme.dp(40)
+                        implicitHeight: Theme.dp(40)
+                        radius: Theme.rad(12)
                         color: Theme.bgTrack
+
+                        readonly property string iconPath: volumePage.iconFor(modelData)
 
                         Icon {
                             anchors.centerIn: parent
                             visible: parent.iconPath === ""
-                            name: "graphic_eq"; size: Theme.dp(20)
+                            name: "graphic_eq"
+                            size: Theme.dp(20)
                             color: Theme.subtext
                         }
                         AppIcon {
                             anchors.centerIn: parent
                             visible: parent.iconPath !== ""
                             source: parent.iconPath
-                            size: 20
+                            size: 22
                         }
                     }
-                    Text {
-                        Layout.preferredWidth: Theme.dp(100); elide: Text.ElideRight
-                        font.family: Theme.textFont; font.pixelSize: Theme.typeSize("bodyMedium")
-                        font.weight: Theme.typeWeight("bodyMedium"); color: Theme.text
-                        text: volumePage.streamName(modelData)
+
+                    ColumnLayout {
+                        Layout.preferredWidth: Theme.dp(92)
+                        Layout.alignment: Qt.AlignVCenter
+                        spacing: Theme.dp(1)
+
+                        LText {
+                            Layout.fillWidth: true
+                            role: "bodyLarge"
+                            weight: 480
+                            color: Theme.text
+                            elide: Text.ElideRight
+                            text: volumePage.streamName(modelData)
+                        }
+
+                        LText {
+                            Layout.fillWidth: true
+                            visible: !!(modelData.audio && modelData.audio.muted)
+                            role: "bodySmall"
+                            color: Theme.subtext
+                            text: "Без звука"
+                        }
                     }
+
                     Slider {
                         Layout.fillWidth: true
+                        size: "s"
                         value: modelData.audio ? modelData.audio.volume : 0
                         onMoved: (v) => { if (modelData.audio) modelData.audio.volume = v; }
                         onCommitted: (v) => { if (modelData.audio) modelData.audio.volume = v; }
                     }
+
+                    LText {
+                        Layout.preferredWidth: Theme.dp(34)
+                        Layout.alignment: Qt.AlignVCenter
+                        horizontalAlignment: Text.AlignRight
+                        role: "bodySmall"
+                        tabular: true
+                        color: Theme.subtext
+                        text: modelData.audio ? Math.round(modelData.audio.volume * 100) + "%" : "0%"
+                    }
+
                     IconButton {
                         Layout.alignment: Qt.AlignVCenter
                         size: "s"
                         icon: (modelData.audio && modelData.audio.muted) ? "volume_off" : "volume_up"
                         onClicked: { if (modelData.audio) modelData.audio.muted = !modelData.audio.muted; }
-                    }
-                    Text {
-                        Layout.preferredWidth: Theme.dp(34); horizontalAlignment: Text.AlignRight
-                        font.family: Theme.textFont; font.pixelSize: Theme.typeSize("bodySmall")
-                        font.weight: Theme.typeWeight("bodySmall"); color: Theme.subtext
-                        text: modelData.audio ? Math.round(modelData.audio.volume * 100) + "%" : "0%"
                     }
                 }
             }

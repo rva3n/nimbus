@@ -7,13 +7,15 @@ import "../ui"
 
 // Модальное окно аутентификации polkit. Активный flow приходит из shell.qml
 // (PolkitAgent.flow). Поверхность — Overlay во весь экран, чтобы гарантированно
-// перекрыть остров; визуально повторяет карточку локскрина.
+// перекрыть остров; анатомия — карточка аутентификации Lucid (badge + title +
+// action + account + поле пароля + filled-кнопка).
 PanelWindow {
     id: root
 
     property var flow: null
     // показываем, пока запрос активен и ещё не завершён
     readonly property bool active: flow !== null && !flow.isCompleted
+    readonly property string account: Quickshell.env("USER") || ""
 
     visible: active
     color: "transparent"
@@ -56,12 +58,25 @@ PanelWindow {
         onActivated: root.cancel()
     }
 
-    // ── затемнение и перехват кликов ──────────────────────────────────
+    // ── затемнение и перехват кликов (клик мимо — отмена, как в Lucid) ──
     Rectangle {
         anchors.fill: parent
-        color: Theme.scrim
+        color: Theme.alpha(Theme.cShadow, Theme.blurPct > 0 ? 0.28 : 0.45)
+        opacity: root.active ? 1 : 0
 
-        MouseArea { anchors.fill: parent }
+        Behavior on opacity {
+            NumberAnimation { duration: Theme.durShort }
+        }
+
+        MouseArea {
+            anchors.fill: parent
+            // клик по самой карточке (её пустым местам) не должен отменять запрос
+            onClicked: (mouse) => {
+                const inside = mouse.x >= dialog.x && mouse.x <= dialog.x + dialog.width
+                            && mouse.y >= dialog.y && mouse.y <= dialog.y + dialog.height;
+                if (!inside) root.cancel();
+            }
+        }
     }
 
     // ── карточка диалога ──────────────────────────────────────────────
@@ -70,48 +85,109 @@ PanelWindow {
         anchors.centerIn: parent
         width: Theme.dp(420)
         pad: Theme.dp(20)
+        scale: root.active ? 1 : 0.96
+        opacity: root.active ? 1 : 0
 
-        Text {
+        Behavior on scale {
+            NumberAnimation {
+                duration: Theme.durFastSpatial
+                easing.type: Easing.Bezier
+                easing.bezierCurve: Theme.curveDefaultSpatial
+            }
+        }
+        Behavior on opacity {
+            NumberAnimation { duration: Theme.durShort }
+        }
+
+        // header: badge + overline + title
+        RowLayout {
             Layout.fillWidth: true
-            text: "Аутентификация"
-            color: Theme.text
-            font.family: Theme.textFont
-            font.pixelSize: Theme.typeSize("titleLarge")
-            font.weight: Theme.typeWeight("titleLarge")
-            elide: Text.ElideRight
+            spacing: Theme.dp(12)
+
+            Rectangle {
+                Layout.alignment: Qt.AlignVCenter
+                implicitWidth: Theme.dp(44)
+                implicitHeight: Theme.dp(44)
+                radius: Theme.shapeLgInc
+                color: Theme.accentContainer
+
+                Icon {
+                    anchors.centerIn: parent
+                    name: "lock"
+                    size: Theme.dp(22)
+                    color: Theme.fgAccentContainer
+                }
+            }
+
+            ColumnLayout {
+                Layout.fillWidth: true
+                Layout.alignment: Qt.AlignVCenter
+                spacing: 0
+
+                LText {
+                    Layout.fillWidth: true
+                    text: "Требуется аутентификация"
+                    role: "labelMedium"
+                    color: Theme.accent
+                    elide: Text.ElideRight
+                }
+                LText {
+                    Layout.fillWidth: true
+                    text: "Аутентификация"
+                    role: "titleLarge"
+                    color: Theme.text
+                    elide: Text.ElideRight
+                }
+            }
         }
 
         // Основной текст запроса (например, «Authentication is required to …»).
-        Text {
+        LText {
             Layout.fillWidth: true
             Layout.topMargin: Theme.dp(4)
             visible: text !== ""
             text: root.flow ? root.flow.message : ""
+            role: "bodySmall"
             color: Theme.subtext
-            font.family: Theme.textFont
-            font.pixelSize: Theme.typeSize("bodyMedium")
-            font.weight: Theme.typeWeight("bodyMedium")
             wrapMode: Text.WordWrap
         }
 
         // Подсказка поля ввода, если polkit её задал.
-        Text {
+        LText {
             Layout.fillWidth: true
             Layout.topMargin: Theme.dp(2)
             visible: text !== ""
             text: root.flow ? root.flow.inputPrompt : ""
+            role: "bodySmall"
             color: Theme.subtextDim
-            font.family: Theme.textFont
-            font.pixelSize: Theme.typeSize("bodySmall")
-            font.weight: Theme.typeWeight("bodySmall")
             wrapMode: Text.WordWrap
+        }
+
+        // Кому принадлежит пароль.
+        RowLayout {
+            Layout.fillWidth: true
+            Layout.topMargin: Theme.dp(6)
+            spacing: Theme.dp(8)
+
+            Icon {
+                Layout.alignment: Qt.AlignVCenter
+                name: "person"
+                size: Theme.dp(18)
+                color: Theme.subtextDim
+            }
+            LText {
+                Layout.alignment: Qt.AlignVCenter
+                role: "bodySmall"
+                color: Theme.text
+                text: "От имени " + root.account
+            }
         }
 
         // Пароль. responseVisible=false → маскируем (обычный случай).
         TextField {
             id: pwField
             Layout.fillWidth: true
-            Layout.topMargin: Theme.dp(10)
+            Layout.topMargin: Theme.dp(6)
             visible: root.flow === null || root.flow.isResponseRequired
             placeholder: "Пароль"
             echoMode: (root.flow && root.flow.responseVisible) ? TextInput.Normal : TextInput.Password
@@ -120,7 +196,7 @@ PanelWindow {
         }
 
         // Ошибка попытки / доп. сообщение (остаток попыток polkit кладёт сюда).
-        Text {
+        LText {
             Layout.fillWidth: true
             Layout.topMargin: Theme.dp(4)
             readonly property string info: root.flow ? root.flow.supplementaryMessage : ""
@@ -130,9 +206,7 @@ PanelWindow {
             text: info !== "" ? info : fallback
             color: (root.flow && root.flow.supplementaryIsError) || fallback !== ""
                 ? Theme.error : Theme.subtext
-            font.family: Theme.textFont
-            font.pixelSize: Theme.typeSize("bodySmall")
-            font.weight: Theme.typeWeight("bodySmall")
+            role: "bodySmall"
             wrapMode: Text.WordWrap
         }
 

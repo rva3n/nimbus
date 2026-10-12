@@ -6,7 +6,7 @@ import "../core"
 import "../ui"
 
 // Переключатель окон (аналог Alt+Tab). Оверлей во весь экран (Overlay), по
-// центру — карточка со списком окон Umbriel. Логика:
+// центру — Lucid-карточка shapeXl с сеткой плиток окон Umbriel. Логика:
 //   summon(1)  — открыть и выбрать следующее окно после активного
 //   summon(-1) — открыть и выбрать предыдущее
 //   summon(dir) при открытом — шаг по списку на dir с закольцовкой
@@ -18,9 +18,28 @@ PanelWindow {
 
     property bool open: false
     property int _sel: 0
+    // анимация появления/ухода карточки
+    property real reveal: 0
+    // даёт плиткам плавно переезжать при смене состава окон
+    property bool glide: false
 
     // порядок — как отдаёт Umbriel, без сортировки
     readonly property var items: Umbriel.windows
+    readonly property int count: items ? items.length : 0
+
+    // ── сетка плиток (Lucid fit) ──────────────────────────────────────
+    readonly property int gap: Theme.dp(18)
+    readonly property int footH: Theme.dp(40)
+    readonly property int cols: Math.max(1, Math.min(4, Math.ceil(Math.sqrt(Math.max(1, switcher.count)))))
+    readonly property real availW: Math.max(Theme.dp(280), switcher.width - Theme.dp(160))
+    readonly property real tileW: Math.max(Theme.dp(140), Math.min(Theme.dp(200), Math.floor((switcher.availW - (switcher.cols - 1) * switcher.gap) / switcher.cols)))
+    readonly property real thumbH: Math.round(switcher.tileW / 1.6)
+    readonly property real tileH: switcher.thumbH + Theme.dp(8) + Theme.dp(22)
+    readonly property int rows: Math.ceil(Math.max(1, switcher.count) / switcher.cols)
+    readonly property real gridW: switcher.cols * switcher.tileW + (switcher.cols - 1) * switcher.gap
+    readonly property real gridH: switcher.rows * switcher.tileH + (switcher.rows - 1) * switcher.gap
+    readonly property real viewMaxH: Math.max(Theme.dp(200), switcher.height * 0.72 - Theme.dp(32) - switcher.footH)
+    readonly property real viewH: switcher.count > 0 ? Math.min(switcher.gridH, switcher.viewMaxH) : 0
 
     // ── icon index: app_id (lowercase) → имя иконки ───────────────────
     // тот же приём, что и в WorkspacesRow: точное совпадение по id, затем
@@ -46,20 +65,20 @@ PanelWindow {
 
     // ── навигация ─────────────────────────────────────────────────────
     function _wrapIndex(i) {
-        const n = switcher.items.length;
+        const n = switcher.count;
         if (n <= 0) return 0;
         return ((i % n) + n) % n;
     }
 
     function _step(dir) {
-        if (switcher.items.length === 0) return;
+        if (switcher.count === 0) return;
         switcher._sel = switcher._wrapIndex(switcher._sel + dir);
     }
 
     function summon(dir) {
         if (!switcher.open) {
             switcher.open = true;
-            const n = switcher.items.length;
+            const n = switcher.count;
             if (n === 0) { switcher._sel = 0; return; }
             // активный в списке; если активного нет — с -1 для dir>0
             let base = -1;
@@ -90,15 +109,22 @@ PanelWindow {
 
     // список изменился — не выходим за границы
     onItemsChanged: {
-        const n = switcher.items.length;
+        const n = switcher.count;
         if (n === 0) { switcher._sel = 0; return; }
         switcher._sel = Math.max(0, Math.min(switcher._sel, n - 1));
     }
 
-    // при открытии — забрать клавиатуру
-    onOpenChanged: if (switcher.open) keyCatcher.forceActiveFocus()
+    // при открытии — забрать клавиатуру + включить glide
+    onOpenChanged: {
+        switcher.reveal = switcher.open ? 1 : 0;
+        if (switcher.open) {
+            keyCatcher.forceActiveFocus();
+            glideOff.stop();
+            glideOn.restart();
+        }
+    }
 
-    visible: switcher.open
+    visible: switcher.open || switcher.reveal > 0.01
     color: "transparent"
     anchors { top: true; bottom: true; left: true; right: true }
     exclusiveZone: 0
@@ -106,10 +132,21 @@ PanelWindow {
     WlrLayershell.namespace: "nimbus-switcher"
     WlrLayershell.keyboardFocus: switcher.open ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
 
+    Timer { id: glideOn; interval: 60; onTriggered: switcher.glide = true }
+    Timer { id: glideOff; interval: 60; onTriggered: switcher.glide = false }
+
+    Behavior on reveal {
+        NumberAnimation {
+            duration: switcher.open ? Theme.durFastEffects : Theme.ms(90)
+            easing.type: switcher.open ? Easing.OutCubic : Easing.InCubic
+        }
+    }
+
     // ── приглушённый фон и перехват кликов вне карточки ───────────────
     Rectangle {
         anchors.fill: parent
-        color: Theme.alpha(Theme.scrim, 0.35)
+        color: Theme.alpha(Theme.cShadow, Theme.blurPct > 0 ? 0.28 : 0.45)
+        opacity: switcher.reveal
 
         MouseArea {
             anchors.fill: parent
@@ -118,167 +155,272 @@ PanelWindow {
     }
 
     // ── карточка ──────────────────────────────────────────────────────
-    Card {
-        id: dialog
+    Rectangle {
+        id: card
         anchors.centerIn: parent
-        width: Theme.dp(560)
-        pad: Theme.dp(16)
+        width: Math.max(Theme.dp(420), switcher.gridW + Theme.dp(32))
+        height: (switcher.count > 0 ? switcher.viewH : Theme.dp(140)) + Theme.dp(32) + switcher.footH
+        radius: Theme.shapeXl
+        color: Theme.bg
+        opacity: switcher.reveal
 
-        readonly property real rowH: Theme.dp(44)
-
-        Text {
-            Layout.fillWidth: true
-            text: "Переключение окон"
-            color: Theme.subtextDim
-            font.family: Theme.textFont
-            font.pixelSize: Theme.typeSize("labelLarge")
-            font.weight: Theme.typeWeight("labelLarge")
-            elide: Text.ElideRight
+        // клики между плитками не должны доставать до затемнения
+        MouseArea {
+            anchors.fill: parent
+            acceptedButtons: Qt.AllButtons
         }
 
-        ListView {
-            id: winList
+        Flickable {
+            id: view
+            visible: switcher.count > 0
+            x: Theme.dp(16)
+            y: Theme.dp(16)
+            width: card.width - Theme.dp(32)
+            height: switcher.viewH
+            contentWidth: width
+            contentHeight: switcher.gridH
+            interactive: contentHeight > height + 1
+            clip: interactive
+            boundsBehavior: Flickable.StopAtBounds
 
-            Layout.fillWidth: true
-            Layout.topMargin: Theme.dp(6)
-            implicitHeight: Math.min(Math.max(1, switcher.items.length), 8) * dialog.rowH
-            height: implicitHeight
-            clip: true
-            spacing: 0
-            model: switcher.items
-            currentIndex: switcher._sel
-            onCurrentIndexChanged: if (currentIndex >= 0 && currentIndex < count)
-                positionViewAtIndex(currentIndex, ListView.Contain)
+            Item {
+                id: grid
+                x: (view.width - switcher.gridW) / 2
+                width: switcher.gridW
+                height: switcher.gridH
+                transform: Translate { y: (1 - switcher.reveal) * Theme.dp(10) }
 
-            delegate: Item {
-                id: rowItem
+                Repeater {
+                    model: switcher.items
 
-                required property var modelData
-                required property int index
+                    delegate: Item {
+                        id: tile
 
-                readonly property bool selected: index === switcher._sel
-                readonly property string title: (modelData && modelData.title) ? modelData.title : ""
-                readonly property string appId: (modelData && modelData.app_id) ? modelData.app_id : ""
-                readonly property string ws: (modelData && modelData.workspace) ? String(modelData.workspace) : ""
-                readonly property string iconPath: switcher.iconFor(appId)
+                        required property var modelData
+                        required property int index
 
-                width: winList.width
-                height: dialog.rowH
+                        readonly property bool selected: index === switcher._sel
+                        readonly property string title: (modelData && modelData.title) ? modelData.title : ""
+                        readonly property string appId: (modelData && modelData.app_id) ? modelData.app_id : ""
+                        readonly property string ws: (modelData && modelData.workspace) ? String(modelData.workspace) : ""
+                        readonly property string iconPath: switcher.iconFor(appId)
 
-                Rectangle {
-                    id: row
+                        x: (index % switcher.cols) * (switcher.tileW + switcher.gap)
+                        y: Math.floor(index / switcher.cols) * (switcher.tileH + switcher.gap)
+                        width: switcher.tileW
+                        height: switcher.tileH
 
-                    anchors.left: parent.left
-                    anchors.right: parent.right
-                    anchors.verticalCenter: parent.verticalCenter
-                    height: dialog.rowH - Theme.dp(4)
-                    radius: Theme.radiusMd
-                    color: rowItem.selected ? Theme.accentContainer
-                                            : (rowHover.containsMouse ? Theme.bgHover : "transparent")
-
-                    Behavior on color {
-                        ColorAnimation { duration: Theme.durQuick }
-                    }
-
-                    MouseArea {
-                        id: rowHover
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: {
-                            switcher._sel = rowItem.index;
-                            switcher.activate();
-                        }
-                    }
-
-                    RowLayout {
-                        anchors.fill: parent
-                        anchors.leftMargin: Theme.dp(10)
-                        anchors.rightMargin: Theme.dp(10)
-                        spacing: Theme.dp(12)
-
-                        // иконка приложения (или точка, если её нет)
-                        Item {
-                            Layout.alignment: Qt.AlignVCenter
-                            Layout.preferredWidth: Theme.dp(28)
-                            Layout.preferredHeight: Theme.dp(28)
-
-                            Rectangle {
-                                visible: rowItem.iconPath === ""
-                                anchors.centerIn: parent
-                                width: Theme.dp(10)
-                                height: Theme.dp(10)
-                                radius: Theme.radiusPill
-                                color: rowItem.selected ? Theme.fgAccentContainer : Theme.subtext
+                        MouseArea {
+                            id: tap
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                switcher._sel = tile.index;
+                                switcher.activate();
                             }
+                        }
+
+                        // превью-карточка окна (Lucid: radius rad(18)/rad(12),
+                        // withBlur-заливки). Живого захвата у Umbriel нет,
+                        // поэтому внутри — иконка приложения.
+                        Rectangle {
+                            id: shot
+
+                            width: tile.width
+                            height: switcher.thumbH
+                            radius: tile.selected ? Theme.rad(18) : Theme.rad(12)
+                            color: Theme.withBlur(tile.selected ? Theme.mHighest : Theme.mHigh)
+                            border.width: tile.selected ? 3 : 0
+                            border.color: Theme.primary
+                            scale: tap.pressed ? 0.985 : (tile.selected ? 1.03 : 1)
+
+                            Behavior on radius {
+                                NumberAnimation {
+                                    duration: Theme.durDefaultSpatial
+                                    easing.type: Easing.Bezier
+                                    easing.bezierCurve: Theme.curveStandard
+                                }
+                            }
+                            Behavior on color { ColorAnimation { duration: Theme.durFastEffects } }
+                            Behavior on border.color { ColorAnimation { duration: Theme.durFastEffects } }
+                            Behavior on scale {
+                                NumberAnimation { duration: Theme.durFastEffects; easing.type: Easing.OutCubic }
+                            }
+
+                            // внутренняя карточка — концентрична внешней
+                            Rectangle {
+                                id: inner
+
+                                anchors.fill: parent
+                                anchors.margins: Theme.dp(5)
+                                radius: Math.max(Theme.dp(6), shot.radius - Theme.dp(5))
+                                color: Theme.withBlur(Theme.bgSunken)
+                                border.width: tile.selected ? 2 : 1
+                                border.color: tile.selected ? Theme.accent : Theme.a(Theme.text, 0.25)
+
+                                AppIcon {
+                                    anchors.centerIn: parent
+                                    visible: tile.iconPath !== ""
+                                    source: tile.iconPath
+                                    size: Math.round(Math.min(56, inner.height * 0.42))
+                                }
+                                Icon {
+                                    anchors.centerIn: parent
+                                    visible: tile.iconPath === ""
+                                    name: "select_window"
+                                    size: Theme.dp(40)
+                                    color: tile.selected ? Theme.primary : Theme.subtext
+                                }
+
+                                // бейдж воркспейса — сырая строка "DP-1:8"
+                                Rectangle {
+                                    visible: tile.ws !== ""
+                                    anchors.left: parent.left
+                                    anchors.bottom: parent.bottom
+                                    anchors.margins: Theme.dp(6)
+                                    implicitWidth: wsRow.implicitWidth + Theme.dp(14)
+                                    height: Theme.dp(22)
+                                    radius: Theme.dp(11)
+                                    color: tile.selected ? Theme.primary : Theme.a(Theme.mHighest, 0.92)
+
+                                    Row {
+                                        id: wsRow
+                                        anchors.centerIn: parent
+                                        spacing: Theme.dp(4)
+
+                                        Icon {
+                                            anchors.verticalCenter: parent.verticalCenter
+                                            name: "workspaces"
+                                            size: Theme.dp(13)
+                                            color: tile.selected ? Theme.fgPrimary : Theme.subtext
+                                        }
+                                        LText {
+                                            anchors.verticalCenter: parent.verticalCenter
+                                            role: "labelSmall"
+                                            tabular: true
+                                            text: tile.ws
+                                            color: tile.selected ? Theme.fgPrimary : Theme.text
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // подпись: иконка + название
+                        Row {
+                            anchors.top: shot.bottom
+                            anchors.topMargin: Theme.dp(8)
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            width: tile.width - Theme.dp(8)
+                            spacing: Theme.dp(6)
 
                             AppIcon {
-                                anchors.fill: parent
-                                visible: rowItem.iconPath !== ""
-                                source: rowItem.iconPath
-                                size: 28
+                                anchors.verticalCenter: parent.verticalCenter
+                                visible: tile.iconPath !== ""
+                                source: tile.iconPath
+                                size: 16
+                            }
+                            Icon {
+                                anchors.verticalCenter: parent.verticalCenter
+                                visible: tile.iconPath === ""
+                                name: "select_window"
+                                size: Theme.dp(16)
+                                color: tile.selected ? Theme.primary : Theme.subtext
+                            }
+                            LText {
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: Math.min(implicitWidth, parent.width - Theme.dp(22))
+                                role: "labelLarge"
+                                color: tile.selected ? Theme.primary : Theme.text
+                                elide: Text.ElideRight
+                                text: tile.title !== "" ? tile.title : tile.appId
+
+                                Behavior on color { ColorAnimation { duration: Theme.durFastEffects } }
                             }
                         }
 
-                        ColumnLayout {
-                            Layout.fillWidth: true
-                            Layout.alignment: Qt.AlignVCenter
-                            spacing: 0
-
-                            Text {
-                                Layout.fillWidth: true
-                                text: rowItem.title !== "" ? rowItem.title : rowItem.appId
-                                color: rowItem.selected ? Theme.fgAccentContainer : Theme.text
-                                font.family: Theme.textFont
-                                font.pixelSize: Theme.typeSize("bodyLarge")
-                                font.weight: Theme.typeWeight("titleSmall")
-                                elide: Text.ElideRight
-                            }
-                            Text {
-                                Layout.fillWidth: true
-                                visible: text !== ""
-                                text: rowItem.appId
-                                color: rowItem.selected ? Theme.fgAccentContainer : Theme.subtextDim
-                                opacity: rowItem.selected ? 0.75 : 1
-                                font.family: Theme.textFont
-                                font.pixelSize: Theme.typeSize("bodySmall")
-                                font.weight: Theme.typeWeight("bodySmall")
-                                elide: Text.ElideRight
+                        Behavior on x {
+                            enabled: switcher.glide
+                            NumberAnimation {
+                                duration: Theme.durFastSpatial
+                                easing.type: Easing.Bezier
+                                easing.bezierCurve: Theme.curveDefaultSpatial
                             }
                         }
-
-                        // бейдж воркспейса — сырая строка "DP-1:8"
-                        Rectangle {
-                            visible: rowItem.ws !== ""
-                            Layout.alignment: Qt.AlignVCenter
-                            implicitWidth: wsLabel.implicitWidth + Theme.dp(12)
-                            implicitHeight: Theme.dp(20)
-                            radius: Theme.radiusSm
-                            color: rowItem.selected ? Theme.alpha(Theme.fgAccentContainer, 0.12)
-                                                    : Theme.bgTrack
-
-                            Text {
-                                id: wsLabel
-                                anchors.centerIn: parent
-                                text: rowItem.ws
-                                color: rowItem.selected ? Theme.fgAccentContainer : Theme.subtextDim
-                                font.family: Theme.textFont
-                                font.pixelSize: Theme.typeSize("bodySmall")
-                                font.weight: Theme.typeWeight("bodySmall")
+                        Behavior on y {
+                            enabled: switcher.glide
+                            NumberAnimation {
+                                duration: Theme.durFastSpatial
+                                easing.type: Easing.Bezier
+                                easing.bezierCurve: Theme.curveDefaultSpatial
                             }
                         }
                     }
                 }
             }
+        }
 
-            Text { // пусто
-                anchors.centerIn: parent
-                visible: winList.count === 0
-                text: "Нет окон"
+        // пусто
+        Column {
+            anchors.centerIn: parent
+            anchors.verticalCenterOffset: -switcher.footH / 2
+            visible: switcher.count === 0
+            spacing: Theme.dp(8)
+
+            Icon {
+                anchors.horizontalCenter: parent.horizontalCenter
+                name: "select_window"
+                size: Theme.dp(36)
                 color: Theme.subtext
-                font.family: Theme.textFont
-                font.pixelSize: Theme.typeSize("bodyMedium")
-                font.weight: Theme.typeWeight("bodyMedium")
+            }
+            LText {
+                anchors.horizontalCenter: parent.horizontalCenter
+                role: "titleMedium"
+                color: Theme.subtext
+                text: "Нет окон"
+            }
+        }
+
+        // footer: счётчик + подсказка
+        Item {
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.bottom: parent.bottom
+            anchors.leftMargin: Theme.dp(24)
+            anchors.rightMargin: Theme.dp(24)
+            height: switcher.footH
+
+            Row {
+                id: countRow
+                anchors.left: parent.left
+                anchors.verticalCenter: parent.verticalCenter
+                spacing: Theme.dp(6)
+
+                Icon {
+                    anchors.verticalCenter: parent.verticalCenter
+                    name: "select_window"
+                    size: Theme.dp(16)
+                    color: Theme.subtext
+                }
+                LText {
+                    anchors.verticalCenter: parent.verticalCenter
+                    role: "labelMedium"
+                    color: Theme.subtext
+                    text: switcher.count === 1 ? "1 окно" : switcher.count + " окон"
+                }
+            }
+
+            LText {
+                anchors.right: parent.right
+                anchors.left: countRow.right
+                anchors.leftMargin: Theme.dp(16)
+                anchors.verticalCenter: countRow.verticalCenter
+                horizontalAlignment: Text.AlignRight
+                elide: Text.ElideLeft
+                role: "labelMedium"
+                color: Theme.subtextDim
+                text: switcher.count > 0 ? "Tab — двигать  ·  Enter — перейти  ·  Esc — отмена" : "Esc — закрыть"
             }
         }
     }
@@ -300,10 +442,10 @@ PanelWindow {
             } else if (event.key === Qt.Key_Backtab) {
                 switcher._step(-1);
                 event.accepted = true;
-            } else if (event.key === Qt.Key_Down) {
+            } else if (event.key === Qt.Key_Down || event.key === Qt.Key_Right) {
                 switcher._step(1);
                 event.accepted = true;
-            } else if (event.key === Qt.Key_Up) {
+            } else if (event.key === Qt.Key_Up || event.key === Qt.Key_Left) {
                 switcher._step(-1);
                 event.accepted = true;
             } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {

@@ -3,8 +3,8 @@ import QtQuick.Layouts
 import "../../core"
 import "../../ui"
 
-// Страница «Погода»: текущие условия, прогноз по часам и на 5 дней.
-// Данные — из core/Weather.qml (Open-Meteo).
+// Страница «Погода»: Lucid-язык — герой-карточка, чипы-выделения, мини-карточки
+// по часам и строки прогноза. Данные — из core/Weather.qml (Open-Meteo).
 ColumnLayout {
     id: page
 
@@ -43,27 +43,23 @@ ColumnLayout {
                 color: Theme.subtext
             }
 
-            Text {
+            LText {
                 Layout.alignment: Qt.AlignVCenter
+                role: "labelMedium"
                 text: chip.label
                 color: Theme.subtext
-                font.family: Theme.textFont
-                font.pixelSize: Theme.typeSize("labelMedium")
-                font.weight: Theme.typeWeight("labelMedium")
             }
         }
     }
 
     // ── загрузка и ошибка ─────────────────────────────────────────────
-    Text {
+    LText {
         visible: Weather.loading && !Weather.hasData
         Layout.fillWidth: true
         horizontalAlignment: Text.AlignHCenter
-        text: "загрузка…"
+        role: "bodySmall"
         color: Theme.subtext
-        font.family: Theme.textFont
-        font.pixelSize: Theme.typeSize("bodySmall")
-        font.weight: Theme.typeWeight("bodySmall")
+        text: "загрузка…"
     }
 
     Rectangle {
@@ -87,15 +83,13 @@ ColumnLayout {
                 color: Theme.fgErrorContainer
             }
 
-            Text {
+            LText {
                 Layout.fillWidth: true
                 Layout.alignment: Qt.AlignVCenter
-                text: Weather.error
+                role: "bodySmall"
                 color: Theme.fgErrorContainer
                 elide: Text.ElideRight
-                font.family: Theme.textFont
-                font.pixelSize: Theme.typeSize("bodySmall")
-                font.weight: Theme.typeWeight("bodySmall")
+                text: Weather.error
             }
 
             Button {
@@ -119,21 +113,25 @@ ColumnLayout {
             Layout.fillWidth: true
             spacing: Theme.dp(12)
 
-            RowLayout { // герой: блок иконки + температура/описание/место
+            RowLayout { // герой: фигура иконки + температура/описание/место
                 Layout.fillWidth: true
-                spacing: Theme.dp(12)
+                spacing: Theme.dp(14)
 
-                Rectangle { // контейнер иконки 64×64
+                Item {
                     Layout.alignment: Qt.AlignVCenter
-                    implicitWidth: Theme.dp(64)
-                    implicitHeight: Theme.dp(64)
-                    radius: Theme.radiusLg
-                    color: Theme.accentContainer
+                    implicitWidth: Theme.dp(72)
+                    implicitHeight: Theme.dp(72)
+
+                    MaterialShape {
+                        anchors.fill: parent
+                        shape: "cookie9"
+                        color: Theme.accentContainer
+                    }
 
                     Icon {
                         anchors.centerIn: parent
                         name: Weather.icon
-                        size: Theme.dp(32)
+                        size: Theme.dp(34)
                         color: Theme.fgAccentContainer
                     }
                 }
@@ -143,32 +141,26 @@ ColumnLayout {
                     Layout.alignment: Qt.AlignVCenter
                     spacing: Theme.dp(2)
 
-                    Text {
+                    LText {
+                        role: "displayMedium"
+                        tabular: true
                         text: Math.round(Weather.temp) + "°"
-                        color: Theme.text
-                        font.family: Theme.textFont
-                        font.pixelSize: Theme.typeSize("displayMedium")
-                        font.weight: Theme.typeWeight("displayMedium")
                     }
 
-                    Text {
+                    LText {
                         Layout.fillWidth: true
-                        text: Weather.desc
+                        role: "bodyLarge"
                         color: Theme.subtext
                         elide: Text.ElideRight
-                        font.family: Theme.textFont
-                        font.pixelSize: Theme.typeSize("bodyLarge")
-                        font.weight: Theme.typeWeight("bodyLarge")
+                        text: Weather.desc
                     }
 
-                    Text {
+                    LText {
                         Layout.fillWidth: true
-                        text: Weather.place
+                        role: "labelMedium"
                         color: Theme.subtextDim
                         elide: Text.ElideRight
-                        font.family: Theme.textFont
-                        font.pixelSize: Theme.typeSize("labelMedium")
-                        font.weight: Theme.typeWeight("labelMedium")
+                        text: Weather.place
                     }
                 }
             }
@@ -212,7 +204,7 @@ ColumnLayout {
             Repeater {
                 model: Weather.hourly.slice(0, 6)
 
-                delegate: Rectangle { // час — отдельная мини-карточка
+                delegate: Rectangle { // час — мини-карточка Lucid
                     id: hourCell
 
                     required property var modelData
@@ -224,21 +216,19 @@ ColumnLayout {
 
                     Layout.preferredWidth: Theme.dp(52)
                     Layout.preferredHeight: Theme.dp(76)
-                    radius: Theme.radiusMd
-                    color: Theme.bgTile
+                    radius: Theme.shapeLg
+                    color: Theme.withBlur(Theme.mHighest)
 
                     ColumnLayout {
                         anchors.fill: parent
                         anchors.margins: Theme.dp(6)
                         spacing: Theme.dp(4)
 
-                        Text {
+                        LText {
                             Layout.alignment: Qt.AlignHCenter
-                            text: hourCell.modelData.label
+                            role: "labelSmall"
                             color: Theme.subtext
-                            font.family: Theme.textFont
-                            font.pixelSize: Theme.typeSize("labelSmall")
-                            font.weight: Theme.typeWeight("labelSmall")
+                            text: hourCell.modelData.label
                         }
 
                         Icon {
@@ -248,13 +238,11 @@ ColumnLayout {
                             color: Theme.subtext
                         }
 
-                        Text {
+                        LText {
                             Layout.alignment: Qt.AlignHCenter
+                            role: "bodyMedium"
+                            tabular: true
                             text: hourCell.modelData.temp + "°"
-                            color: Theme.text
-                            font.family: Theme.textFont
-                            font.pixelSize: Theme.typeSize("bodyMedium")
-                            font.weight: Theme.typeWeight("bodyMedium")
                         }
                     }
                 }
@@ -270,65 +258,56 @@ ColumnLayout {
         Layout.fillWidth: true
         title: "На 5 дней"
 
-        ColumnLayout {
+        ColumnLayout { // строки прогноза в анатомии ListItem (без собственного фона)
             Layout.fillWidth: true
-            spacing: Theme.dp(4)
+            spacing: 0
 
             Repeater {
                 model: Weather.daily.slice(0, 5)
 
-                delegate: ColumnLayout {
+                delegate: RowLayout {
                     required property var modelData
                     required property int index
+
                     Layout.fillWidth: true
-                    spacing: 0
+                    Layout.preferredHeight: Theme.dp(44)
+                    spacing: Theme.dp(12)
 
-                    RowLayout { // строка дня: колонки фиксированной ширины, без прижатий
+                    LText {
                         Layout.fillWidth: true
-                        Layout.preferredHeight: Theme.dp(40)
-                        Layout.leftMargin: Theme.dp(8)
-                        Layout.rightMargin: Theme.dp(8)
-                        spacing: Theme.dp(12)
+                        Layout.alignment: Qt.AlignVCenter
+                        role: "bodyLarge"
+                        weight: 480
+                        color: Theme.text
+                        elide: Text.ElideRight
+                        text: modelData.day
+                    }
 
-                        Text {
-                            Layout.fillWidth: true
-                            Layout.alignment: Qt.AlignVCenter
-                            text: modelData.day
-                            color: Theme.text
-                            elide: Text.ElideRight
-                            font.family: Theme.textFont
-                            font.pixelSize: Theme.typeSize("bodyLarge")
-                            font.weight: Theme.typeWeight("bodyLarge")
-                        }
+                    Icon {
+                        Layout.alignment: Qt.AlignVCenter
+                        name: Weather.wmoIcon(modelData.code, true)
+                        size: Theme.dp(18)
+                        color: Theme.subtext
+                    }
 
-                        Icon {
-                            Layout.alignment: Qt.AlignVCenter
-                            name: Weather.wmoIcon(modelData.code, true)
-                            size: Theme.dp(18)
-                            color: Theme.subtext
-                        }
+                    LText { // минимум — колонка вправо
+                        Layout.preferredWidth: Theme.dp(38)
+                        Layout.alignment: Qt.AlignVCenter
+                        horizontalAlignment: Text.AlignRight
+                        role: "bodyMedium"
+                        tabular: true
+                        color: Theme.subtext
+                        text: Math.round(modelData.min) + "°"
+                    }
 
-                        Text { // минимум — колонка, выравнивание вправо
-                            Layout.preferredWidth: Theme.dp(34)
-                            Layout.alignment: Qt.AlignVCenter
-                            horizontalAlignment: Text.AlignRight
-                            text: Math.round(modelData.min) + "°"
-                            color: Theme.subtext
-                            font.family: Theme.textFont
-                            font.pixelSize: Theme.typeSize("bodyMedium")
-                            font.weight: Theme.typeWeight("bodyMedium")
-                        }
-
-                        Text { // максимум — фикс. ширина 40, вправо (от min отделён spacing 12)
-                            Layout.preferredWidth: Theme.dp(40)
-                            Layout.alignment: Qt.AlignVCenter
-                            horizontalAlignment: Text.AlignRight
-                            text: Math.round(modelData.max) + "°"
-                            color: Theme.text
-                            font.family: Theme.textFont
-                            font.pixelSize: Theme.typeSize("bodyMedium")
-                            font.weight: Theme.typeWeight("bodyMedium")
-                        }
+                    LText { // максимум — фикс. ширина, вправо
+                        Layout.preferredWidth: Theme.dp(42)
+                        Layout.alignment: Qt.AlignVCenter
+                        horizontalAlignment: Text.AlignRight
+                        role: "bodyMedium"
+                        tabular: true
+                        color: Theme.text
+                        text: Math.round(modelData.max) + "°"
                     }
                 }
             }

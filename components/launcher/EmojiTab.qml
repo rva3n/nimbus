@@ -188,23 +188,26 @@ ColumnLayout {
         signal hovered(int index)
         signal activated(int index)
 
-        Rectangle { // ховер-подсветка / выбранное
-            anchors.centerIn: parent
-            width: cell.kao ? parent.width - Theme.dp(4)
-                            : Math.min(parent.width, parent.height) - Theme.dp(4)
-            height: cell.kao ? parent.height - Theme.dp(2) : width
-            radius: cell.kao ? Theme.radiusSm : width / 2
-            color: cell.selected ? Theme.accentContainer : Theme.text
-            opacity: cell.selected ? 1 : (cellArea.containsMouse ? Theme.stateHover : 0)
-            border.width: cell.selected ? 1 : 0
-            border.color: Theme.accentBorder
+        Rectangle { // выбранная ячейка — secondaryContainer со скруглением
+            anchors.fill: parent
+            anchors.margins: Theme.dp(2)
+            radius: Theme.radiusSm
+            color: cell.selected ? Theme.secondaryContainer : "transparent"
 
-            Behavior on opacity {
-                NumberAnimation {
-                    duration: Theme.ms(100)
-                    easing.type: Theme.easeStandard
-                }
+            Behavior on color {
+                ColorAnimation { duration: Theme.durDefaultEffects }
             }
+        }
+
+        StateLayer { // ховер/нажатие
+            anchors.fill: parent
+            radius: Theme.radiusSm
+            tint: cell.selected ? Theme.fgSecondaryContainer : Theme.text
+            onClicked: cell.activated(cell.index)
+        }
+
+        HoverHandler {
+            onHoveredChanged: if (hovered) cell.hovered(cell.index)
         }
 
         Text {
@@ -214,19 +217,10 @@ ColumnLayout {
             horizontalAlignment: Text.AlignHCenter
             verticalAlignment: Text.AlignVCenter
             elide: Text.ElideRight
-            color: cell.selected ? Theme.fgAccentContainer : Theme.text
+            color: cell.selected ? Theme.fgSecondaryContainer : Theme.text
             // эмодзи рисуем системным шрифтом (Roboto их не содержит)
             font.family: cell.kao ? Theme.textFont : ""
             font.pixelSize: cell.kao ? Theme.fs(13) : Theme.dp(24)
-        }
-
-        MouseArea {
-            id: cellArea
-            anchors.fill: parent
-            hoverEnabled: true
-            cursorShape: Qt.PointingHandCursor
-            onEntered: cell.hovered(cell.index)
-            onClicked: cell.activated(cell.index)
         }
     }
 }

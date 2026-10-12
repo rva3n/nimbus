@@ -73,17 +73,35 @@ ColumnLayout {
         onExited: (exitCode) => tab.haveWtype = exitCode === 0
     }
 
-    // ── Закреплённые ──────────────────────────────────────────────────
-    Text {
+    // ── Закреплённые: заголовок группы с пином и правилом (Lucid) ────
+    RowLayout {
         visible: tab.fPins.length > 0
         Layout.fillWidth: true
         Layout.leftMargin: Theme.dp(8)
+        Layout.rightMargin: Theme.dp(8)
         Layout.bottomMargin: Theme.dp(2)
-        text: "Закреплённые"
-        color: Theme.subtext
-        font.family: Theme.textFont
-        font.pixelSize: Theme.typeSize("labelMedium")
-        font.weight: Theme.typeWeight("labelMedium")
+        spacing: Theme.dp(8)
+
+        Icon {
+            Layout.alignment: Qt.AlignVCenter
+            name: "push_pin"
+            size: Theme.dp(16)
+            color: Theme.primary
+        }
+
+        LText {
+            Layout.alignment: Qt.AlignVCenter
+            role: "labelLarge"
+            text: "Закреплённые"
+            color: Theme.primary
+        }
+
+        Rectangle {
+            Layout.fillWidth: true
+            Layout.alignment: Qt.AlignVCenter
+            implicitHeight: 1
+            color: Theme.divider
+        }
     }
 
     Column { // пины: обычный позиционер надёжнее лэйаута с Repeater
@@ -256,26 +274,26 @@ ColumnLayout {
             id: rowItem
 
             Layout.fillWidth: true
-            implicitHeight: Theme.dp(48)
+            implicitHeight: Theme.dp(52)
 
             Rectangle {
                 anchors.fill: parent
                 radius: Theme.radiusMd
-                color: ci.selected ? Theme.accentContainer
-                     : (rowArea.containsMouse ? Theme.bgHover : "transparent")
+                color: ci.selected ? Theme.secondaryContainer : "transparent"
 
                 Behavior on color {
-                    ColorAnimation { duration: Theme.durQuick }
+                    ColorAnimation { duration: Theme.durDefaultEffects }
                 }
             }
 
-            MouseArea {
-                id: rowArea
-                anchors.fill: parent
-                hoverEnabled: true
-                cursorShape: Qt.PointingHandCursor
-                onEntered: ci.hovered(ci.rowIndex)
+            StateLayer { // ховер/нажатие — state layer, клик по строке — активация
+                radius: Theme.radiusMd
+                tint: ci.selected ? Theme.fgSecondaryContainer : Theme.text
                 onClicked: ci.activated(ci.rowIndex)
+            }
+
+            HoverHandler {
+                onHoveredChanged: if (hovered) ci.hovered(ci.rowIndex)
             }
 
             RowLayout {
@@ -324,7 +342,7 @@ ColumnLayout {
                     Layout.fillWidth: true
                     Layout.alignment: Qt.AlignVCenter
                     text: ci.label
-                    color: ci.selected ? Theme.fgAccentContainer : Theme.text
+                    color: ci.selected ? Theme.fgSecondaryContainer : Theme.text
                     // pins и короткие — одна строка, длинные — максимум две
                     elide: Text.ElideRight
                     wrapMode: ci.pinned ? Text.NoWrap : Text.Wrap
@@ -342,40 +360,13 @@ ColumnLayout {
                     onClicked: ci.pinned ? Clip.unpin(ci.modelData.id) : Clip.pin(ci.modelData.id)
                 }
 
-                Item { // delete в error-тоне (у ui/IconButton нет error-варианта)
+                IconButton { // удалить: ghost-кнопка в error-тоне
                     Layout.alignment: Qt.AlignVCenter
                     visible: !ci.pinned
-                    implicitWidth: Theme.dp(28)
-                    implicitHeight: Theme.dp(28)
-
-                    Rectangle {
-                        anchors.fill: parent
-                        radius: Theme.radiusPill
-                        color: delArea.containsMouse || delArea.pressed ? Theme.errorContainer : "transparent"
-
-                        Behavior on color {
-                            ColorAnimation { duration: Theme.durDefaultEffects }
-                        }
-                    }
-
-                    Icon {
-                        anchors.centerIn: parent
-                        name: "delete"
-                        size: Theme.dp(16)
-                        color: delArea.containsMouse ? Theme.fgErrorContainer : Theme.error
-
-                        Behavior on color {
-                            ColorAnimation { duration: Theme.durDefaultEffects }
-                        }
-                    }
-
-                    MouseArea {
-                        id: delArea
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: Clip.del(ci.modelData.id)
-                    }
+                    icon: "delete"
+                    size: "s"
+                    tintOverride: Theme.error
+                    onClicked: Clip.del(ci.modelData.id)
                 }
             }
         }

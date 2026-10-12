@@ -4,7 +4,7 @@ import "../../core"
 import ".."
 import "../../ui" as Ui
 
-// Обои: табы, фильтры, поиск и сетка превью. Вся логика — в Wallpaper.
+// Обои: вкладки (ui/Tabs), фильтры, поиск и сетка превью. Вся логика — в Wallpaper.
 ColumnLayout {
     id: wallpapersPage
 
@@ -14,34 +14,34 @@ ColumnLayout {
     Layout.fillWidth: true
     spacing: 10
 
-    RowLayout { // табы + обновление
+    // вкладки в анатомии M3 (иконка/подпись + скользящий индикатор)
+    Ui.Tabs {
         Layout.fillWidth: true
-        spacing: 8
-
-        TabBtn { label: "Фото"; active: Wallpaper.tab === "photos"; onClicked: { Wallpaper.tab = "photos"; if (Wallpaper.localItems.length === 0) Wallpaper.refreshLocal(); } }
-        TabBtn { label: "Видео"; active: Wallpaper.tab === "videos"; onClicked: { Wallpaper.tab = "videos"; if (Wallpaper.localItems.length === 0) Wallpaper.refreshLocal(); } }
-        TabBtn { label: "Motion"; active: Wallpaper.tab === "motion"; onClicked: { Wallpaper.tab = "motion"; if (Wallpaper.motionResults.length === 0) { Wallpaper.motionQuery = ""; Wallpaper.searchMotion(); } } }
-        TabBtn { label: "Wallhaven"; active: Wallpaper.tab === "wallhaven"; onClicked: { Wallpaper.tab = "wallhaven"; if (Wallpaper.results.length === 0) Wallpaper.search(); } }
-
-        Item { Layout.fillWidth: true }
-
-        Text {
-            visible: Wallpaper.loading
-            Layout.alignment: Qt.AlignVCenter
-            text: "загрузка…"
-            color: Theme.subtext
-            font.family: Theme.textFont
-            font.pixelSize: Theme.typeSize("labelSmall")
-            font.weight: Theme.typeWeight("labelSmall")
-        }
-
-        Ui.IconButton {
-            icon: "refresh"
-            onClicked: Wallpaper.tab === "wallhaven" ? Wallpaper.search() : Wallpaper.refreshLocal()
+        options: [
+            { "key": "photos", "label": "Фото" },
+            { "key": "videos", "label": "Видео" },
+            { "key": "motion", "label": "Motion" },
+            { "key": "wallhaven", "label": "Wallhaven" }
+        ]
+        current: Wallpaper.tab
+        onPicked: (key) => {
+            Wallpaper.tab = key;
+            if (key === "photos" || key === "videos") {
+                if (Wallpaper.localItems.length === 0)
+                    Wallpaper.refreshLocal();
+            } else if (key === "motion") {
+                if (Wallpaper.motionResults.length === 0) {
+                    Wallpaper.motionQuery = "";
+                    Wallpaper.searchMotion();
+                }
+            } else if (key === "wallhaven") {
+                if (Wallpaper.results.length === 0)
+                    Wallpaper.search();
+            }
         }
     }
 
-    RowLayout { // авто-смена и таймер
+    RowLayout { // авто-смена и таймер + обновление
         Layout.fillWidth: true
         spacing: 6
 
@@ -58,6 +58,19 @@ ColumnLayout {
         }
 
         Item { Layout.fillWidth: true }
+
+        Ui.LText {
+            visible: Wallpaper.loading
+            Layout.alignment: Qt.AlignVCenter
+            role: "labelSmall"
+            color: Theme.subtext
+            text: "загрузка…"
+        }
+
+        Ui.IconButton {
+            icon: "refresh"
+            onClicked: Wallpaper.tab === "wallhaven" ? Wallpaper.search() : Wallpaper.refreshLocal()
+        }
     }
 
     RowLayout { // значение таймера
@@ -65,12 +78,10 @@ ColumnLayout {
         Layout.fillWidth: true
         spacing: 8
 
-        Text {
-            text: "1м"
+        Ui.LText {
+            role: "labelSmall"
             color: Theme.subtext
-            font.family: Theme.textFont
-            font.pixelSize: Theme.typeSize("labelSmall")
-            font.weight: Theme.typeWeight("labelSmall")
+            text: "1м"
         }
 
         Ui.Slider {
@@ -79,27 +90,24 @@ ColumnLayout {
             onMoved: (v) => win.setAuto(v)
         }
 
-        Text {
-            text: "24ч"
+        Ui.LText {
+            role: "labelSmall"
             color: Theme.subtext
-            font.family: Theme.textFont
-            font.pixelSize: Theme.typeSize("labelSmall")
-            font.weight: Theme.typeWeight("labelSmall")
+            text: "24ч"
         }
 
-        Text {
+        Ui.LText {
             Layout.preferredWidth: 56
             horizontalAlignment: Text.AlignRight
-            text: win.autoLabel
+            role: "labelSmall"
             color: Theme.text
-            font.family: Theme.textFont
-            font.pixelSize: Theme.typeSize("labelSmall")
-            font.weight: Theme.typeWeight("labelSmall")
+            text: win.autoLabel
         }
     }
 
     Ui.TextField { // поиск
         visible: Wallpaper.tab === "wallhaven" || Wallpaper.tab === "motion"
+        variant: "search"
         Layout.fillWidth: true
         placeholder: Wallpaper.tab === "motion" ? "Поиск видео (MotionBGs)…" : "Поиск на Wallhaven…"
         onAccepted: {
@@ -168,10 +176,14 @@ ColumnLayout {
             required property var modelData
 
             readonly property bool selected: Wallpaper.tab !== "wallhaven" && Wallpaper.tab !== "motion" && Wallpaper.currentPath === modelData.path
+            // wallhaven/motion отдают готовый thumb (картинка); локальные — путь к файлу
+            readonly property bool useThumb: Wallpaper.tab === "wallhaven" || Wallpaper.tab === "motion"
+            // локальное видео: Image не декодирует .mp4 — рисуем заглушку
+            readonly property bool localVideo: !cell.useThumb && !!modelData.video
 
             width: 112
             height: 76
-            radius: Theme.radiusMd
+            radius: Theme.shapeLg
             color: Theme.bgTile
             clip: true
             scale: cell.selected ? 1.06 : 1
@@ -187,13 +199,27 @@ ColumnLayout {
 
             Image {
                 anchors.fill: parent
+                visible: !cell.localVideo
                 fillMode: Image.PreserveAspectCrop
                 asynchronous: true
-                source: (Wallpaper.tab === "wallhaven" || Wallpaper.tab === "motion") ? modelData.thumb : ("file://" + modelData.path)
+                source: cell.localVideo ? "" : (cell.useThumb ? modelData.thumb : ("file://" + modelData.path))
+            }
+
+            Rectangle { // заглушка локального видео
+                visible: cell.localVideo
+                anchors.fill: parent
+                color: Theme.bgTrack
+
+                Ui.Icon {
+                    anchors.centerIn: parent
+                    name: "movie"
+                    size: Theme.dp(26)
+                    color: Theme.subtext
+                }
             }
 
             Rectangle { // затемнение видео
-                visible: Wallpaper.tab === "motion" || (Wallpaper.tab !== "wallhaven" && modelData.video)
+                visible: Wallpaper.tab === "motion" || cell.localVideo
                 anchors.fill: parent
                 radius: parent.radius
                 color: Theme.alpha(Theme.shadow, 0.45)
@@ -266,14 +292,12 @@ ColumnLayout {
             }
         }
 
-        Text {
+        Ui.LText {
             anchors.centerIn: parent
             visible: wpGrid.count === 0
-            text: Wallpaper.loading ? "Загрузка…" : "Пусто"
+            role: "bodyMedium"
             color: Theme.subtext
-            font.family: Theme.textFont
-            font.pixelSize: Theme.typeSize("bodyMedium")
-            font.weight: Theme.typeWeight("bodyMedium")
+            text: Wallpaper.loading ? "Загрузка…" : "Пусто"
         }
     }
 

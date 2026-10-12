@@ -5,8 +5,9 @@ import "../../core"
 import "../../ui"
 import ".."
 
-// Страница «Календарь»: месяц сеткой 7×6, неделя с понедельника.
-// Сегодняшний день — акцентный круг. Ориентир — MonthView из Lucid.
+// Страница «Календарь»: месяц сеткой 7×6, неделя с понедельника. Сегодня —
+// акцентный «пентагон» (MaterialShape), выбранный день — акцентный круг.
+// Ориентир — MonthView из Lucid.
 ColumnLayout {
     id: page
 
@@ -15,6 +16,8 @@ ColumnLayout {
     property int monthIndex: new Date().getMonth()
     // обновляется минутным таймером, чтобы подсветка «сегодня» не устаревала
     property date today: new Date()
+    // { year, month, day } или null — выбранный день
+    property var selected: null
 
     readonly property var weekdays: ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"]
 
@@ -25,6 +28,8 @@ ColumnLayout {
         for (let i = 0; i < 42; i++) {
             const d = new Date(page.year, page.monthIndex, 1 - lead + i);
             out.push({
+                "year": d.getFullYear(),
+                "month": d.getMonth(),
                 "day": d.getDate(),
                 "other": d.getMonth() !== page.monthIndex,
                 "weekend": d.getDay() === 0 || d.getDay() === 6,
@@ -79,6 +84,7 @@ ColumnLayout {
         const n = page.today;
         page.year = n.getFullYear();
         page.monthIndex = n.getMonth();
+        page.selected = { "year": n.getFullYear(), "month": n.getMonth(), "day": n.getDate() };
     }
 
     Card {
@@ -93,15 +99,13 @@ ColumnLayout {
                 onClicked: page.prev()
             }
 
-            Text {
+            LText {
                 Layout.fillWidth: true
                 Layout.leftMargin: Theme.dp(4)
-                text: page.monthTitle
+                role: "titleMedium"
                 color: Theme.text
                 elide: Text.ElideRight
-                font.family: Theme.textFont
-                font.pixelSize: Theme.typeSize("titleMedium")
-                font.weight: Theme.typeWeight("titleMedium")
+                text: page.monthTitle
             }
 
             Chip {
@@ -123,15 +127,15 @@ ColumnLayout {
             Repeater {
                 model: page.weekdays
 
-                Text {
+                LText {
                     required property string modelData
+                    required property int index
+
                     Layout.fillWidth: true
                     horizontalAlignment: Text.AlignHCenter
+                    role: "labelSmall"
+                    color: index >= 5 ? Theme.accent : Theme.subtext
                     text: modelData
-                    color: Theme.subtext
-                    font.family: Theme.textFont
-                    font.pixelSize: Theme.typeSize("labelSmall")
-                    font.weight: Theme.typeWeight("labelSmall")
                 }
             }
         }
@@ -147,31 +151,90 @@ ColumnLayout {
                 model: page.cells
 
                 Item {
-                    required property var modelData
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: Theme.dp(38)
+                    id: cell
 
-                    Rectangle { // круг «сегодня»
+                    required property var modelData
+                    readonly property bool isSelected: page.selected !== null
+                        && page.selected.year === cell.modelData.year
+                        && page.selected.month === cell.modelData.month
+                        && page.selected.day === cell.modelData.day
+
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: Theme.dp(40)
+
+                    // выбранный день — акцентный круг
+                    Rectangle {
                         anchors.centerIn: parent
-                        width: Theme.dp(32)
+                        width: Theme.dp(34)
                         height: width
                         radius: width / 2
-                        visible: modelData.today
+                        visible: cell.isSelected && !cell.modelData.today
                         color: Theme.accent
+
+                        Behavior on color {
+                            ColorAnimation {
+                                duration: Theme.durFastEffects
+                            }
+                        }
                     }
 
-                    Text {
+                    // сегодня — акцентный пентагон
+                    Loader {
                         anchors.centerIn: parent
-                        text: modelData.day
-                        color: modelData.today ? Theme.fgOnFill
-                             : modelData.other ? Theme.subtextDim
-                             : modelData.weekend ? Theme.subtext
+                        active: cell.modelData.today
+
+                        sourceComponent: MaterialShape {
+                            width: Theme.dp(40)
+                            height: Theme.dp(40)
+                            shape: "pentagon"
+                            color: Theme.accent
+                            scale: cellArea.pressed ? 0.9 : (cellArea.containsMouse ? 1.08 : 1)
+                            rotation: cellArea.containsMouse ? -10 : 0
+
+                            Behavior on scale {
+                                NumberAnimation {
+                                    duration: Theme.durFastSpatial
+                                    easing.type: Easing.Bezier
+                                    easing.bezierCurve: Theme.curveFastSpatial
+                                }
+                            }
+
+                            Behavior on rotation {
+                                NumberAnimation {
+                                    duration: Theme.durDefaultSpatial
+                                    easing.type: Easing.Bezier
+                                    easing.bezierCurve: Theme.curveDefaultSpatial
+                                }
+                            }
+                        }
+                    }
+
+                    LText {
+                        anchors.centerIn: parent
+                        role: "bodyMedium"
+                        tabular: true
+                        weight: cell.modelData.today || cell.isSelected ? 640 : 440
+                        rounded: cell.modelData.today ? 100 : 0
+                        color: cell.modelData.today || (cell.isSelected && !cell.modelData.today) ? Theme.fgOnFill
+                             : cell.modelData.other ? Theme.subtextDim
+                             : cell.modelData.weekend ? Theme.subtext
                              : Theme.text
-                        font.family: Theme.textFont
-                        font.pixelSize: Theme.typeSize("bodyMedium")
-                        font.weight: modelData.today
-                                     ? Theme.typeWeight("titleSmall")
-                                     : Theme.typeWeight("bodyMedium")
+                        text: cell.modelData.day
+                    }
+
+                    StateLayer {
+                        id: cellArea
+
+                        radius: Theme.dp(20)
+                        tint: cell.modelData.today ? Theme.accent : Theme.text
+                        hoverOpacity: cell.modelData.today ? 0 : Theme.stateHover
+                        pressOpacity: cell.modelData.today ? 0 : Theme.statePressed
+                        ripple: false
+                        onClicked: page.selected = {
+                            "year": cell.modelData.year,
+                            "month": cell.modelData.month,
+                            "day": cell.modelData.day
+                        }
                     }
                 }
             }

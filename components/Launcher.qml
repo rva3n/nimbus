@@ -26,7 +26,8 @@ ColumnLayout {
 
     visible: active
     Layout.fillWidth: true
-    spacing: Theme.dp(14)
+    // ритм Lucid: head → content gap, полный блок внутри капсулы
+    spacing: Theme.dp(12)
 
     // сброс поиска и выделения
     function resetSearch() {
@@ -113,8 +114,11 @@ ColumnLayout {
     }
 
     // ── содержимое активной вкладки ───────────────────────────────────
+    // Lucid-карточка: размытый surfaceHigh, крупный радиус shapeXl
     Card {
         Layout.fillWidth: true
+        radius: Theme.shapeXl
+        pad: Theme.dp(10)
 
         AppsTab {
             id: appsTab

@@ -283,11 +283,24 @@ ColumnLayout {
         tab.pending = "";
     }
 
-    // ленивое получение установленной версии выбранного пакета поиска
+    // ленивое получение установленной версии: в поиске — для выбранного
+    // результата, в режиме приложений — для выбранной строки
     function _maybeFetchInstalled() {
+        if (!tab.searchMode) {
+            const a = tab.appsList[tab.sel];
+            if (a) tab.ensureInstalledVersion(a.pkg);
+            return;
+        }
         const it = tab.selectedResult;
         if (it && it.installed && !it.installedVer)
             tab.ensureInstalledVersion(it.name);
+    }
+
+    // подпись строки приложения: версия, если уже известна, иначе имя пакета
+    function appSub(a) {
+        if (!a) return "";
+        const v = tab.installedVersions[a.pkg];
+        return v ? v : a.pkg;
     }
 
     function ensureInstalledVersion(name) {
@@ -652,106 +665,108 @@ ColumnLayout {
                 readonly property bool hasIcon: rowItem.pkgIcon !== ""
 
                 width: resultView.width
-                height: Theme.dp(40)
+                height: Theme.dp(52)
 
                 Rectangle {
                     id: searchRow
 
                     anchors.fill: parent
-                    radius: Theme.radiusMd
-                    color: rowItem.index === tab.sel ? Theme.accentContainer
-                         : (rowMouse.containsMouse ? Theme.bgHover : "transparent")
+                    radius: Theme.rad(14)
+                    color: rowItem.index === tab.sel ? Theme.secondaryContainer : "transparent"
                     border.width: rowItem.pendingRemove ? Theme.dp(1) : 0
                     border.color: Theme.error
 
                     Behavior on color {
-                        ColorAnimation { duration: Theme.durQuick }
+                        ColorAnimation { duration: Theme.durDefaultEffects }
                     }
+                }
 
-                    MouseArea {
-                        id: rowMouse
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        cursorShape: Qt.PointingHandCursor
-                        onEntered: tab.hovered(rowItem.index)
-                        onClicked: tab.activate(rowItem.index)
-                    }
+                StateLayer {
+                    radius: Theme.rad(14)
+                    tint: rowItem.index === tab.sel ? Theme.fgSecondaryContainer : Theme.text
+                    onClicked: tab.activate(rowItem.index)
+                }
 
-                    RowLayout {
-                        anchors.fill: parent
-                        anchors.leftMargin: Theme.dp(8)
-                        anchors.rightMargin: Theme.dp(8)
-                        spacing: Theme.dp(8)
+                HoverHandler {
+                    onHoveredChanged: if (hovered) tab.hovered(rowItem.index)
+                }
 
-                        // иконка приложения (установленные) или глиф пакета
-                        Item {
-                            Layout.alignment: Qt.AlignVCenter
-                            implicitWidth: Theme.dp(28)
-                            implicitHeight: Theme.dp(28)
+                RowLayout {
+                    anchors.fill: parent
+                    anchors.leftMargin: Theme.dp(16)
+                    anchors.rightMargin: Theme.dp(16)
+                    spacing: Theme.dp(12)
 
-                            AppIcon {
-                                anchors.centerIn: parent
-                                visible: rowItem.hasIcon
-                                source: rowItem.pkgIcon
-                                size: 26
-                            }
+                    // иконка приложения (установленные) или глиф пакета
+                    Item {
+                        Layout.alignment: Qt.AlignVCenter
+                        implicitWidth: Theme.dp(40)
+                        implicitHeight: Theme.dp(40)
 
-                            Icon {
-                                anchors.centerIn: parent
-                                visible: !rowItem.hasIcon
-                                name: "inventory_2"
-                                size: Theme.dp(16)
-                                color: rowItem.index === tab.sel ? Theme.fgAccentContainer : Theme.subtext
-                            }
-                        }
-
-                        ColumnLayout {
-                            Layout.fillWidth: true
-                            Layout.alignment: Qt.AlignVCenter
-                            spacing: 0
-
-                            Text {
-                                Layout.fillWidth: true
-                                text: rowItem.modelData.name
-                                color: rowItem.index === tab.sel ? Theme.fgAccentContainer : Theme.text
-                                font.family: Theme.textFont
-                                font.pixelSize: Theme.typeSize("bodyLarge")
-                                font.weight: Font.DemiBold
-                                elide: Text.ElideRight
-                            }
-                            Text {
-                                Layout.fillWidth: true
-                                text: rowItem.modelData.repo + " · " + rowItem.modelData.version
-                                      + (rowItem.modelData.desc ? " · " + rowItem.modelData.desc : "")
-                                color: rowItem.index === tab.sel ? Theme.fgAccentContainer : Theme.subtext
-                                opacity: rowItem.index === tab.sel ? 0.75 : 1
-                                font.family: Theme.textFont
-                                font.pixelSize: Theme.typeSize("bodySmall")
-                                font.weight: Theme.typeWeight("bodySmall")
-                                elide: Text.ElideRight
-                            }
-                        }
-
-                        // бейдж «Установлено» / подтверждение удаления
                         Rectangle {
-                            visible: rowItem.modelData.installed
-                            Layout.alignment: Qt.AlignVCenter
-                            implicitWidth: badgeText.implicitWidth + Theme.dp(14)
-                            implicitHeight: Theme.dp(20)
-                            radius: Theme.pill(height)
-                            color: rowItem.pendingRemove ? Theme.errorContainer : Theme.bgTrack
-                            border.width: rowItem.pendingRemove ? Theme.dp(1) : 0
-                            border.color: Theme.error
+                            anchors.fill: parent
+                            visible: !rowItem.hasIcon
+                            radius: Math.round(parent.width * 0.35)
+                            color: Theme.withBlur(Theme.bgTile)
+                        }
 
-                            Text {
-                                id: badgeText
-                                anchors.centerIn: parent
-                                text: rowItem.pendingRemove ? "Подтвердить удаление?" : "Установлено"
-                                color: rowItem.pendingRemove ? Theme.fgErrorContainer : Theme.subtext
-                                font.family: Theme.textFont
-                                font.pixelSize: Theme.fs(10)
-                                font.weight: Theme.typeWeight("labelSmall")
-                            }
+                        AppIcon {
+                            anchors.centerIn: parent
+                            visible: rowItem.hasIcon
+                            source: rowItem.pkgIcon
+                            size: 35
+                        }
+
+                        Icon {
+                            anchors.centerIn: parent
+                            visible: !rowItem.hasIcon
+                            name: "inventory_2"
+                            size: Theme.dp(22)
+                            color: rowItem.index === tab.sel ? Theme.fgSecondaryContainer : Theme.subtext
+                        }
+                    }
+
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        Layout.alignment: Qt.AlignVCenter
+                        spacing: 0
+
+                        LText {
+                            Layout.fillWidth: true
+                            text: rowItem.modelData.name
+                            role: "bodyLarge"
+                            color: rowItem.index === tab.sel ? Theme.fgSecondaryContainer : Theme.text
+                            elide: Text.ElideRight
+                        }
+                        LText {
+                            Layout.fillWidth: true
+                            text: rowItem.modelData.repo + " · " + rowItem.modelData.version
+                                  + (rowItem.modelData.desc ? " · " + rowItem.modelData.desc : "")
+                            role: "bodySmall"
+                            color: rowItem.index === tab.sel
+                                ? Theme.alpha(Theme.fgSecondaryContainer, 0.8) : Theme.subtext
+                            elide: Text.ElideRight
+                        }
+                    }
+
+                    // бейдж «Установлено» / подтверждение удаления
+                    Rectangle {
+                        visible: rowItem.modelData.installed
+                        Layout.alignment: Qt.AlignVCenter
+                        implicitWidth: badgeText.implicitWidth + Theme.dp(14)
+                        implicitHeight: Theme.dp(20)
+                        radius: Theme.pill(height)
+                        color: rowItem.pendingRemove ? Theme.errorContainer : Theme.bgTrack
+                        border.width: rowItem.pendingRemove ? Theme.dp(1) : 0
+                        border.color: Theme.error
+
+                        LText {
+                            id: badgeText
+                            anchors.centerIn: parent
+                            role: "labelSmall"
+                            size: Theme.fs(10)
+                            text: rowItem.pendingRemove ? "Подтвердить удаление?" : "Установлено"
+                            color: rowItem.pendingRemove ? Theme.fgErrorContainer : Theme.subtext
                         }
                     }
                 }
@@ -793,32 +808,36 @@ ColumnLayout {
             Layout.fillWidth: true
             spacing: Theme.dp(6)
 
-            Text { // подсказка по Enter
+            LText { // подсказка по Enter
                 id: hint
                 Layout.fillWidth: true
+                role: "labelSmall"
                 text: tab.hintText
                 color: Theme.subtextDim
                 elide: Text.ElideRight
-                font.family: Theme.textFont
-                font.pixelSize: Theme.typeSize("labelSmall")
-                font.weight: Theme.typeWeight("labelSmall")
             }
 
-            Chip {
+            Button {
                 visible: tab.selectedResult !== null && tab.selectedResult.aur
-                label: "AUR"
+                variant: "text"
+                size: "s"
+                text: "AUR"
                 icon: "open_in_new"
                 onClicked: if (tab.selectedResult) tab.openAur(tab.selectedResult.name)
             }
-            Chip {
+            Button {
                 visible: tab.selectedResult !== null && tab.selectedResult.aur
-                label: "Git"
+                variant: "text"
+                size: "s"
+                text: "Git"
                 icon: "link"
                 onClicked: if (tab.selectedResult) tab.openAurGit(tab.selectedResult.name)
             }
-            Chip {
+            Button {
                 visible: tab.selectedResult !== null && !tab.selectedResult.aur
-                label: "archlinux.org"
+                variant: "text"
+                size: "s"
+                text: "archlinux.org"
                 icon: "open_in_new"
                 onClicked: if (tab.selectedResult) tab.openArch(tab.selectedResult.name)
             }
@@ -833,69 +852,100 @@ ColumnLayout {
         Layout.fillWidth: true
         spacing: Theme.dp(6)
 
-        // компактная карточка обновлений
-        ColumnLayout {
+        // карточка обновлений — акцентный контейнер (Lucid card anatomy)
+        Rectangle {
+            id: updatesCard
+
             visible: !tab.searchMode
             Layout.fillWidth: true
             Layout.topMargin: Theme.dp(4)
-            spacing: Theme.dp(6)
+            implicitHeight: updatesCol.implicitHeight + Theme.dp(24)
+            radius: Theme.shapeXl
+            color: Theme.secondaryContainer
 
-            Text {
-                Layout.fillWidth: true
-                Layout.leftMargin: Theme.dp(8)
-                text: tab.totalUpdates > 0
-                    ? "Обновления: " + tab.totalUpdates + " (репо " + tab.repoUpdates + ", AUR " + tab.aurUpdates + ")"
-                    : "Всё актуально 🎉"
-                color: tab.totalUpdates > 0 ? Theme.text : Theme.subtext
-                font.family: Theme.textFont
-                font.pixelSize: Theme.typeSize("bodyLarge")
-                font.weight: Font.DemiBold
-            }
+            ColumnLayout {
+                id: updatesCol
 
-            // «Обновить всё» — кнопка (мышь), не входит в клавиатурный выбор
-            Chip {
-                visible: tab.totalUpdates > 0
-                Layout.alignment: Qt.AlignLeft
-                Layout.leftMargin: Theme.dp(8)
-                label: "Обновить всё в терминале"
-                icon: "system_update_alt"
-                onClicked: tab.updateAll()
-            }
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.top: parent.top
+                anchors.margins: Theme.dp(12)
+                spacing: Theme.dp(8)
 
-            Column { // строки обновлений (невыделяемые)
-                Layout.fillWidth: true
-                spacing: Theme.dp(2)
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: Theme.dp(8)
 
-                Repeater {
-                    model: tab.detailLines
+                    Icon {
+                        Layout.alignment: Qt.AlignVCenter
+                        name: tab.totalUpdates > 0 ? "system_update_alt" : "check_circle"
+                        size: Theme.dp(20)
+                        color: Theme.fgSecondaryContainer
+                    }
 
-                    delegate: Text {
-                        required property var modelData
-
-                        width: parent.width
-                        leftPadding: Theme.dp(8)
-                        text: modelData
-                        color: Theme.subtextDim
+                    LText {
+                        Layout.fillWidth: true
+                        role: "bodyLarge"
+                        text: tab.totalUpdates > 0
+                            ? "Обновления: " + tab.totalUpdates + " (репо " + tab.repoUpdates + ", AUR " + tab.aurUpdates + ")"
+                            : "Всё актуально 🎉"
+                        color: Theme.fgSecondaryContainer
                         elide: Text.ElideRight
-                        font.family: Theme.textFont
-                        font.pixelSize: Theme.typeSize("bodySmall")
-                        font.weight: Theme.typeWeight("bodySmall")
+                    }
+                }
+
+                // «Обновить всё» — кнопка (мышь), не входит в клавиатурный выбор
+                Button {
+                    visible: tab.totalUpdates > 0
+                    Layout.alignment: Qt.AlignLeft
+                    variant: "filled"
+                    size: "s"
+                    text: "Обновить всё"
+                    icon: "system_update_alt"
+                    onClicked: tab.updateAll()
+                }
+
+                Column { // строки обновлений (невыделяемые)
+                    Layout.fillWidth: true
+                    spacing: Theme.dp(2)
+
+                    Repeater {
+                        model: tab.detailLines
+
+                        delegate: LText {
+                            required property var modelData
+                            width: parent.width
+                            role: "bodySmall"
+                            text: modelData
+                            color: Theme.alpha(Theme.fgSecondaryContainer, 0.8)
+                            elide: Text.ElideRight
+                        }
                     }
                 }
             }
         }
 
-        // заголовок секции
-        Text {
+        // заголовок секции — Lucid list header: label primary + правило
+        RowLayout {
             Layout.fillWidth: true
             Layout.leftMargin: Theme.dp(8)
+            Layout.rightMargin: Theme.dp(8)
             Layout.topMargin: Theme.dp(6)
-            text: "Приложения (" + tab.appsList.length + ")"
-            color: Theme.subtext
-            font.family: Theme.textFont
-            font.pixelSize: Theme.typeSize("labelLarge")
-            font.weight: Theme.typeWeight("labelLarge")
-            elide: Text.ElideRight
+            spacing: Theme.dp(8)
+
+            LText {
+                Layout.alignment: Qt.AlignVCenter
+                role: "labelLarge"
+                text: "Приложения (" + tab.appsList.length + ")"
+                color: Theme.primary
+            }
+
+            Rectangle {
+                Layout.fillWidth: true
+                Layout.alignment: Qt.AlignVCenter
+                height: 1
+                color: Theme.divider
+            }
         }
 
         ListView { // установленные приложения
@@ -918,86 +968,89 @@ ColumnLayout {
                 readonly property bool hasIcon: appRow.modelData.icon !== ""
 
                 width: appView.width
-                height: Theme.dp(40)
+                height: Theme.dp(56)
 
-                Rectangle {
+                Rectangle { // выбранная строка — secondaryContainer
                     anchors.fill: parent
-                    radius: Theme.radiusMd
-                    color: appRow.index === tab.sel ? Theme.accentContainer
-                         : (appMouse.containsMouse ? Theme.bgHover : "transparent")
+                    radius: Theme.rad(14)
+                    color: appRow.index === tab.sel ? Theme.secondaryContainer : "transparent"
 
                     Behavior on color {
-                        ColorAnimation { duration: Theme.durQuick }
+                        ColorAnimation { duration: Theme.durDefaultEffects }
                     }
+                }
 
-                    MouseArea {
-                        id: appMouse
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        cursorShape: Qt.PointingHandCursor
-                        onEntered: tab.hovered(appRow.index)
-                        onClicked: tab.activate(appRow.index)
-                    }
+                StateLayer { // ховер/нажатие
+                    radius: Theme.rad(14)
+                    tint: appRow.index === tab.sel ? Theme.fgSecondaryContainer : Theme.text
+                    onClicked: tab.activate(appRow.index)
+                }
 
-                    RowLayout {
-                        anchors.fill: parent
-                        anchors.leftMargin: Theme.dp(8)
-                        anchors.rightMargin: Theme.dp(8)
-                        spacing: Theme.dp(8)
+                HoverHandler {
+                    onHoveredChanged: if (hovered) tab.hovered(appRow.index)
+                }
 
-                        Item {
-                            Layout.alignment: Qt.AlignVCenter
-                            implicitWidth: Theme.dp(28)
-                            implicitHeight: Theme.dp(28)
+                RowLayout {
+                    anchors.fill: parent
+                    anchors.leftMargin: Theme.dp(16)
+                    anchors.rightMargin: Theme.dp(16)
+                    spacing: Theme.dp(12)
 
-                            AppIcon {
-                                anchors.centerIn: parent
-                                visible: appRow.hasIcon
-                                source: appRow.modelData.icon
-                                size: 26
-                            }
+                    Item { // ведущий слот 40: иконка без плитки / фолбэк на плитке
+                        Layout.alignment: Qt.AlignVCenter
+                        implicitWidth: Theme.dp(40)
+                        implicitHeight: Theme.dp(40)
 
-                            Icon { // фолбэк-глиф для неразрешённых иконок
-                                anchors.centerIn: parent
-                                visible: !appRow.hasIcon
-                                name: "inventory_2"
-                                size: Theme.dp(16)
-                                color: appRow.index === tab.sel ? Theme.fgAccentContainer : Theme.subtext
-                            }
+                        Rectangle {
+                            anchors.fill: parent
+                            visible: !appRow.hasIcon
+                            radius: Math.round(parent.width * 0.35)
+                            color: Theme.withBlur(Theme.bgTile)
                         }
 
-                        ColumnLayout {
+                        AppIcon {
+                            anchors.centerIn: parent
+                            visible: appRow.hasIcon
+                            source: appRow.modelData.icon
+                            size: 35
+                        }
+
+                        Icon { // фолбэк-глиф для неразрешённых иконок
+                            anchors.centerIn: parent
+                            visible: !appRow.hasIcon
+                            name: "inventory_2"
+                            size: Theme.dp(22)
+                            color: appRow.index === tab.sel ? Theme.fgSecondaryContainer : Theme.subtext
+                        }
+                    }
+
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        Layout.alignment: Qt.AlignVCenter
+                        spacing: 0
+
+                        LText {
                             Layout.fillWidth: true
-                            Layout.alignment: Qt.AlignVCenter
-                            spacing: 0
-
-                            Text {
-                                Layout.fillWidth: true
-                                text: appRow.modelData.name
-                                color: appRow.index === tab.sel ? Theme.fgAccentContainer : Theme.text
-                                font.family: Theme.textFont
-                                font.pixelSize: Theme.typeSize("bodyLarge")
-                                font.weight: Font.DemiBold
-                                elide: Text.ElideRight
-                            }
-                            Text {
-                                Layout.fillWidth: true
-                                text: appRow.modelData.pkg
-                                color: appRow.index === tab.sel ? Theme.fgAccentContainer : Theme.subtext
-                                opacity: appRow.index === tab.sel ? 0.75 : 1
-                                font.family: Theme.textFont
-                                font.pixelSize: Theme.typeSize("bodySmall")
-                                font.weight: Theme.typeWeight("bodySmall")
-                                elide: Text.ElideRight
-                            }
+                            text: appRow.modelData.name
+                            role: "bodyLarge"
+                            color: appRow.index === tab.sel ? Theme.fgSecondaryContainer : Theme.text
+                            elide: Text.ElideRight
                         }
-
-                        Icon { // подсказка «подробнее»
-                            Layout.alignment: Qt.AlignVCenter
-                            name: "chevron_right"
-                            size: Theme.dp(18)
-                            color: appRow.index === tab.sel ? Theme.fgAccentContainer : Theme.subtextDim
+                        LText {
+                            Layout.fillWidth: true
+                            text: tab.appSub(appRow.modelData)
+                            role: "bodySmall"
+                            color: appRow.index === tab.sel
+                                ? Theme.alpha(Theme.fgSecondaryContainer, 0.8) : Theme.subtext
+                            elide: Text.ElideRight
                         }
+                    }
+
+                    Icon { // подсказка «подробнее»
+                        Layout.alignment: Qt.AlignVCenter
+                        name: "chevron_right"
+                        size: Theme.dp(20)
+                        color: appRow.index === tab.sel ? Theme.fgSecondaryContainer : Theme.subtextDim
                     }
                 }
             }
@@ -1020,10 +1073,17 @@ ColumnLayout {
 
         visible: tab.detailsOpen && tab.detailTarget !== null
         Layout.fillWidth: true
-        Layout.preferredHeight: Theme.dp(164)
+        Layout.preferredHeight: Theme.dp(184)
+
+        Rectangle { // Lucid-карточка панели деталей
+            anchors.fill: parent
+            radius: Theme.shapeXl
+            color: Theme.withBlur(Theme.mHigh)
+        }
 
         ColumnLayout {
             anchors.fill: parent
+            anchors.margins: Theme.dp(12)
             spacing: Theme.dp(4)
 
             Flickable {
@@ -1068,14 +1128,12 @@ ColumnLayout {
                     }
                 }
 
-                Text {
+                LText {
                     Layout.fillWidth: true
+                    role: "bodyLarge"
                     text: (tab.detailTarget ? tab.detailTarget.name : "")
                           + (tab.dVersion !== "" ? "  " + tab.dVersion : "")
                     color: Theme.text
-                    font.family: Theme.textFont
-                    font.pixelSize: Theme.typeSize("bodyLarge")
-                    font.weight: Font.DemiBold
                     elide: Text.ElideRight
                 }
             }
@@ -1159,84 +1217,51 @@ ColumnLayout {
                 }
             }
 
-            RowLayout { // ссылки + удаление
+            RowLayout { // ссылки (text-кнопки) + удаление в error-контейнере
                 Layout.fillWidth: true
                 Layout.leftMargin: Theme.dp(4)
                 Layout.topMargin: Theme.dp(4)
                 spacing: Theme.dp(6)
 
-                Chip {
+                Button {
                     visible: tab.detailAur
-                    label: "AUR"
+                    variant: "text"
+                    size: "s"
+                    text: "AUR"
                     icon: "open_in_new"
                     onClicked: if (tab.detailTarget) tab.openAur(tab.detailTarget.pkg)
                 }
-                Chip {
+                Button {
                     visible: tab.detailAur
-                    label: "Git"
+                    variant: "text"
+                    size: "s"
+                    text: "Git"
                     icon: "link"
                     onClicked: if (tab.detailTarget) tab.openAurGit(tab.detailTarget.pkg)
                 }
-                Chip {
+                Button {
                     visible: !tab.detailAur
-                    label: "archlinux.org"
+                    variant: "text"
+                    size: "s"
+                    text: "archlinux.org"
                     icon: "open_in_new"
                     onClicked: if (tab.detailTarget) tab.openArch(tab.detailTarget.pkg)
                 }
 
                 Item { Layout.fillWidth: true }
 
-                // «Удалить» → первый клик — подтверждение (красный чип), второй — удаление
-                Rectangle {
-                    id: deleteChip
+                // «Удалить» → первый клик — подтверждение (error-контейнер), второй — удаление
+                Button {
+                    readonly property bool armed: tab.detailTarget !== null
+                        && tab.pending === tab.detailTarget.pkg
 
                     Layout.alignment: Qt.AlignVCenter
-                    readonly property bool danger: tab.detailTarget !== null
-                        && tab.pending === tab.detailTarget.pkg
-                    implicitWidth: deleteRow.implicitWidth + Theme.dp(24)
-                    implicitHeight: Theme.dp(30)
-                    radius: Theme.pill(height)
-                    color: deleteChip.danger ? Theme.errorContainer : "transparent"
-                    border.width: deleteChip.danger ? 0 : 1
-                    border.color: Theme.divider
-
-                    Rectangle { // hover/нажатие — state layer
-                        anchors.fill: parent
-                        radius: parent.radius
-                        color: deleteChip.danger ? Theme.fgErrorContainer : Theme.text
-                        opacity: deleteMouse.containsMouse
-                            ? (deleteMouse.pressed ? Theme.statePressed : Theme.stateHover) : 0
-                    }
-
-                    Row {
-                        id: deleteRow
-                        anchors.centerIn: parent
-                        spacing: Theme.dp(6)
-
-                        Icon {
-                            anchors.verticalCenter: parent.verticalCenter
-                            name: "delete"
-                            size: Theme.dp(16)
-                            color: deleteChip.danger ? Theme.fgErrorContainer : Theme.subtext
-                        }
-                        Text {
-                            anchors.verticalCenter: parent.verticalCenter
-                            text: deleteChip.danger ? "Подтвердить удаление?" : "Удалить"
-                            color: deleteChip.danger ? Theme.fgErrorContainer : Theme.subtext
-                            font.family: Theme.textFont
-                            font.pixelSize: Theme.fs(11)
-                            font.weight: Theme.typeWeight("labelMedium")
-                        }
-                    }
-
-                    MouseArea {
-                        id: deleteMouse
-                        anchors.fill: parent
-                        anchors.margins: -Theme.dp(4)
-                        hoverEnabled: true
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: tab.removeDetail()
-                    }
+                    variant: armed ? "tonal" : "text"
+                    danger: true
+                    size: "s"
+                    icon: "delete"
+                    text: armed ? "Подтвердить удаление?" : "Удалить"
+                    onClicked: tab.removeDetail()
                 }
             }
         }

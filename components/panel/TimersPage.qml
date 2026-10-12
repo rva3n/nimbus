@@ -5,8 +5,8 @@ import "../../core"
 import "../../ui"
 import ".."
 
-// Страница «Таймеры»: переключатель «Таймер / Секундомер», крупное время,
-// пресеты и управление. Всё состояние — в синглтоне Chrono.
+// Страница «Таймеры»: переключатель «Таймер / Секундомер», крупный счётчик в
+// кольце CircularProgress, пресеты и управление. Всё состояние — в синглтоне Chrono.
 ColumnLayout {
     id: page
 
@@ -56,53 +56,44 @@ ColumnLayout {
         visible: page.mode === "timer"
         title: "Таймер"
 
-        Text {
+        Item { // кольцо с крупным счётчиком по центру
             Layout.fillWidth: true
-            Layout.topMargin: Theme.dp(4)
-            horizontalAlignment: Text.AlignHCenter
-            text: page.fmtTimer(Chrono.remaining)
-            color: Theme.text
-            font.family: Theme.textFont
-            font.pixelSize: Theme.typeSize("displayMedium")
-            font.weight: Theme.typeWeight("displayMedium")
-            font.features: ({ "tnum": 1 })  // счетчик не дёргается каждую секунду
-        }
+            Layout.preferredHeight: Theme.dp(196)
 
-        Text {
-            Layout.fillWidth: true
-            visible: Chrono.timerDone
-            horizontalAlignment: Text.AlignHCenter
-            text: "Время вышло"
-            color: Theme.accent
-            font.family: Theme.textFont
-            font.pixelSize: Theme.typeSize("labelLarge")
-            font.weight: Theme.typeWeight("labelLarge")
-        }
+            CircularProgress {
+                id: ring
 
-        Item { // прогресс от общего времени
-            Layout.fillWidth: true
-            Layout.topMargin: Theme.dp(4)
-            implicitHeight: Theme.dp(6)
-
-            Rectangle {
-                anchors.fill: parent
-                radius: height / 2
-                color: Theme.bgTrack
+                anchors.centerIn: parent
+                width: Theme.dp(180)
+                height: width
+                thickness: Theme.dp(8)
+                value: Chrono.totalSeconds > 0
+                       ? Math.max(0, Math.min(1, Chrono.remaining / Chrono.totalSeconds))
+                       : 0
+                color: Chrono.timerDone ? Theme.error : Theme.accent
+                trackColor: Theme.bgTrack
             }
 
-            Rectangle {
-                width: Chrono.totalSeconds > 0
-                     ? parent.width * Math.max(0, Math.min(1, Chrono.remaining / Chrono.totalSeconds))
-                     : 0
-                height: parent.height
-                radius: height / 2
-                color: Theme.accent
+            ColumnLayout {
+                anchors.centerIn: parent
+                spacing: Theme.dp(2)
 
-                Behavior on width {
-                    NumberAnimation {
-                        duration: Theme.ms(300)
-                        easing.type: Easing.OutCubic
-                    }
+                LText {
+                    Layout.alignment: Qt.AlignHCenter
+                    role: "displayMedium"
+                    tabular: true
+                    color: Chrono.timerDone ? Theme.error : Theme.text
+                    text: page.fmtTimer(Chrono.remaining)
+                }
+
+                LText {
+                    Layout.alignment: Qt.AlignHCenter
+                    role: "labelMedium"
+                    color: Theme.subtext
+                    text: Chrono.timerDone ? "Время вышло"
+                        : Chrono.running ? "Идёт"
+                        : Chrono.remaining > 0 ? "Пауза"
+                        : "Готов"
                 }
             }
         }
@@ -126,29 +117,34 @@ ColumnLayout {
 
         RowLayout { // управление
             Layout.alignment: Qt.AlignHCenter
-            Layout.topMargin: Theme.dp(4)
-            spacing: Theme.dp(12)
+            Layout.topMargin: Theme.dp(6)
+            spacing: Theme.dp(8)
 
-            IconButton {
-                icon: "play_arrow"
+            Button {
+                icon: Chrono.running ? "pause" : "play_arrow"
+                text: Chrono.running ? "Пауза" : (Chrono.remaining > 0 ? "Продолжить" : "Старт")
                 variant: "filled"
-                size: "m"
-                disabled: Chrono.running
-                onClicked: Chrono.remaining > 0
-                           ? Chrono.resume()
-                           : Chrono.start(Chrono.totalSeconds > 0 ? Chrono.totalSeconds : 5 * 60)
+                onClicked: {
+                    if (Chrono.running)
+                        Chrono.pause();
+                    else if (Chrono.remaining > 0)
+                        Chrono.resume();
+                    else
+                        Chrono.start(Chrono.totalSeconds > 0 ? Chrono.totalSeconds : 5 * 60);
+                }
             }
-            IconButton {
-                icon: "pause"
-                variant: "filled"
-                size: "m"
-                disabled: !Chrono.running
-                onClicked: Chrono.pause()
-            }
-            IconButton {
-                icon: "restart_alt"
+
+            Button {
+                icon: "add"
+                text: "+1 мин"
                 variant: "tonal"
-                size: "m"
+                onClicked: Chrono.addMin(1)
+            }
+
+            Button {
+                icon: "restart_alt"
+                text: "Сброс"
+                variant: "tonal"
                 disabled: Chrono.totalSeconds === 0 && Chrono.remaining === 0
                 onClicked: Chrono.reset()
             }
@@ -160,39 +156,39 @@ ColumnLayout {
         visible: page.mode === "stopwatch"
         title: "Секундомер"
 
-        Text {
+        LText {
             Layout.fillWidth: true
-            Layout.topMargin: Theme.dp(4)
+            Layout.topMargin: Theme.dp(8)
             horizontalAlignment: Text.AlignHCenter
+            role: "displayMedium"
+            tabular: true
             text: page.fmtSw(Chrono.swElapsed)
-            color: Theme.text
-            font.family: Theme.textFont
-            font.pixelSize: Theme.typeSize("displayMedium")
-            font.weight: Theme.typeWeight("displayMedium")
-            font.features: ({ "tnum": 1 })  // счетчик не дёргается
         }
 
         RowLayout { // управление
             Layout.alignment: Qt.AlignHCenter
-            Layout.topMargin: Theme.dp(6)
-            spacing: Theme.dp(12)
+            Layout.topMargin: Theme.dp(8)
+            spacing: Theme.dp(8)
 
-            IconButton {
+            Button {
                 icon: Chrono.swRunning ? "pause" : "play_arrow"
+                text: Chrono.swRunning ? "Пауза" : "Старт"
                 variant: "filled"
-                size: "m"
                 onClicked: Chrono.swToggle()
             }
-            IconButton {
+
+            Button {
                 icon: "flag"
+                text: "Круг"
                 variant: "tonal"
-                size: "m"
                 disabled: Chrono.swElapsed <= 0
                 onClicked: Chrono.addLap()
             }
-            IconButton {
+
+            Button {
                 icon: "restart_alt"
-                size: "m"
+                text: "Сброс"
+                variant: "tonal"
                 disabled: Chrono.swElapsed <= 0
                 onClicked: Chrono.swReset()
             }
@@ -211,64 +207,47 @@ ColumnLayout {
             Layout.topMargin: Theme.dp(4)
             Layout.preferredHeight: Chrono.laps.length === 0
                                  ? Theme.dp(36)
-                                 : Math.min(Chrono.laps.length, 5) * Theme.dp(52)
+                                 : Math.min(Chrono.laps.length, 5) * Theme.dp(48)
             clip: true
-            spacing: Theme.dp(6)
+            spacing: Theme.dp(4)
             // новые круги — сверху
             model: Chrono.laps.slice().reverse()
 
-            delegate: RowLayout {
+            delegate: RowLayout { // компактная строка круга
                 required property var modelData
                 required property int index
+
                 width: ListView.view.width
-                height: Theme.dp(46)
+                height: Theme.dp(44)
                 spacing: Theme.dp(12)
 
-                Rectangle { // номер круга 40×40
-                    implicitWidth: Theme.dp(40)
-                    implicitHeight: Theme.dp(40)
-                    radius: Theme.radiusPill
-                    color: Theme.bgTrack
-
-                    Text {
-                        anchors.centerIn: parent
-                        text: Chrono.laps.length - index
-                        color: Theme.subtext
-                        font.family: Theme.textFont
-                        font.pixelSize: Theme.typeSize("labelMedium")
-                        font.weight: Theme.typeWeight("labelMedium")
-                    }
-                }
-
-                Text {
-                    Layout.fillWidth: true
-                    text: "Круг " + (Chrono.laps.length - index)
-                    color: Theme.text
-                    elide: Text.ElideRight
-                    font.family: Theme.textFont
-                    font.pixelSize: Theme.typeSize("bodyLarge")
-                    font.weight: Theme.typeWeight("bodyLarge")
-                }
-
-                Text {
-                    text: page.fmtSw(modelData)
+                LText {
+                    Layout.alignment: Qt.AlignVCenter
+                    role: "labelMedium"
+                    tabular: true
                     color: Theme.subtext
-                    font.family: Theme.textFont
-                    font.pixelSize: Theme.typeSize("titleSmall")
-                    font.weight: Theme.typeWeight("titleSmall")
+                    text: "Круг " + (Chrono.laps.length - index)
+                }
+
+                Item { Layout.fillWidth: true }
+
+                LText {
+                    Layout.alignment: Qt.AlignVCenter
+                    role: "titleSmall"
+                    tabular: true
+                    color: Theme.text
+                    text: page.fmtSw(modelData)
                 }
             }
         }
 
-        Text {
+        LText {
             Layout.fillWidth: true
             Layout.bottomMargin: Theme.dp(4)
             visible: Chrono.laps.length === 0
-            text: "Пока пусто — отметьте первый круг"
+            role: "bodySmall"
             color: Theme.subtextDim
-            font.family: Theme.textFont
-            font.pixelSize: Theme.typeSize("bodySmall")
-            font.weight: Theme.typeWeight("bodySmall")
+            text: "Пока пусто — отметьте первый круг"
         }
     }
 }

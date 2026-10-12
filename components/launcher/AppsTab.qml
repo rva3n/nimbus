@@ -4,8 +4,13 @@ import Quickshell
 import "../../core"
 import "../../ui"
 
-// Вкладка «Приложения»: фильтр по name/comment/keywords, закреплённые вперёд,
-// запуск по клику или Enter. Логика перенесена из прежнего Launcher.
+// Вкладка «Приложения» на анатомии Lucid LauncherList: строка 56, ведущий слот
+// 40 (иконка приложения без плитки, символьный фолбэк — на плитке), имя
+// bodyLarge + комментарий bodySmall, справа точка работающего окна; выбранная
+// строка — secondaryContainer с радиусом rad(14), ховер — StateLayer.
+// Калькулятор отвечает на собственной карточке (DockCalc): labelMedium-подпись
+// и крупный result над результатами. Pin/hide — на ховере. Фильтр по
+// name/comment/keywords, закреплённые вперёд, запуск по клику или Enter.
 Item {
     id: root
 
@@ -14,6 +19,14 @@ Item {
     property var shell: null
 
     signal hovered(int index)
+
+    // ── m3-метрики строки (через масштаб Nimbus) ──────────────────────
+    readonly property int rowH: Theme.dp(56)
+    readonly property int calcH: Theme.dp(88)
+    readonly property int leadSlot: Theme.dp(40)
+    readonly property int edge: Theme.dp(16)
+    readonly property int between: Theme.dp(12)
+    readonly property int selRadius: Theme.rad(14)
 
     readonly property var apps: {
         const q = root.query.toLowerCase().trim();
@@ -34,6 +47,34 @@ Item {
         });
         return out.slice(0, 60);
     }
+
+    // ── индикатор работающего окна (Umbriel.windows → app_id) ─────────
+    readonly property var runningSet: {
+        const s = {};
+        for (const w of Umbriel.windows) {
+            if (!w || !w.app_id) continue;
+            s[String(w.app_id).toLowerCase()] = true;
+        }
+        return s;
+    }
+    // первый токен команды записи (basename, как в PackagesTab/Switcher)
+    function _base(a) {
+        let first = "";
+        if (Array.isArray(a.command) && a.command.length > 0) first = String(a.command[0]);
+        else first = String(a.execString || a.command || "").trim().split(/\s+/)[0] || "";
+        return first.split("/").pop();
+    }
+    function appRunning(a) {
+        if (!a) return false;
+        const s = root.runningSet;
+        let id = a.id ? String(a.id) : "";
+        if (id.endsWith(".desktop")) id = id.slice(0, -8);
+        if (id !== "" && s[id.toLowerCase()] === true) return true;
+        if (a.startupClass && s[String(a.startupClass).toLowerCase()] === true) return true;
+        const base = root._base(a);
+        return base !== "" && s[base.toLowerCase()] === true;
+    }
+
     // ── калькулятор: строка «= результат» над приложениями ────────────
     // экранирование одинарных кавычек для sh
     function shq(s) { return "'" + String(s).replace(/'/g, "'\\''") + "'" }
@@ -49,8 +90,8 @@ Item {
     }
     readonly property var calcRow: ({
         calc: true,
-        name: "= " + root.calcResult,
-        comment: "Скопировать результат",
+        name: root.calcResult,
+        comment: "Результат · Enter — скопировать",
         icon: "calculate"
     })
     // модель списка: псевдо-строка калькулятора + приложения
@@ -182,101 +223,199 @@ Item {
             required property var modelData
             required property int index
 
+            readonly property bool isCalc: modelData !== null && modelData.calc === true
+            readonly property bool selected: rowItem.index === root.sel && !rowItem.isCalc
+            readonly property bool app: !rowItem.isCalc
+            readonly property string iconPath: (rowItem.app && modelData.icon) ? Quickshell.iconPath(modelData.icon, true) : ""
+            readonly property bool hasIcon: rowItem.iconPath !== ""
+            readonly property bool running: rowItem.app && root.appRunning(modelData)
+            readonly property bool pinned: rowItem.app && Apps.isPinned(modelData)
+            readonly property bool hidden: rowItem.app && Apps.isHidden(modelData)
+            readonly property bool showActions: rowItem.app && (rowItem.hovering || rowItem.pinned || rowItem.hidden)
+            property bool hovering: false
+
             width: appList.width
-            height: Theme.dp(52)
+            height: rowItem.isCalc ? root.calcH : root.rowH
 
+            HoverHandler {
+                onHoveredChanged: {
+                    rowItem.hovering = hovered;
+                    if (hovered) root.hovered(rowItem.index);
+                }
+            }
+
+            // выбранная строка / ховер-фон
             Rectangle {
-                id: row
-
-                width: parent.width
-                height: Theme.dp(52)
-                radius: Theme.radiusMd
-                color: rowItem.index === root.sel ? Theme.accentContainer
-                                                  : (rowMouse.containsMouse ? Theme.bgHover : "transparent")
+                anchors.fill: parent
+                radius: rowItem.isCalc ? Theme.shapeXl : root.selRadius
+                color: rowItem.selected ? Theme.secondaryContainer
+                     : (rowItem.isCalc && rowItem.index === root.sel ? Theme.secondaryContainer : "transparent")
+                visible: rowItem.selected || (rowItem.isCalc && rowItem.index === root.sel)
 
                 Behavior on color {
-                    ColorAnimation { duration: Theme.durQuick }
+                    ColorAnimation { duration: Theme.durDefaultEffects }
+                }
+            }
+
+            StateLayer {
+                radius: rowItem.isCalc ? Theme.shapeXl : root.selRadius
+                tint: rowItem.selected || (rowItem.isCalc && rowItem.index === root.sel)
+                      ? Theme.fgSecondaryContainer : Theme.text
+                onClicked: root.activate(rowItem.index)
+            }
+
+            // ── карточка калькулятора (DockCalc) ──────────────────────
+            Rectangle {
+                anchors.fill: parent
+                visible: rowItem.isCalc
+                radius: Theme.shapeXl
+                color: rowItem.index === root.sel ? Theme.secondaryContainer : Theme.withBlur(Theme.mHigh)
+
+                Behavior on color {
+                    ColorAnimation { duration: Theme.durDefaultEffects }
                 }
 
-                MouseArea {
-                    id: rowMouse
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    onEntered: root.hovered(rowItem.index)
-                    onClicked: root.activate(rowItem.index)
+                Column {
+                    x: root.edge + Theme.dp(4)
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: parent.width - x - Theme.dp(72)
+                    spacing: Theme.dp(2)
+
+                    LText {
+                        width: parent.width
+                        elide: Text.ElideRight
+                        role: "labelMedium"
+                        text: rowItem.modelData.comment || ""
+                        color: rowItem.index === root.sel
+                               ? Theme.alpha(Theme.fgSecondaryContainer, 0.75) : Theme.subtextDim
+                    }
+                    LText {
+                        width: parent.width
+                        elide: Text.ElideRight
+                        tabular: true
+                        role: "headlineMedium"
+                        text: root.calcResult
+                        color: rowItem.index === root.sel ? Theme.fgSecondaryContainer : Theme.primary
+                    }
                 }
 
-                RowLayout {
-                    anchors.fill: parent
-                    anchors.leftMargin: Theme.dp(8)
-                    anchors.rightMargin: Theme.dp(6)
-                    spacing: Theme.dp(10)
+                Column {
+                    anchors.right: parent.right
+                    anchors.rightMargin: root.edge + Theme.dp(4)
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: Theme.dp(4)
 
-                    // иконка приложения в контейнере с M3-радиусом
+                    Icon {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        name: "content_paste"
+                        size: Theme.dp(20)
+                        color: rowItem.index === root.sel
+                               ? Theme.alpha(Theme.fgSecondaryContainer, 0.85) : Theme.subtextDim
+                    }
+                    LText {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        role: "labelSmall"
+                        text: "Return"
+                        color: rowItem.index === root.sel
+                               ? Theme.alpha(Theme.fgSecondaryContainer, 0.75) : Theme.subtextDim
+                    }
+                }
+            }
+
+            // ── строка приложения ─────────────────────────────────────
+            RowLayout {
+                anchors.fill: parent
+                anchors.leftMargin: root.edge
+                anchors.rightMargin: root.edge
+                spacing: root.between
+                visible: rowItem.app
+
+                // ведущий слот 40: иконка приложения (без плитки) либо
+                // символьный фолбэк на M3-плитке
+                Item {
+                    Layout.alignment: Qt.AlignVCenter
+                    implicitWidth: root.leadSlot
+                    implicitHeight: root.leadSlot
+
                     Rectangle {
-                        Layout.alignment: Qt.AlignVCenter
-                        Layout.preferredWidth: Theme.dp(40)
-                        Layout.preferredHeight: Theme.dp(40)
-                        radius: Theme.radiusMd
-                        color: Theme.bgTrack
-                        AppIcon {
-                            anchors.centerIn: parent
-                            visible: !rowItem.modelData.calc
-                            size: 30
-                            source: rowItem.modelData.icon ? Quickshell.iconPath(rowItem.modelData.icon, true) : ""
-                        }
-                        Icon {
-                            anchors.centerIn: parent
-                            visible: rowItem.modelData.calc === true
-                            name: rowItem.modelData.icon || ""
-                            size: 24
-                            color: rowItem.index === root.sel ? Theme.fgAccentContainer : Theme.text
-                        }
+                        anchors.fill: parent
+                        visible: !rowItem.hasIcon
+                        radius: Math.round(parent.width * 0.35)
+                        color: Theme.withBlur(Theme.bgTile)
                     }
 
-                    ColumnLayout {
+                    AppIcon {
+                        anchors.centerIn: parent
+                        visible: rowItem.hasIcon
+                        source: rowItem.iconPath
+                        size: 35
+                    }
+
+                    Icon {
+                        anchors.centerIn: parent
+                        visible: !rowItem.hasIcon
+                        name: "apps"
+                        size: Theme.dp(22)
+                        color: rowItem.selected ? Theme.fgSecondaryContainer : Theme.subtext
+                    }
+                }
+
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    Layout.alignment: Qt.AlignVCenter
+                    spacing: 0
+
+                    RowLayout {
                         Layout.fillWidth: true
-                        Layout.alignment: Qt.AlignVCenter
-                        spacing: 0
-                        Text {
+                        spacing: Theme.dp(7)
+
+                        LText {
                             Layout.fillWidth: true
                             text: rowItem.modelData.name || ""
-                            color: rowItem.index === root.sel ? Theme.fgAccentContainer : Theme.text
-                            font.family: Theme.textFont
-                            font.pixelSize: Theme.typeSize("bodyLarge")
-                            font.weight: Theme.typeWeight("bodyLarge")
+                            role: "bodyLarge"
+                            color: rowItem.selected ? Theme.fgSecondaryContainer : Theme.text
                             elide: Text.ElideRight
                         }
-                        Text {
-                            Layout.fillWidth: true
-                            visible: text !== ""
-                            text: rowItem.modelData.comment || ""
-                            color: rowItem.index === root.sel ? Theme.fgAccentContainer : Theme.subtext
-                            opacity: rowItem.index === root.sel ? 0.75 : 1
-                            font.family: Theme.textFont
-                            font.pixelSize: Theme.typeSize("bodySmall")
-                            font.weight: Theme.typeWeight("bodySmall")
-                            elide: Text.ElideRight
+
+                        // точка работающего окна — акцентом после имени
+                        Rectangle {
+                            Layout.alignment: Qt.AlignVCenter
+                            visible: rowItem.running
+                            implicitWidth: Theme.dp(6)
+                            implicitHeight: Theme.dp(6)
+                            radius: width / 2
+                            color: rowItem.selected ? Theme.fgSecondaryContainer : Theme.primary
                         }
                     }
 
-                    // закрепить/открепить
-                    IconButton {
-                        Layout.alignment: Qt.AlignVCenter
-                        visible: !rowItem.modelData.calc
-                        icon: "push_pin"
-                        variant: Apps.isPinned(rowItem.modelData) ? "filled" : "standard"
-                        onClicked: Apps.togglePin(rowItem.modelData)
+                    LText {
+                        Layout.fillWidth: true
+                        visible: text !== ""
+                        text: rowItem.modelData.comment || ""
+                        role: "bodySmall"
+                        color: rowItem.selected ? Theme.alpha(Theme.fgSecondaryContainer, 0.8) : Theme.subtext
+                        elide: Text.ElideRight
                     }
+                }
 
-                    // скрыть/показать
-                    IconButton {
-                        Layout.alignment: Qt.AlignVCenter
-                        visible: !rowItem.modelData.calc
-                        icon: Apps.isHidden(rowItem.modelData) ? "visibility_off" : "visibility"
-                        variant: Apps.isHidden(rowItem.modelData) ? "filled" : "standard"
-                        onClicked: Apps.toggleHide(rowItem.modelData)
-                    }
+                // закрепить/открепить — на ховере (и когда активно)
+                IconButton {
+                    Layout.alignment: Qt.AlignVCenter
+                    visible: rowItem.showActions
+                    icon: "push_pin"
+                    size: "s"
+                    variant: rowItem.pinned ? "filled" : "standard"
+                    onClicked: Apps.togglePin(rowItem.modelData)
+                }
+
+                // скрыть/показать — глаз на ховере (и когда скрыто)
+                IconButton {
+                    Layout.alignment: Qt.AlignVCenter
+                    visible: rowItem.showActions
+                    icon: rowItem.hidden ? "visibility_off" : "visibility"
+                    size: "s"
+                    variant: rowItem.hidden ? "filled" : "standard"
+                    onClicked: Apps.toggleHide(rowItem.modelData)
                 }
             }
         }

@@ -236,6 +236,20 @@ Singleton {
         }
     }
 
+    // Реколоринг с текущего источника без смены обоев — для настроек темы
+    // (themeScheme / themeMode / themeContrast), чтобы не дёргать awww/mpvpaper.
+    property bool _themeOnlyPending: false
+    function applyThemeOnly() {
+        if (_themeOnlyPending) return; // слить частые дёргания в одно применение
+        _themeOnlyPending = true;
+        Qt.callLater(() => {
+            _themeOnlyPending = false;
+            const p = currentPath;
+            if (p.length === 0) return;
+            runMatugen(p, currentIsVideo);
+        });
+    }
+
     function saveState() {
         const json = JSON.stringify({ path: w.currentPath, video: w.currentIsVideo, auto: w.autoEnabled, autoMin: w.autoMinutes });
         Quickshell.execDetached(["sh", "-c",

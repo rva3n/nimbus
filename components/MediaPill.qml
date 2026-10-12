@@ -38,8 +38,22 @@ PanelWindow {
                 return p;
         return ps[0];
     }
+    readonly property bool playing: mp.player && mp.player.isPlaying === true
     readonly property bool fullscreenActive: mp.screen
         ? Umbriel.fullscreenFor(mp.screen.name, mp.screen.width, mp.screen.height) : false
+    readonly property int vizBars: 7
+    readonly property string cavaUid: "pill-" + (mp.screen ? mp.screen.name : "s")
+
+    // спрос cava живёт вместе с окном: плеер ушёл / fullscreen — полосы отданы
+    Component.onCompleted: if (mp.visible) Cava.want(mp.cavaUid, mp.vizBars)
+    onVisibleChanged: {
+        if (mp.visible)
+            Cava.want(mp.cavaUid, mp.vizBars);
+        else
+            Cava.drop(mp.cavaUid);
+    }
+    onCavaUidChanged: if (mp.visible) Cava.want(mp.cavaUid, mp.vizBars)
+    Component.onDestruction: Cava.drop(mp.cavaUid)
 
     visible: mp.player !== null && !mp.fullscreenActive
     mask: Region { item: pill; radius: pill.radius }
@@ -121,25 +135,86 @@ PanelWindow {
 
                 Column {
                     anchors.verticalCenter: parent.verticalCenter
-                    width: parent.width - Theme.dp(26) - Theme.dp(24) - Theme.dp(8) * 2
+                    width: parent.width - Theme.dp(26) - Theme.dp(24) - Theme.dp(33) - Theme.dp(8) * 3
                     spacing: 0
 
-                    LText {
+                    Marquee {
                         width: parent.width
                         role: "labelLarge"
                         color: Theme.text
                         text: mp.player ? (mp.player.trackTitle || "") : ""
-                        elide: Text.ElideRight
                     }
 
-                    LText {
+                    Marquee {
                         width: parent.width
                         visible: text !== ""
                         role: "labelSmall"
                         color: Theme.subtext
                         text: mp.player ? (mp.player.trackArtist || "") : ""
-                        elide: Text.ElideRight
                     }
+                }
+
+                // мини-визуализатор cava: столбики снизу, при паузе прячется
+                Item {
+                    id: viz
+
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: Theme.dp(33)
+                    height: Theme.dp(16)
+
+                    function barColor(level) {
+                        // тишина — акцент-контейнер, бит — акцент
+                        var f = 0.62;
+                        var k = f + (1 - f) * Math.min(1, level * 1.25);
+                        return Qt.rgba(
+                            Theme.accentContainer.r * (1 - k) + Theme.accent.r * k,
+                            Theme.accentContainer.g * (1 - k) + Theme.accent.g * k,
+                            Theme.accentContainer.b * (1 - k) + Theme.accent.b * k, 1);
+                    }
+
+                    readonly property real slot: (viz.width - (mp.vizBars - 1) * Theme.dp(2)) / mp.vizBars
+
+                    Row {
+                        anchors.fill: parent
+                        spacing: Theme.dp(2)
+
+                        Repeater {
+                            model: mp.vizBars
+
+                            Rectangle {
+                                required property int index
+
+                                readonly property real level: (Cava.levels[index] !== undefined) ? Cava.levels[index] : 0
+
+                                width: viz.slot
+                                height: Math.min(viz.height, Math.max(width, level * viz.height))
+                                anchors.bottom: parent.bottom
+                                radius: width / 2
+                                color: viz.barColor(level)
+
+                                Behavior on height {
+                                    NumberAnimation {
+                                        duration: Theme.ms(70)
+                                        easing.type: Easing.OutCubic
+                                    }
+
+                                }
+
+                            }
+
+                        }
+
+                    }
+
+                    opacity: mp.playing && Cava.running ? 1 : 0
+                    Behavior on opacity {
+                        NumberAnimation {
+                            duration: Theme.durFastEffects
+                            easing.type: Easing.OutCubic
+                        }
+
+                    }
+
                 }
 
                 // play/pause: залитая кнопка dp(24), круг → squircle при нажатии

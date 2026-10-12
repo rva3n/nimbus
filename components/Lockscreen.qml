@@ -18,13 +18,28 @@ WlSessionLock {
     property var pam: null
     property string errorText: ""
     property string typed: ""
+    // бусины PasswordEcho: показ букв и «набухание» пока PAM думает
+    property bool reveal: false
+    property bool busy: false
 
     function submit() {
-        if (lock.typed.length > 0 && lock.pam)
+        if (lock.typed.length > 0 && lock.pam) {
+            lock.busy = true;
+            busyGuard.restart();
             lock.pam.respond(lock.typed);
+        }
     }
 
     onLockedChanged: if (lock.locked) { lock.typed = ""; }
+
+    // страховка: respond() вне активной pam-сессии не даст completed — бусины
+    // не должны «дышать» вечно. Логика PAM живёт в shell.qml, это не трогаем.
+    Timer {
+        id: busyGuard
+
+        interval: 8000
+        onTriggered: lock.busy = false
+    }
 
     // обои как фон — только статичные изображения
     readonly property bool wallpaperBg: Wallpaper.currentPath !== "" && !Wallpaper.currentIsVideo
@@ -287,25 +302,108 @@ WlSessionLock {
                         color: Theme.text
                     }
 
-                    // поле пароля
-                    TextField {
-                        id: pwField
+                    // поле пароля: ввод живёт в pwField (на нём focusK и
+                    // фокус-поведение), а рисует набранное ui/PasswordEcho —
+                    // Lucid-«бусины» поверх: фигуры, тающие в точки
+                    Item {
+                        id: fieldBox
+
                         Layout.fillWidth: true
                         Layout.topMargin: Theme.dp(8)
-                        placeholder: "Пароль"
-                        echoMode: TextInput.Password
-                        onTextChanged: lock.typed = pwField.text
-                        onAccepted: lock.submit()
-                        Component.onCompleted: forceActiveFocus()
+                        implicitHeight: pwField.implicitHeight
 
-                        // фокус и сброс поля при повторной блокировке
-                        Connections {
-                            target: lock
-                            function onLockedChanged() {
-                                if (lock.locked) {
-                                    pwField.text = "";
+                        transform: Translate { id: shift }
+
+                        SequentialAnimation { // Lucid: отказ — поле «не пускает»
+                            id: shake
+
+                            NumberAnimation { target: shift; property: "x"; to: -9; duration: Theme.ms(45); easing.type: Easing.OutCubic }
+                            NumberAnimation { target: shift; property: "x"; to: 9; duration: Theme.ms(90); easing.type: Easing.InOutCubic }
+                            NumberAnimation { target: shift; property: "x"; to: -5; duration: Theme.ms(90); easing.type: Easing.InOutCubic }
+                            NumberAnimation { target: shift; property: "x"; to: 5; duration: Theme.ms(90); easing.type: Easing.InOutCubic }
+                            NumberAnimation { target: shift; property: "x"; to: 0; duration: Theme.ms(60); easing.type: Easing.OutCubic }
+                        }
+
+                        TextField {
+                            id: pwField
+
+                            anchors.fill: parent
+                            placeholder: "Пароль"
+                            echoMode: TextInput.Password
+                            onTextChanged: lock.typed = pwField.text
+                            onAccepted: lock.submit()
+
+                            // сами символы рисует PasswordEcho: в поле — невидимые
+                            // пробелы, чтобы бусины не дублировались с точками
+                            Component.onCompleted: {
+                                pwField.input.passwordCharacter = " ";
+                                pwField.input.color = "transparent";
+                                pwField.input.selectionColor = "transparent";
+                                pwField.input.selectedTextColor = "transparent";
+                                pwField.forceActiveFocus();
+                            }
+
+                            // глаз Lucid: показать набранное буквами
+                            trailing: IconButton {
+                                icon: lock.reveal ? "visibility_off" : "visibility"
+                                size: "s"
+                                tooltip: lock.reveal ? "Скрыть" : "Показать"
+                                visible: pwField.text !== ""
+                                onClicked: {
+                                    lock.reveal = !lock.reveal;
                                     pwField.forceActiveFocus();
                                 }
+                            }
+
+                            // фокус и сброс поля при повторной блокировке
+                            Connections {
+                                target: lock
+
+                                function onLockedChanged() {
+                                    lock.busy = false;
+                                    busyGuard.stop();
+                                    if (lock.locked) {
+                                        lock.reveal = false;
+                                        pwField.text = "";
+                                        pwField.forceActiveFocus();
+                                    }
+                                }
+                            }
+                        }
+
+                        PasswordEcho {
+                            anchors.left: parent.left
+                            anchors.leftMargin: Theme.dp(16)
+                            anchors.right: parent.right
+                            anchors.rightMargin: Theme.dp(46)
+                            anchors.verticalCenter: parent.verticalCenter
+                            height: Theme.dp(30)
+                            text: pwField.text
+                            reveal: lock.reveal
+                            busy: lock.busy
+                            selectionStart: pwField.input.selectionStart
+                            selectionEnd: pwField.input.selectionEnd
+                            // отказ — бусины краснеют, успех — зеленеют у порога
+                            color: lock.errorText !== "" ? Theme.error : Theme.text
+                            edge: pwField.containerColor
+                            font.family: Theme.fontFamily
+                            font.pixelSize: Theme.typeSize("bodyLarge")
+                            font.variableAxes: Theme.axes(Theme.typeSize("bodyLarge"), 420, 0)
+                        }
+                    }
+
+                    // отказ PAM: краснеем, трясём, чистим, возвращаем фокус
+                    Connections {
+                        target: lock
+
+                        function onErrorTextChanged() {
+                            if (lock.errorText !== "") {
+                                lock.busy = false;
+                                busyGuard.stop();
+                                lock.reveal = false;
+                                pwField.text = "";
+                                shake.restart();
+                                pwField.forceActiveFocus();
                             }
                         }
                     }

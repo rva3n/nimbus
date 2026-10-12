@@ -36,7 +36,30 @@ Singleton {
         weatherLat: 0,
         weatherLon: 0,
         weatherPlace: "",
-        dnd: false
+        dnd: false,
+        themeScheme: "auto",
+        themeContrast: 0,
+        themeMode: "auto",
+        islandOrder: ["kb", "weather", "ws", "clock", "tray"],
+        islandAllScreens: false,
+        barStyle: "island",
+        mediaStyle: "cover",
+        soundsEnabled: true,
+        nightLightEnabled: false,
+        nightLightTemp: 4500,
+        nightLightMode: "manual",
+        nightLightFrom: "22:00",
+        nightLightTo: "07:00",
+        dndScheduleEnabled: false,
+        dndFrom: "23:00",
+        dndTo: "07:00",
+        goPlan: "go",
+        goChipMode: "auto",
+        goWarnPct: 80,
+        tilesOrder: "",
+        tilesHidden: "",
+        widgetsEnabled: false,
+        widgetsLayout: {}
     })
 
     Process {
@@ -77,6 +100,29 @@ Singleton {
             property real weatherLon: 0
             property string weatherPlace: ""
             property bool dnd: false
+            property string themeScheme: "auto"
+            property real themeContrast: 0
+            property string themeMode: "auto"
+            property var islandOrder: ["kb", "weather", "ws", "clock", "tray"]
+            property bool islandAllScreens: false
+            property string barStyle: "island"
+            property string mediaStyle: "cover"
+            property bool soundsEnabled: true
+            property bool nightLightEnabled: false
+            property int nightLightTemp: 4500
+            property string nightLightMode: "manual"
+            property string nightLightFrom: "22:00"
+            property string nightLightTo: "07:00"
+            property bool dndScheduleEnabled: false
+            property string dndFrom: "23:00"
+            property string dndTo: "07:00"
+            property string goPlan: "go"
+            property string goChipMode: "auto"
+            property int goWarnPct: 80
+            property string tilesOrder: ""
+            property string tilesHidden: ""
+            property bool widgetsEnabled: false
+            property var widgetsLayout: ({})
         }
     }
 
@@ -103,6 +149,35 @@ Singleton {
     readonly property real weatherLon: a.weatherLon
     readonly property string weatherPlace: a.weatherPlace
     readonly property bool dnd: a.dnd
+    readonly property string themeScheme: a.themeScheme
+    readonly property real themeContrast: a.themeContrast
+    readonly property string themeMode: a.themeMode
+    readonly property var islandOrder: a.islandOrder
+    readonly property bool islandAllScreens: a.islandAllScreens
+    readonly property string barStyle: a.barStyle
+    readonly property string mediaStyle: a.mediaStyle
+    readonly property bool soundsEnabled: a.soundsEnabled
+    readonly property bool nightLightEnabled: a.nightLightEnabled
+    readonly property int nightLightTemp: a.nightLightTemp
+    readonly property string nightLightMode: a.nightLightMode
+    readonly property string nightLightFrom: a.nightLightFrom
+    readonly property string nightLightTo: a.nightLightTo
+    readonly property bool dndScheduleEnabled: a.dndScheduleEnabled
+    readonly property string dndFrom: a.dndFrom
+    readonly property string dndTo: a.dndTo
+    readonly property string goPlan: a.goPlan
+    readonly property string goChipMode: a.goChipMode
+    readonly property int goWarnPct: a.goWarnPct
+    readonly property string tilesOrder: a.tilesOrder
+    readonly property string tilesHidden: a.tilesHidden
+    readonly property bool widgetsEnabled: a.widgetsEnabled
+    readonly property var widgetsLayout: a.widgetsLayout
+
+    // Инстанцирование ленивых синглтонов: без ссылки на них QML их не создаёт,
+    // и NightLight/Sounds никогда бы не отреагировали на эти префы.
+    // (Сами они читают Prefs — зацикливания нет: это простые биндинги.)
+    readonly property bool soundsHook: Sounds.enabled
+    readonly property bool nightLightHook: NightLight.active
 
     // Добить ключи, которых нет в существующем файле: JsonAdapter оставляет
     // их неопределёнными — иначе ловим "Unable to assign [undefined] to bool".

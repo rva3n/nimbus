@@ -12,6 +12,8 @@ import "../ui"
 Row {
     id: wsRow
     property string output: ""
+    // Тултип-хост (Island/IdlePill): showTip(item, text)/hideTip(item)
+    property var tipHost: null
     spacing: Theme.dp(4)
 
     readonly property var items: Umbriel.workspacesFor(output)
@@ -115,6 +117,9 @@ Row {
                     id: area
                     radius: bg.radius
                     tint: wsPill.active ? Theme.fgAccentContainer : Theme.text
+                    onEntered: if (wsRow.tipHost && wsPill.wsData)
+                        wsRow.tipHost.showTip(area, "Рабочий стол " + wsPill.wsData.index)
+                    onExited: if (wsRow.tipHost) wsRow.tipHost.hideTip(area)
                     onClicked: if (wsPill.wsData)
                         Quickshell.execDetached(["umbriel", "msg", "workspace-switch:" + wsPill.wsData.index])
                 }

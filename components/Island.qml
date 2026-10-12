@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 import QtQuick.Effects
+import QtQuick.Shapes
 import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
@@ -52,6 +53,14 @@ PanelWindow {
     // Максимальная высота панели: 75% экрана, чтобы высокие страницы (обои,
     // звук) помещались целиком, а не обрезались прежними жёсткими 652px.
     readonly property real panelMax: Math.max(360, Math.round((win.screen ? win.screen.height : 1080) * 0.75))
+
+    // ── Ключи редизайна острова: barStyle / islandOrder / islandAllScreens ──
+    // Теперь живут в Prefs (JsonAdapter); чтение защитное: не «notch» → island,
+    // не массив → дефолтный порядок, не true → false.
+    readonly property string barStyle: Prefs.barStyle === "notch" ? "notch" : "island"
+    readonly property bool notch: win.barStyle === "notch"
+    readonly property var islandOrder: Prefs.islandOrder
+    readonly property bool islandAllScreens: Prefs.islandAllScreens === true
 
     property date now: new Date()
     Timer { interval: 1000; running: true; repeat: true; onTriggered: win.now = new Date() }
@@ -121,6 +130,15 @@ PanelWindow {
         return u;
     }
 
+    // ── Тултип чипов островка (ui/Tooltip) ─────────────────────────────
+    // Живёт прямо в окне: окно прозрачное ниже капсулы, тултип рисуем в
+    // свободной зоне; input ограничен маской капсулы — тултип не ловит клики.
+    // Объявлен ДО shadowHost: IdlePill связывается с ним по id при создании.
+    Tooltip {
+        id: chipTip
+        z: 50
+    }
+
     // Настоящая тень: обёртка с запасом, layer.effect рисует капсулу
     // с гауссовой тенью (в Umbriel теней слоёв нет — делаем сами).
     Item {
@@ -130,7 +148,8 @@ PanelWindow {
         readonly property int padBottom: Theme.dp(24)
 
         x: Math.round((parent.width - width) / 2)
-        y: Theme.dp(6) - padTop
+        // notch: капсула прижата к верхней кромке (y=0)
+        y: (win.notch ? 0 : Theme.dp(6)) - padTop
         width: pill.width + padH * 2
         height: pill.height + padTop + padBottom
         layer.enabled: true
@@ -153,13 +172,18 @@ PanelWindow {
             height: win.big ? Math.min(contentCol.implicitHeight + Theme.dp(32), win.panelMax) : Math.max(Theme.height, idlePill.implicitHeight + Theme.dp(6))
             // idle — Lucid-пилюля (radiusPill), панель — крупный скруглённый
             // контейнер (radiusXl / shapeXlInc для лончера). Без обводки.
+            // notch: капсула прижата к кромке — верхние углы прямые, низ полный
             radius: win.big ? (win.mode === "launcher" ? Theme.shapeXlInc : Theme.radiusXl) : height / 2
+            topLeftRadius: win.notch ? 0 : radius
+            topRightRadius: win.notch ? 0 : radius
             color: win.big ? Theme.withBlur(Theme.mContainer) : Theme.bg
             clip: true
             // OPEN — emphasizedDecel @ durEnter, CLOSE — emphasizedAccel @ durExit
             Behavior on width { NumberAnimation { duration: win.big ? Theme.durEnter : Theme.durExit; easing.type: Easing.Bezier; easing.bezierCurve: win.big ? Theme.easeEmphasizedDecel : Theme.easeEmphasizedAccel } }
             Behavior on height { NumberAnimation { duration: win.big ? Theme.durEnter : Theme.durExit; easing.type: Easing.Bezier; easing.bezierCurve: win.big ? Theme.easeEmphasizedDecel : Theme.easeEmphasizedAccel } }
             Behavior on radius { NumberAnimation { duration: win.big ? Theme.durEnter : Theme.durExit; easing.type: Easing.Bezier; easing.bezierCurve: win.big ? Theme.easeEmphasizedDecel : Theme.easeEmphasizedAccel } }
+            Behavior on topLeftRadius { NumberAnimation { duration: win.big ? Theme.durEnter : Theme.durExit; easing.type: Easing.Bezier; easing.bezierCurve: win.big ? Theme.easeEmphasizedDecel : Theme.easeEmphasizedAccel } }
+            Behavior on topRightRadius { NumberAnimation { duration: win.big ? Theme.durEnter : Theme.durExit; easing.type: Easing.Bezier; easing.bezierCurve: win.big ? Theme.easeEmphasizedDecel : Theme.easeEmphasizedAccel } }
             Behavior on color { ColorAnimation { duration: win.big ? Theme.durEnter : Theme.durExit } }
 
             // ── IDLE / OSD / NOTIF ─────────────────────────────────────
@@ -182,6 +206,8 @@ PanelWindow {
                     now: win.now
                     output: win.screen.name
                     shell: win.shell
+                    orderProp: win.islandOrder
+                    tipHost: chipTip
                 }
             }
 
@@ -299,6 +325,104 @@ PanelWindow {
                 Launcher { active: win.mode === "launcher"; shell: win.shell; tab: win.shell ? win.shell.launcherTab : "apps" }
             }
         }
+            }
+        }
+    }
+
+    // ── Notch «плавники» (порт lucidbar/BarFlare.qml) ──────────────────
+    // Четверть-круги цвета фона по бокам капсулы, смыкающиеся с верхней
+    // кромкой экрана: слева — прямой, справа — зеркальный (transform -1).
+    Item {
+        id: flares
+        visible: win.notch && !win.big
+
+        x: shadowHost.x + pill.x
+        y: shadowHost.y + pill.y
+
+
+        readonly property real bite: 0.5
+        readonly property real finSize: Theme.dp(14)
+
+        // левый (прямой)
+        Item {
+            x: -flares.finSize + flares.bite
+            y: 0
+            width: flares.finSize
+            height: flares.finSize
+
+            Shape {
+                anchors.fill: parent
+                preferredRendererType: Shape.CurveRenderer
+                antialiasing: true
+
+                ShapePath {
+                    strokeWidth: 0
+                    fillColor: Theme.bg
+                    startX: flares.finSize
+                    startY: flares.finSize
+
+                    PathArc {
+                        x: 0
+                        y: 0
+                        radiusX: flares.finSize
+                        radiusY: flares.finSize
+                        direction: PathArc.Counterclockwise
+                    }
+
+                    PathLine {
+                        x: flares.finSize
+                        y: 0
+                    }
+
+                    PathLine {
+                        x: flares.finSize
+                        y: flares.finSize
+                    }
+                }
+            }
+        }
+
+        // правый (зеркальный, как BarFlare с mirrored: true)
+        Item {
+            x: pill.width - flares.bite
+            y: 0
+            width: flares.finSize
+            height: flares.finSize
+
+            Shape {
+                anchors.fill: parent
+                preferredRendererType: Shape.CurveRenderer
+                antialiasing: true
+
+                transform: Scale {
+                    xScale: -1
+                    origin.x: flares.finSize / 2
+                }
+
+                ShapePath {
+                    strokeWidth: 0
+                    fillColor: Theme.bg
+                    startX: flares.finSize
+                    startY: flares.finSize
+
+                    PathArc {
+                        x: 0
+                        y: 0
+                        radiusX: flares.finSize
+                        radiusY: flares.finSize
+                        direction: PathArc.Counterclockwise
+                    }
+
+                    PathLine {
+                        x: flares.finSize
+                        y: 0
+                    }
+
+                    PathLine {
+                        x: flares.finSize
+                        y: flares.finSize
+                    }
+                }
             }
         }
     }

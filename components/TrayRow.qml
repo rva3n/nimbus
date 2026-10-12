@@ -14,6 +14,8 @@ Item {
     id: trayRow
 
     property var shell: null
+    // Тултип-хост (Island/IdlePill): showTip(item, text)/hideTip(item)
+    property var tipHost: null
 
     // Пассивные (status === Status.Passive) не показываем — это фоновые SNI.
     readonly property var allItems: SystemTray.items ? SystemTray.items.values : []
@@ -53,9 +55,21 @@ Item {
         visible: trayRow.items.length > 0
         implicitWidth: capsuleRow.implicitWidth + Theme.dp(16)
         implicitHeight: Theme.dp(24)
+        // hover-grow: капсула слегка вырастает, иконки по центру не двигаются
+        property real grow: capsuleArea.containsMouse ? Theme.dp(4) : 0
+        width: implicitWidth + grow
+        height: implicitHeight + grow
         radius: Theme.radiusPill
         color: Theme.bgTile
         scale: capsuleArea.pressed ? 0.97 : 1
+
+        Behavior on grow {
+            NumberAnimation {
+                duration: Theme.durFastEffects
+                easing.type: Easing.Bezier
+                easing.bezierCurve: Theme.curveFastSpatial
+            }
+        }
 
         Behavior on scale {
             NumberAnimation {
@@ -69,6 +83,9 @@ Item {
             id: capsuleArea
             radius: parent.radius
             acceptedButtons: Qt.LeftButton | Qt.MiddleButton | Qt.RightButton
+            onEntered: if (trayRow.tipHost)
+                trayRow.tipHost.showTip(capsuleArea, "Системный трей — клик, чтобы открыть")
+            onExited: if (trayRow.tipHost) trayRow.tipHost.hideTip(capsuleArea)
             onClicked: if (trayRow.shell) trayRow.shell.toggleTray()
         }
 

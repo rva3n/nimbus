@@ -84,7 +84,7 @@ ShellRoot {
         id: notifServer
         keepOnReload: true
         onNotification: (n) => {
-            const snap = { appName: n.appName, summary: n.summary, body: n.body, appIcon: n.appIcon, raw: n };
+            const snap = { appName: n.appName, summary: n.summary, body: n.body, appIcon: n.appIcon, ts: Date.now(), raw: n };
             Notif.add(snap);
             if (!Notif.dnd && root.view === "idle" && !root.locked) Notif.toast(snap);
         }

@@ -34,6 +34,24 @@ Rectangle {
         ? (mc.seeking ? mc.dragFrac : Math.max(0, Math.min(1, mc.pos / mc.length)))
         : 0
 
+    readonly property bool playing: mc.player && mc.player.isPlaying === true
+    // стиль обложки: "cover" (по умолчанию) | "disc". Защита: если ключ
+    // mediaStyle ещё не добавлен в prefs — ведём себя как "cover"
+    readonly property bool discMode: mc.styleKey === "disc"
+    readonly property string styleKey: {
+        var v;
+        try {
+            v = Prefs.mediaStyle;
+        } catch (e) {
+            v = undefined;
+        }
+        return v === "disc" ? "disc" : "cover";
+    }
+    readonly property int vizBars: Math.max(8, Math.min(40, Math.floor((mc.vizWidth + Theme.dp(3)) / Theme.dp(14))))
+    // ширина строки визуализатора = ширина карточки минус поля
+    readonly property real vizWidth: Math.max(0, mc.width - Theme.dp(16))
+    readonly property string cavaUid: "card"
+
     implicitHeight: main.implicitHeight + Theme.dp(16)
     radius: Theme.shapeLgInc
     // глубина стекла следует за ползунком «Размытие фона» (Theme.glass)
@@ -57,6 +75,19 @@ Rectangle {
     // смена плеера — сброс позиции на актуальную
     onPlayerChanged: mc.pos = mc.num(mc.player ? mc.player.position : 0)
 
+    // спрос cava живёт вместе с карточкой: видна и есть плеер — полосы заняты
+    Component.onCompleted: mc.syncCava()
+    onVisibleChanged: mc.syncCava()
+    Component.onDestruction: Cava.drop(mc.cavaUid)
+    function syncCava() {
+        if (mc.visible && mc.player !== null)
+            Cava.want(mc.cavaUid, mc.vizBars);
+        else
+            Cava.drop(mc.cavaUid);
+    }
+    onVizBarsChanged: mc.syncCava()
+    onPlayingChanged: mc.syncCava()
+
     ColumnLayout {
         id: main
         anchors.left: parent.left
@@ -69,11 +100,15 @@ Rectangle {
             Layout.fillWidth: true
             spacing: Theme.dp(10)
 
-            Rectangle { // обложка dp(64) shapeLg
+            Rectangle { // обложка dp(64) shapeLg; в disc-режиме — крутящаяся пластинка
+                id: coverBox
+
                 Layout.alignment: Qt.AlignVCenter
                 Layout.preferredWidth: Theme.dp(64)
                 Layout.preferredHeight: Theme.dp(64)
-                radius: Theme.shapeLg
+                // «turning disc» из Lucid: круглая обложка, крутится пока играет,
+                // пауза — стоп (угол замирает и продолжается с него же)
+                radius: mc.discMode ? width / 2 : Theme.shapeLg
                 color: Theme.bgTrack
                 clip: true
 
@@ -91,6 +126,40 @@ Rectangle {
                     size: Theme.dp(26)
                     color: Theme.subtext
                 }
+
+                Rectangle { // «этикетка» пластинки в disc-режиме: затемнение центра
+                    anchors.centerIn: parent
+                    width: Theme.dp(20)
+                    height: width
+                    radius: width / 2
+                    color: Theme.a(Theme.scrim, 0.32)
+                    visible: mc.discMode
+
+                    Rectangle { // отверстие шпинделя
+                        anchors.centerIn: parent
+                        width: Theme.dp(4)
+                        height: width
+                        radius: width / 2
+                        color: Theme.a(Theme.scrim, 0.5)
+                    }
+                }
+
+                Behavior on radius {
+                    NumberAnimation {
+                        duration: Theme.durFastSpatial
+                        easing.type: Easing.Bezier
+                        easing.bezierCurve: Theme.curveDefaultSpatial
+                    }
+
+                }
+
+                RotationAnimation on rotation {
+                    from: 0
+                    to: 360
+                    duration: 24000
+                    loops: Animation.Infinite
+                    running: mc.discMode && mc.playing
+                }
             }
 
             ColumnLayout { // название и исполнитель
@@ -98,20 +167,19 @@ Rectangle {
                 Layout.alignment: Qt.AlignVCenter
                 spacing: 0
 
-                LText {
+                Marquee {
                     Layout.fillWidth: true
                     role: "titleSmall"
                     color: Theme.text
                     text: mc.player ? (mc.player.trackTitle || "") : ""
-                    elide: Text.ElideRight
                 }
 
-                LText {
+                Marquee {
                     Layout.fillWidth: true
+                    visible: text !== ""
                     role: "bodySmall"
                     color: Theme.subtext
                     text: mc.player ? (mc.player.trackArtist || "") : ""
-                    elide: Text.ElideRight
                 }
             }
 
@@ -197,6 +265,70 @@ Rectangle {
                 color: Theme.subtext
                 text: mc.fmtTime(mc.length)
             }
+        }
+
+        // полоса визуализатора под seek-строкой: высокие скруглённые бары cava
+        Item {
+            id: viz
+
+            function barColor(level) {
+                // тишина — акцент-контейнер, бит — акцент
+                var f = 0.62;
+                var k = f + (1 - f) * Math.min(1, level * 1.25);
+                return Qt.rgba(
+                    Theme.accentContainer.r * (1 - k) + Theme.accent.r * k,
+                    Theme.accentContainer.g * (1 - k) + Theme.accent.g * k,
+                    Theme.accentContainer.b * (1 - k) + Theme.accent.b * k, 1);
+            }
+
+            Layout.fillWidth: true
+            Layout.topMargin: Theme.dp(4)
+            Layout.preferredHeight: Theme.dp(28)
+            visible: mc.player !== null
+
+            readonly property real slot: (viz.width - (mc.vizBars - 1) * Theme.dp(3)) / mc.vizBars
+
+            Row {
+                anchors.fill: parent
+                spacing: Theme.dp(3)
+
+                Repeater {
+                    model: mc.vizBars
+
+                    Rectangle {
+                        required property int index
+
+                        readonly property real level: (Cava.levels[index] !== undefined) ? Cava.levels[index] : 0
+
+                        width: viz.slot
+                        height: Math.min(viz.height, Math.max(width, level * viz.height))
+                        anchors.bottom: parent.bottom
+                        radius: width / 2
+                        color: viz.barColor(level)
+
+                        Behavior on height {
+                            NumberAnimation {
+                                duration: Theme.ms(70)
+                                easing.type: Easing.OutCubic
+                            }
+
+                        }
+
+                    }
+
+                }
+
+            }
+
+            opacity: mc.playing ? 1 : 0.3
+            Behavior on opacity {
+                NumberAnimation {
+                    duration: Theme.durFastEffects
+                    easing.type: Easing.OutCubic
+                }
+
+            }
+
         }
     }
 

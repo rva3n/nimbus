@@ -5,14 +5,19 @@ import "../ui"
 
 // Содержимое острова для idle/osd/notif. Внешнюю капсулу (фон Theme.bg,
 // рамку, радиус) рисует сам Island, поэтому своего общего фона здесь нет:
-// idle — один ряд [раскладка][погода][воркспейсы][часы],
-// osd/notif — строки. API: mode/now/output/shell.
+// idle — ряд чипов [раскладка][погода][воркспейсы][часы][трей] в порядке
+// Prefs-ключа islandOrder (нет ключа/не массив — дефолтный порядок),
+// osd/notif — строки. API: mode/now/output/shell/tipHost.
 Item {
     id: holder
     property string mode: "idle"
     property date now: new Date()
     property string output: ""
     property var shell: null
+    // Тултип-хост (Island): объект с showTip(hoverItem, text)/hideTip(hoverItem)
+    property var tipHost: null
+    // Порядок чипов (islandOrder), приходит из Island; null/не массив → дефолт
+    property var orderProp: null
 
     implicitWidth: mode === "notif" ? notifRow.implicitWidth
                  : mode === "osd" ? osdRow.implicitWidth
@@ -22,20 +27,39 @@ Item {
                   : mode === "osd" ? Theme.dp(34)
                   : Theme.dp(28)
 
-    // ── idle: раскладка + погода + воркспейсы + часы + трей ────────────
+    // ── порядок чипов: islandOrder (id: kb/weather/ws/clock/tray) ──────
+    // ВАЖНО: JsonAdapter отдаёт QVariantList, а не JS-Array — Array.isArray
+    // для него false, поэтому копируем по length и фильтруем по типу.
+    readonly property var defaultOrder: ["kb", "weather", "ws", "clock", "tray"]
+    readonly property var orderRaw: holder.orderProp
+    readonly property var order: {
+        const allowed = holder.defaultOrder;
+        const raw = holder.orderRaw;
+        const out = [];
+        if (raw && typeof raw.length === "number") {
+            for (let i = 0; i < raw.length; i++) {
+                const id = raw[i];
+                if (typeof id === "string" && allowed.includes(id) && !out.includes(id))
+                    out.push(id);
+            }
+        }
+        for (const id of allowed)
+            if (!out.includes(id)) out.push(id);
+        return out;
+    }
+
+    function tip(item, text) { if (holder.tipHost) holder.tipHost.showTip(item, text); }
+    function untip(item)     { if (holder.tipHost) holder.tipHost.hideTip(item); }
+
+    // ── idle: чипы в порядке islandOrder ───────────────────────────────
     // Чипы — Lucid-пилюли: без обводок, заливка ролью (bgTile/accent),
     // взаимодействие — StateLayer. Высота 24 внутри 28-полосы idle.
-    Row {
-        id: idleRow
-        visible: holder.mode === "idle"
-        anchors.centerIn: parent
-        spacing: Theme.dp(6)
-
-        // раскладка клавиатуры: компактный кликабельный чип (bgTile)
+    // Ховер: плитка слегка вырастает (шириной 4dp), сам Item не меняется —
+    // layout ряда не дрожит. Нажатие — прежнее сжатие 0.96.
+    Component { id: kbChip
         Item {
             id: layoutChip
             visible: Umbriel.keyboardLayout !== "" && Prefs.islandLayout
-            anchors.verticalCenter: parent.verticalCenter
             implicitWidth: layoutText.implicitWidth + Theme.dp(18)
             implicitHeight: Theme.dp(24)
             scale: layoutArea.pressed ? 0.96 : 1
@@ -48,13 +72,28 @@ Item {
                 }
             }
 
+            // растёт только фон, контент стоит на месте
+            property real grow: layoutArea.containsMouse ? Theme.dp(4) : 0
+            Behavior on grow {
+                NumberAnimation {
+                    duration: Theme.durFastEffects
+                    easing.type: Easing.Bezier
+                    easing.bezierCurve: Theme.curveFastSpatial
+                }
+            }
+
             Rectangle {
-                anchors.fill: parent
+                x: -layoutChip.grow / 2
+                y: -layoutChip.grow / 2
+                width: parent.width + layoutChip.grow
+                height: parent.height + layoutChip.grow
                 radius: Theme.radiusPill
                 color: Theme.bgTile
                 StateLayer {
                     id: layoutArea
                     radius: parent.radius
+                    onEntered: holder.tip(layoutArea, "Раскладка клавиатуры — клик, чтобы сменить")
+                    onExited: holder.untip(layoutArea)
                     onClicked: Quickshell.execDetached(["umbriel", "msg", "keyboard-layout-next"])
                 }
             }
@@ -68,12 +107,12 @@ Item {
                 font.capitalization: Font.AllUppercase
             }
         }
+    }
 
-        // погода: чип icon + temp (bgTile), клик → вкладка «погода»
+    Component { id: weatherChip
         Item {
-            id: weatherChip
+            id: weatherOuter
             visible: Weather.hasData && isFinite(Weather.temp) && Prefs.islandWeather
-            anchors.verticalCenter: parent.verticalCenter
             implicitWidth: weatherRow.implicitWidth + Theme.dp(18)
             implicitHeight: Theme.dp(24)
             scale: weatherArea.pressed ? 0.96 : 1
@@ -86,13 +125,27 @@ Item {
                 }
             }
 
+            property real grow: weatherArea.containsMouse ? Theme.dp(4) : 0
+            Behavior on grow {
+                NumberAnimation {
+                    duration: Theme.durFastEffects
+                    easing.type: Easing.Bezier
+                    easing.bezierCurve: Theme.curveFastSpatial
+                }
+            }
+
             Rectangle {
-                anchors.fill: parent
+                x: -weatherOuter.grow / 2
+                y: -weatherOuter.grow / 2
+                width: parent.width + weatherOuter.grow
+                height: parent.height + weatherOuter.grow
                 radius: Theme.radiusPill
                 color: Theme.bgTile
                 StateLayer {
                     id: weatherArea
                     radius: parent.radius
+                    onEntered: holder.tip(weatherArea, "Погода: " + Weather.place)
+                    onExited: holder.untip(weatherArea)
                     onClicked: if (holder.shell) holder.shell.setTab("weather")
                 }
             }
@@ -118,19 +171,21 @@ Item {
                 }
             }
         }
+    }
 
-        WorkspacesRow { // воркспейсы — между чипами
+    Component { id: wsChip
+        WorkspacesRow {
             id: wsRow
-            anchors.verticalCenter: parent.verticalCenter
             output: holder.output
             visible: Prefs.islandWorkspaces
+            tipHost: holder.tipHost
         }
+    }
 
-        // часы: залитый акцентный чип (Lucid clock pill), табличные цифры
+    Component { id: clockChip
         Item {
-            id: clockChip
+            id: clockOuter
             visible: Prefs.islandClock
-            anchors.verticalCenter: parent.verticalCenter
             implicitWidth: clockText.implicitWidth + Theme.dp(20)
             implicitHeight: Theme.dp(24)
             scale: clockArea.pressed ? 0.96 : 1
@@ -143,14 +198,28 @@ Item {
                 }
             }
 
+            property real grow: clockArea.containsMouse ? Theme.dp(4) : 0
+            Behavior on grow {
+                NumberAnimation {
+                    duration: Theme.durFastEffects
+                    easing.type: Easing.Bezier
+                    easing.bezierCurve: Theme.curveFastSpatial
+                }
+            }
+
             Rectangle {
-                anchors.fill: parent
+                x: -clockOuter.grow / 2
+                y: -clockOuter.grow / 2
+                width: parent.width + clockOuter.grow
+                height: parent.height + clockOuter.grow
                 radius: Theme.radiusPill
                 color: Theme.primary
                 StateLayer {
                     id: clockArea
                     radius: parent.radius
                     tint: Theme.fgAccent
+                    onEntered: holder.tip(clockArea, "Часы — клик, чтобы открыть календарь")
+                    onExited: holder.untip(clockArea)
                     onClicked: if (holder.shell) holder.shell.setTab("calendar")
                 }
             }
@@ -167,20 +236,44 @@ Item {
                 text: Qt.formatDateTime(holder.now, Prefs.clockSeconds ? "HH:mm:ss" : "HH:mm")
             }
         }
+    }
 
-        // Системный трей — правый край idle-ряда, после часов. Отдельный файл
-        // TrayRow.qml: грузим через Loader с явным source, потому что qmldir
-        // (его здесь не трогаем) не объявляет TrayRow. Ширину берём с
+    Component { id: trayChip
+        // Системный трей — правый край idle-ряда (как чип). Ширину берём с
         // содержимого: на пустом трее она 0 и капсула не занимает места.
         Loader {
             id: trayLoader
-            anchors.verticalCenter: parent.verticalCenter
             source: "TrayRow.qml"
             active: Prefs.islandTray
             width: item ? item.implicitWidth : 0
             visible: width > 0
             // клик по капсуле открывает вид острова «трей»
             Binding { target: trayLoader.item; property: "shell"; value: holder.shell; when: trayLoader.item !== null }
+            Binding { target: trayLoader.item; property: "tipHost"; value: holder.tipHost; when: trayLoader.item !== null }
+        }
+    }
+
+    Row {
+        id: idleRow
+        visible: holder.mode === "idle"
+        anchors.centerIn: parent
+        spacing: Theme.dp(6)
+
+        Repeater {
+            id: chipRepeater
+            model: holder.order
+
+            delegate: Loader {
+                id: chipLoader
+                required property string modelData
+                anchors.verticalCenter: parent.verticalCenter
+                // id Component'ов не свойства — ссылаемся напрямую по id
+                sourceComponent: chipLoader.modelData === "kb" ? kbChip
+                               : chipLoader.modelData === "weather" ? weatherChip
+                               : chipLoader.modelData === "ws" ? wsChip
+                               : chipLoader.modelData === "clock" ? clockChip
+                               : trayChip
+            }
         }
     }
 

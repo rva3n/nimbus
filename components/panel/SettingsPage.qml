@@ -89,6 +89,70 @@ RowLayout {
                                  String(Prefs.idleScreenMin), String(Prefs.idleLockMin), String(Prefs.idleSuspendMin)]);
     }
 
+    // Применение темы: смены scheme/mode/contrast сливаются дебаунсом 600 мс
+    // в один вызов Wallpaper.applyThemeOnly() — реколор текущих обоев через
+    // matugen (картинка не меняется). «Готово» — по факту обновления палитры
+    // (colors.json пересобран → меняется Theme.primary), страховка — 3 с.
+    property int themeApplyState: 0 // 0 — покой, 1 — «применяется…», 2 — «готово»
+
+    function scheduleThemeApply() {
+        page.themeApplyState = 1;
+        themeApplyTimer.restart();
+    }
+
+    function finishThemeApply() {
+        if (page.themeApplyState !== 1) return;
+        page.themeApplyState = 2;
+        themeAppliedTimer.restart();
+    }
+
+    Timer {
+        id: themeApplyTimer
+
+        interval: 600
+        onTriggered: {
+            Wallpaper.applyThemeOnly();
+            themeApplyMaxTimer.restart();
+        }
+    }
+
+    Timer {
+        id: themeApplyMaxTimer
+
+        interval: 3000 // палитра могла совпасть со старой — всё равно «готово»
+        onTriggered: page.finishThemeApply()
+    }
+
+    Timer {
+        id: themeAppliedTimer
+
+        interval: 1800 // «готово» держится на экране полторы секунды
+        onTriggered: if (page.themeApplyState === 2) page.themeApplyState = 0
+    }
+
+    // ── порядок чипов островка (islandOrder) ─────────────────────────
+    // Список id согласован с IdlePill/Island: kb/weather/ws/clock/tray.
+    readonly property var chipTitles: ({
+        "kb": "Раскладка",
+        "weather": "Погода",
+        "ws": "Рабочие пространства",
+        "clock": "Часы",
+        "tray": "Трей"
+    })
+    readonly property var chipOrder: Array.isArray(Prefs.islandOrder) && Prefs.islandOrder.length > 0
+                                   ? Prefs.islandOrder : ["kb", "weather", "ws", "clock", "tray"]
+
+    // Поднять/опустить чип в порядке островка (массив пишется целиком).
+    function moveChip(i, delta) {
+        const arr = page.chipOrder.slice();
+        const j = i + delta;
+        if (j < 0 || j >= arr.length) return;
+        const t = arr[i];
+        arr[i] = arr[j];
+        arr[j] = t;
+        Prefs.set("islandOrder", arr);
+    }
+
     // ── локальные компоненты ──────────────────────────────────────────
 
     // заголовок раздела справа: titleLarge + пояснение
@@ -440,6 +504,30 @@ RowLayout {
         elide: Text.ElideRight
     }
 
+    // Поле «ЧЧ:ММ» для расписаний (ночной свет, DND): пишет в Prefs-ключ
+    // только валидное значение, при потере фокуса откатывается к текущему
+    // префу. Внешние изменения префа подтягивает Connections внизу файла.
+    component TimeField: TextField {
+        id: tfield
+
+        property string prefKey: ""
+
+        function sync() {
+            const v = Prefs[tfield.prefKey];
+            if (typeof v === "string") tfield.text = v;
+        }
+
+        function commit() {
+            const s = tfield.text.trim();
+            if (/^([01]?\d|2[0-3]):[0-5]\d$/.test(s)) Prefs.set(tfield.prefKey, s);
+            tfield.sync(); // невалидный ввод откатываем
+        }
+
+        onAccepted: tfield.commit()
+        onActiveFocusChanged: if (!tfield.activeFocus) tfield.commit()
+        Component.onCompleted: tfield.sync()
+    }
+
     // ── левая колонка: рейл разделов ──────────────────────────────────
     ColumnLayout {
         id: rail
@@ -453,6 +541,12 @@ RowLayout {
             label: "Шелл"
             selected: page.section === 0
             onClicked: page.section = 0
+        }
+        NavItem {
+            icon: "colors"
+            label: "Тема"
+            selected: page.section === 8
+            onClicked: page.section = 8
         }
         NavItem {
             icon: "widgets"
@@ -477,6 +571,12 @@ RowLayout {
             label: "Погода"
             selected: page.section === 4
             onClicked: page.section = 4
+        }
+        NavItem {
+            icon: "bedtime"
+            label: "Ночной свет"
+            selected: page.section === 9
+            onClicked: page.section = 9
         }
         NavItem {
             icon: "dashboard"
@@ -584,6 +684,121 @@ RowLayout {
                     onCommitted: (v) => Prefs.set("surfaceTint", Math.round(v * 20) / 20)
                 }
             }
+
+            Card { // звуки
+                Layout.fillWidth: true
+                title: "Звук"
+
+                ToggleRow {
+                    label: "Звуковые события"
+                    sub: "Тапы, OSD, уведомления и заряд — файлы из assets/sounds."
+                    checked: Prefs.soundsEnabled
+                    onToggled: (v) => Prefs.set("soundsEnabled", v)
+                }
+
+                RowLayout { // превью звука уведомления
+                    Layout.fillWidth: true
+                    Layout.topMargin: Theme.dp(6)
+                    spacing: Theme.dp(12)
+
+                    Button {
+                        text: "Прослушать пример"
+                        variant: "tonal"
+                        disabled: !Prefs.soundsEnabled
+                        onClicked: Sounds.play("alert")
+                    }
+
+                    LText {
+                        Layout.fillWidth: true
+                        text: "Проигрывает alert.oga — тот же звук, что при уведомлении."
+                        role: "bodySmall"
+                        color: Theme.subtextDim
+                        wrapMode: Text.WordWrap
+                    }
+                }
+            }
+        }
+
+        // 8. Тема (материал-палитра из обоев)
+        ColumnLayout {
+            visible: page.section === 8
+            Layout.fillWidth: true
+            spacing: Theme.dp(12)
+
+            SectionHeader {
+                title: "Тема"
+                caption: "Как строится палитра из обоев: схема, светимость и контраст"
+            }
+
+            Card {
+                Layout.fillWidth: true
+
+                ChoiceRow {
+                    label: "Светимость интерфейса"
+                    values: ["auto", "light", "dark"]
+                    labels: ["Авто", "Светлая", "Тёмная"]
+                    value: Prefs.themeMode
+                    sub: "Авто — matugen решает по яркости обоев."
+                    onCommitted: (v) => {
+                        Prefs.set("themeMode", v);
+                        page.scheduleThemeApply();
+                    }
+                }
+
+                ChoiceRow {
+                    label: "Схема"
+                    values: ["auto", "tonalSpot", "content", "fidelity", "monochrome", "vibrant", "expressive", "neutral"]
+                    labels: ["Авто (по обоям)", "Тональная", "От контента", "Точная", "Монохромная", "Яркая", "Экспрессивная", "Нейтральная"]
+                    value: Prefs.themeScheme
+                    sub: "Семь схем Material из одного цвета обоев; «Авто» выбирает осторожнее всего."
+                    onCommitted: (v) => {
+                        Prefs.set("themeScheme", v);
+                        page.scheduleThemeApply();
+                    }
+                }
+
+                ParamRow {
+                    label: "Контраст"
+                    min: -1
+                    max: 1
+                    value: Prefs.themeContrast
+                    displayMul: 100
+                    suffix: "%"
+                    sub: "Контраст палитры Material: от −100% (мягче) до +100% (резче); 0 — как даёт схема."
+                    onCommitted: (v) => {
+                        Prefs.set("themeContrast", Math.round(v * 20) / 20);
+                        page.scheduleThemeApply();
+                    }
+                }
+
+                RowLayout { // подпись «применяется… → готово»
+                    Layout.fillWidth: true
+                    visible: page.themeApplyState !== 0
+                    spacing: Theme.dp(6)
+
+                    Icon {
+                        name: page.themeApplyState === 2 ? "check_circle" : "sync"
+                        size: Theme.dp(16)
+                        color: page.themeApplyState === 2 ? Theme.subtext : Theme.primary
+                    }
+
+                    LText {
+                        Layout.fillWidth: true
+                        text: page.themeApplyState === 2 ? "Палитра обновлена" : "Перекрашиваю обои…"
+                        role: "bodySmall"
+                        color: page.themeApplyState === 2 ? Theme.subtext : Theme.primary
+                    }
+                }
+
+                LText {
+                    Layout.fillWidth: true
+                    Layout.topMargin: Theme.dp(4)
+                    text: "Обои перекрашиваются их же источником: картинка не меняется, пересчитывается только палитра (matugen)."
+                    role: "bodySmall"
+                    color: Theme.subtextDim
+                    wrapMode: Text.WordWrap
+                }
+            }
         }
 
         // 1. Островок
@@ -594,7 +809,7 @@ RowLayout {
 
             SectionHeader {
                 title: "Островок"
-                caption: "Что показывать в капсуле"
+                caption: "Что и как показывать в капсуле"
             }
 
             Card {
@@ -631,7 +846,102 @@ RowLayout {
                     onToggled: (v) => Prefs.set("islandTray", v)
                 }
             }
+
+
+            Card { // форма капсулы
+                Layout.fillWidth: true
+                title: "Форма капсулы"
+
+                ChoiceRow {
+                    label: "Стиль островка"
+                    values: ["island", "notch"]
+                    labels: ["Плавающий", "Выемка"]
+                    value: Prefs.barStyle
+                    sub: "Плавающая капсула или прижатая к верхней кромке выемка (notch)."
+                    onCommitted: (v) => Prefs.set("barStyle", v)
+                }
+
+                ChoiceRow {
+                    label: "Медиапилюля"
+                    values: ["cover", "disc"]
+                    labels: ["Обложка", "Пластинка"]
+                    value: Prefs.mediaStyle
+                    sub: "Чем показать трек: обложкой или крутящейся пластинкой."
+                    onCommitted: (v) => Prefs.set("mediaStyle", v)
+                }
+            }
+
+            Card { // порядок чипов (islandOrder: kb/weather/ws/clock/tray)
+                Layout.fillWidth: true
+                title: "Порядок чипов"
+
+                LText {
+                    Layout.fillWidth: true
+                    text: "Слева направо — как чипы стоят в капсуле. Стрелками меняйте порядок."
+                    role: "bodySmall"
+                    color: Theme.subtextDim
+                    wrapMode: Text.WordWrap
+                }
+
+                Repeater {
+                    model: page.chipOrder
+
+                    delegate: RowLayout {
+                        required property var modelData
+                        required property int index
+
+                        Layout.topMargin: Theme.dp(2)
+                        spacing: Theme.dp(8)
+
+                        Rectangle {
+                            Layout.alignment: Qt.AlignVCenter
+                            implicitWidth: Theme.dp(30)
+                            implicitHeight: Theme.dp(30)
+                            radius: Theme.rad(9)
+                            color: Theme.bgTrack
+
+                            Icon {
+                                anchors.centerIn: parent
+                                name: modelData === "kb" ? "keyboard"
+                                    : modelData === "weather" ? "public"
+                                    : modelData === "ws" ? "workspaces"
+                                    : modelData === "clock" ? "schedule"
+                                    : "toolbar"
+                                size: Theme.dp(17)
+                                color: Theme.subtext
+                            }
+                        }
+
+                        LText {
+                            Layout.fillWidth: true
+                            text: page.chipTitles[modelData] !== undefined ? page.chipTitles[modelData] : String(modelData)
+                            role: "bodyLarge"
+                            weight: 480
+                            color: Theme.text
+                            elide: Text.ElideRight
+                        }
+
+                        IconButton {
+                            Layout.alignment: Qt.AlignVCenter
+                            icon: "expand_less"
+                            tooltip: "Выше"
+                            disabled: index === 0
+                            onClicked: page.moveChip(index, -1)
+                        }
+
+                        IconButton {
+                            Layout.alignment: Qt.AlignVCenter
+                            icon: "expand_more"
+                            tooltip: "Ниже"
+                            disabled: index === page.chipOrder.length - 1
+                            onClicked: page.moveChip(index, 1)
+                        }
+                    }
+                }
+            }
         }
+
+
 
         // 2. Питание
         ColumnLayout {
@@ -699,6 +1009,35 @@ RowLayout {
                     checked: Prefs.dnd
                     onToggled: (v) => Prefs.set("dnd", v)
                 }
+                ToggleRow {
+                    label: "Расписание DND"
+                    sub: "Включать «Не беспокоить» в этом окне времени автоматически."
+                    checked: Prefs.dndScheduleEnabled
+                    onToggled: (v) => Prefs.set("dndScheduleEnabled", v)
+                }
+
+                RowLayout { // окно расписания DND (ЧЧ:ММ, может пересекать полночь)
+                    visible: Prefs.dndScheduleEnabled
+                    Layout.fillWidth: true
+                    spacing: Theme.dp(12)
+
+                    TimeField {
+                        id: dndFromField
+
+                        prefKey: "dndFrom"
+                        label: "С"
+                        Layout.fillWidth: true
+                    }
+
+                    TimeField {
+                        id: dndToField
+
+                        prefKey: "dndTo"
+                        label: "До"
+                        Layout.fillWidth: true
+                    }
+                }
+
                 ParamRow {
                     label: "Длительность тоста"
                     min: 2
@@ -812,6 +1151,82 @@ RowLayout {
                         icon: "refresh"
                         disabled: Weather.loading
                         onClicked: Weather.refresh()
+                    }
+                }
+            }
+        }
+
+        // 9. Ночной свет (gammastep: темп / режим / расписание)
+        ColumnLayout {
+            visible: page.section === 9
+            Layout.fillWidth: true
+            spacing: Theme.dp(12)
+
+            SectionHeader {
+                title: "Ночной свет"
+                caption: "Тепло экрана gammastep'ом: температура, режим и окно времени"
+            }
+
+            Card {
+                Layout.fillWidth: true
+
+                ToggleRow {
+                    label: "Ночной свет"
+                    sub: NightLight.active ? "Работает: " + NightLight.temp + " К"
+                                           : "Выключен"
+                    checked: Prefs.nightLightEnabled
+                    onToggled: (v) => Prefs.set("nightLightEnabled", v)
+                }
+
+                ParamRow {
+                    label: "Тепло экрана"
+                    min: 2500
+                    max: 6500
+                    value: Prefs.nightLightTemp
+                    displayMul: 1
+                    suffix: " К"
+                    sub: "Слева теплее — 2500 К свечения; справа ближе к нейтральному белому — 6500 К."
+                    onCommitted: (v) => Prefs.set("nightLightTemp", Math.round(v / 100) * 100)
+                }
+
+                ChoiceRow {
+                    id: nlModeRow
+
+                    label: "Режим"
+                    values: ["manual", "schedule", "sunset"]
+                    labels: ["Ручной", "Расписание", "Закат"]
+                    value: Prefs.nightLightMode
+                    sub: nlModeRow.modeSub
+                    onCommitted: (v) => Prefs.set("nightLightMode", v)
+
+                    readonly property string modeSub: {
+                        if (Prefs.nightLightMode !== "sunset")
+                            return "";
+                        if (NightLight.geoOk)
+                            return "Gammastep сам следит за закатом по координатам из раздела «Погода».";
+                        return "Закату нужны координаты — добавьте город в разделе «Погода»; пока действует ручной режим.";
+                    }
+                }
+
+                RowLayout { // окно расписания (ЧЧ:ММ), видно только в режиме «Расписание»
+                    visible: Prefs.nightLightMode === "schedule"
+                    Layout.fillWidth: true
+                    spacing: Theme.dp(12)
+
+                    TimeField {
+                        id: nightFromField
+
+                        prefKey: "nightLightFrom"
+                        label: "С"
+                        Layout.fillWidth: true
+                    }
+
+                    TimeField {
+                        id: nightToField
+
+                        prefKey: "nightLightTo"
+                        label: "До"
+                        Layout.fillWidth: true
                     }
                 }
             }
@@ -1636,10 +2051,25 @@ RowLayout {
 
     // Switch и TextInput ломают биндинг при ручном изменении — синхронизируем
     // состояние обратно при записи в Prefs. (Переключатели ToggleRow держат
-    // привязку сами через Qt.binding, поэтому здесь остаётся только поле города.)
+    // привязку сами через Qt.binding, поэтому здесь остаётся поле города
+    // и четыре поля ЧЧ:ММ.)
     Connections {
         target: Prefs
 
         function onWeatherCityChanged() { cityField.text = Prefs.weatherCity }
+
+        // поля времени: не трогаем то, которое прямо сейчас редактируют
+        function onDndFromChanged() { if (!dndFromField.activeFocus) dndFromField.sync() }
+        function onDndToChanged() { if (!dndToField.activeFocus) dndToField.sync() }
+        function onNightLightFromChanged() { if (!nightFromField.activeFocus) nightFromField.sync() }
+        function onNightLightToChanged() { if (!nightToField.activeFocus) nightToField.sync() }
+    }
+
+    // Палитра пересчиталась (matugen перезаписал colors.json → Theme.primary
+    // изменился) — подпись в разделе «Тема» переходит в «готово».
+    Connections {
+        target: Theme
+
+        function onPrimaryChanged() { page.finishThemeApply() }
     }
 }

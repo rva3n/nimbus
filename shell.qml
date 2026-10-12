@@ -115,6 +115,12 @@ ShellRoot {
         delegate: MediaPill { modelData: modelData }
     }
 
+    // Виджеты на рабочем столе (Bottom-слой, под окнами) — Prefs.widgetsEnabled.
+    Variants {
+        model: Quickshell.screens
+        delegate: WidgetLayer { modelData: modelData }
+    }
+
     Lockscreen {
         locked: root.locked
         pam: pam
@@ -147,6 +153,33 @@ ShellRoot {
         when: polkitLoader.item !== null
     }
 
+    // Оверлеи финальной волны: экран сессии, шпаргалка, скриншот-тулбар.
+    // LazyLoader — components/qmldir их не перечисляет (как Switcher/PolkitPrompt).
+    // SessionScreen'у шелл нужен для lock(): тот же путь, что `ipc call nimbus
+    // lock` (root.lock поднимает Lockscreen), пробрасывается Binding-ом, как flow.
+    LazyLoader {
+        id: sessionLoader
+        active: true
+        source: "components/SessionScreen.qml"
+    }
+    LazyLoader {
+        id: cheatsheetLoader
+        active: true
+        source: "components/Cheatsheet.qml"
+    }
+    LazyLoader {
+        id: shotLoader
+        active: true
+        source: "components/ScreenshotToolbar.qml"
+    }
+
+    Binding {
+        target: sessionLoader.item
+        property: "shell"
+        value: root
+        when: sessionLoader.item !== null
+    }
+
     // ── Actions ──────────────────────────────────────────────────────
     function openPanel()      { root.view = "panel"; root.panelPage = ""; }
     function openLauncher(tab) { root.launcherTab = tab || "apps"; root.view = "launcher"; }
@@ -155,6 +188,14 @@ ShellRoot {
     function taskman()        { if (root.view === "taskman") { root.view = "idle"; } else { root.view = "taskman"; root.panelPage = ""; } }
     function toggleTray()     { if (root.view === "tray") root.closeOverlays(); else { root.view = "tray"; root.panelPage = ""; } }
     function closeOverlays()  { root.view = "idle"; root.panelPage = ""; }
+    // оверлеи-фуллскрин живут вне root.view — закрываем их же методами
+    function closeAllOverlays() {
+        root.closeOverlays();
+        if (sessionLoader.item) sessionLoader.item.close();
+        if (cheatsheetLoader.item) cheatsheetLoader.item.close();
+        if (shotLoader.item) shotLoader.item.close();
+    }
+
     function lock()           { root.view = "idle"; root.panelPage = ""; Quickshell.execDetached(["umbriel", "msg", "dpms-on"]); root.locked = true; }
     function setPage(p)       { root.panelPage = p; }
     // совместимость с чипами острова: weather — погода, calendar — календарь,
@@ -196,9 +237,9 @@ ShellRoot {
     // ── IPC (compositor keybinds) ────────────────────────────────────
     IpcHandler {
         target: "nimbus"
-        // закрыть любой оверлей (панель/лончер/диспетчер/трей) — для скриптов
-        // и агентов: безопаснее, чем слать Escape через wtype
-        function closeAll() { root.closeOverlays(); }
+        // закрыть любой оверлей (панель/лончер/диспетчер/трей/сессию/шпаргалку/
+        // тулбар) — для скриптов и агентов: безопаснее, чем слать Escape через wtype
+        function closeAll() { root.closeAllOverlays(); }
         function launcher() { if (root.view === "launcher") { root.closeOverlays(); } else { root.openLauncher("apps"); } }
         function panel() { root.togglePanel() }
         function quicksettings() { root.togglePanel() }
@@ -245,15 +286,19 @@ ShellRoot {
             }
         }
         function screenshotRegion() {
-            Quickshell.execDetached(["sh", "-c",
-                "mkdir -p \"$HOME/Pictures/Screenshots\"; f=\"$HOME/Pictures/Screenshots/$(date +%F_%H-%M-%S).png\"; " +
-                "if grim -g \"$(slurp)\" \"$f\" 2>/dev/null; then wl-copy < \"$f\"; notify-send -a Nimbus 'Скриншот' 'Область сохранена и скопирована'; fi"]);
+            // тулбар вместо немедленного снимка; повторный вызов закрывает его
+            if (!shotLoader.item) return;
+            if (shotLoader.item.shown) shotLoader.item.close();
+            else shotLoader.item.open("region");
         }
         function screenshotFull() {
+            // прежнее поведение: быстрый полный снимок
             Quickshell.execDetached(["sh", "-c",
                 "mkdir -p \"$HOME/Pictures/Screenshots\"; f=\"$HOME/Pictures/Screenshots/$(date +%F_%H-%M-%S).png\"; " +
                 "if grim \"$f\" 2>/dev/null; then wl-copy < \"$f\"; notify-send -a Nimbus 'Скриншот' 'Весь экран сохранён и скопирован'; fi"]);
         }
+        function session() { if (sessionLoader.item) sessionLoader.item.open(); }
+        function cheatsheet() { if (cheatsheetLoader.item) cheatsheetLoader.item.open(); }
         function wpLocal() { root.view = "panel"; root.panelPage = "wallpapers"; Wallpaper.tab = "photos"; Wallpaper.refreshLocal(); }
         function wpVideos() { root.view = "panel"; root.panelPage = "wallpapers"; Wallpaper.tab = "videos"; Wallpaper.refreshLocal(); }
         function wpWallhaven() { root.view = "panel"; root.panelPage = "wallpapers"; Wallpaper.tab = "wallhaven"; Wallpaper.search(); }

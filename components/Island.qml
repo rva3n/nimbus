@@ -304,6 +304,7 @@ PanelWindow {
                 CalendarPage { win: win }
                 TimersPage { win: win }
                 SettingsPage { win: win }
+                OpenCodePage { win: win }
 
                 TaskManager { visible: win.mode === "taskman"; shell: win.shell; initialTab: win.shell ? win.shell.taskmanTab : 0 }
 
@@ -438,6 +439,7 @@ PanelWindow {
                                       : page === "system" ? "Система"
                                       : page === "calendar" ? "Календарь"
                                       : page === "timers" ? "Таймеры"
+                                      : page === "opencode" ? "OpenCode"
                                       : page === "emoji" ? "Эмодзи"
                                       : page === "settings" ? "Настройки" : ""
 

@@ -56,6 +56,7 @@ Singleton {
         goPlan: "go",
         goChipMode: "auto",
         goWarnPct: 80,
+        goRenewDom: 22,
         tilesOrder: "",
         tilesHidden: "",
         widgetsEnabled: false,
@@ -119,6 +120,7 @@ Singleton {
             property string goPlan: "go"
             property string goChipMode: "auto"
             property int goWarnPct: 80
+            property int goRenewDom: 22
             property string tilesOrder: ""
             property string tilesHidden: ""
             property bool widgetsEnabled: false
@@ -168,6 +170,7 @@ Singleton {
     readonly property string goPlan: a.goPlan
     readonly property string goChipMode: a.goChipMode
     readonly property int goWarnPct: a.goWarnPct
+    readonly property int goRenewDom: a.goRenewDom
     readonly property string tilesOrder: a.tilesOrder
     readonly property string tilesHidden: a.tilesHidden
     readonly property bool widgetsEnabled: a.widgetsEnabled

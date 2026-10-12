@@ -33,7 +33,8 @@ Item {
     readonly property real _scale: {
         var k = 1;
         for (var p = icon.parent; p; p = p.parent)
-            k *= p.scale;
+            if (p.scale !== undefined)
+                k *= p.scale;
 
         return k;
     }

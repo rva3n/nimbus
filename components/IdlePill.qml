@@ -27,10 +27,12 @@ Item {
                   : mode === "osd" ? Theme.dp(34)
                   : Theme.dp(28)
 
-    // ── порядок чипов: islandOrder (id: kb/weather/ws/clock/tray) ──────
+    // ── порядок чипов: islandOrder (id: kb/weather/ws/clock/go/tray) ─────
     // ВАЖНО: JsonAdapter отдаёт QVariantList, а не JS-Array — Array.isArray
     // для него false, поэтому копируем по length и фильтруем по типу.
-    readonly property var defaultOrder: ["kb", "weather", "ws", "clock", "tray"]
+    // "go" в дефолтном порядке стоит между clock и tray; если у юзера
+    // островOrder задан без "go" — защитно добавится в конец (уже после tray).
+    readonly property var defaultOrder: ["kb", "weather", "ws", "clock", "go", "tray"]
     readonly property var orderRaw: holder.orderProp
     readonly property var order: {
         const allowed = holder.defaultOrder;
@@ -238,6 +240,84 @@ Item {
         }
     }
 
+    Component { id: goChip
+        // Чип расхода OpenCode Go: иконка bolt + худший % окна
+        // (Prefs.goChipMode auto = худшее окно самой нагруженной модели),
+        // тон — по Prefs.goWarnPct/error-порогу 85. Клик — страница «opencode».
+        Item {
+            id: goOuter
+            visible: GoUsage.ready && GoUsage.chipOut(Prefs.goChipMode) !== null
+            implicitWidth: goRow.implicitWidth + Theme.dp(18)
+            implicitHeight: Theme.dp(24)
+            scale: goArea.pressed ? 0.96 : 1
+
+            Behavior on scale {
+                NumberAnimation {
+                    duration: Theme.durFastEffects
+                    easing.type: Easing.Bezier
+                    easing.bezierCurve: Theme.curveFastSpatial
+                }
+            }
+
+            property real grow: goArea.containsMouse ? Theme.dp(4) : 0
+            Behavior on grow {
+                NumberAnimation {
+                    duration: Theme.durFastEffects
+                    easing.type: Easing.Bezier
+                    easing.bezierCurve: Theme.curveFastSpatial
+                }
+            }
+
+            // данные чипа, один раз за кадр
+            readonly property var chip: GoUsage.chipOut(Prefs.goChipMode)
+            readonly property int pct: chip ? Math.round(chip.pct) : 0
+            readonly property string tone: GoUsage.toneKey(chip ? chip.pct : 0)
+            readonly property color ink: goOuter.tone === "error" ? Theme.error
+                : goOuter.tone === "warn" ? Theme.warning : Theme.subtext
+            readonly property string tipText: chip
+                ? chip.name + " · 5ч " + Math.round(chip.p5)
+                  + "% · нед " + Math.round(chip.p7) + "% · мес " + Math.round(chip.p30) + "%"
+                : "OpenCode Go — данные ещё считаются"
+
+            Rectangle {
+                x: -goOuter.grow / 2
+                y: -goOuter.grow / 2
+                width: parent.width + goOuter.grow
+                height: parent.height + goOuter.grow
+                radius: Theme.radiusPill
+                color: Theme.bgTile
+                StateLayer {
+                    id: goArea
+                    radius: parent.radius
+                    onEntered: holder.tip(goArea, goOuter.tipText + " — клик, чтобы открыть лимиты")
+                    onExited: holder.untip(goArea)
+                    onClicked: if (holder.shell) holder.shell.togglePage("opencode")
+                }
+            }
+
+            Row {
+                id: goRow
+                anchors.centerIn: parent
+                spacing: Theme.dp(4)
+
+                Icon {
+                    anchors.verticalCenter: parent.verticalCenter
+                    name: "bolt"
+                    size: Theme.dp(14)
+                    color: Theme.primary
+                }
+
+                LText {
+                    anchors.verticalCenter: parent.verticalCenter
+                    role: "labelLarge"
+                    tabular: true
+                    color: goOuter.ink
+                    text: goOuter.pct + "%"
+                }
+            }
+        }
+    }
+
     Component { id: trayChip
         // Системный трей — правый край idle-ряда (как чип). Ширину берём с
         // содержимого: на пустом трее она 0 и капсула не занимает места.
@@ -272,6 +352,7 @@ Item {
                                : chipLoader.modelData === "weather" ? weatherChip
                                : chipLoader.modelData === "ws" ? wsChip
                                : chipLoader.modelData === "clock" ? clockChip
+                               : chipLoader.modelData === "go" ? goChip
                                : trayChip
             }
         }

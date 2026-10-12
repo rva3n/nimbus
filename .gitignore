@@ -1,2 +1,6 @@
 # Пользовательское состояние — не в git
 prefs.json
+
+# Мусор/логи
+logs/
+scripts/__pycache__/

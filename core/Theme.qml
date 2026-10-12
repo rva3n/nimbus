@@ -524,16 +524,29 @@ Singleton {
 
     // state layer композитом, где второй прямоугольник недопустим
     function layer(base, over, a) {
+        if (!base || !over)
+            return base || over || Qt.rgba(0, 0, 0, 1);
+
         return Qt.rgba(base.r * (1 - a) + over.r * a, base.g * (1 - a) + over.g * a, base.b * (1 - a) + over.b * a, base.a);
     }
 
-    function _mix(a, b, t) { return Qt.rgba(a.r * (1 - t) + b.r * t, a.g * (1 - t) + b.g * t, a.b * (1 - t) + b.b * t, 1) }
+    function _mix(a, b, t) {
+        if (!a || !b)
+            return a || b || Qt.rgba(0, 0, 0, 1);
+
+        return Qt.rgba(a.r * (1 - t) + b.r * t, a.g * (1 - t) + b.g * t, a.b * (1 - t) + b.b * t, 1);
+    }
 
     function _darken(c, t) { return root._mix(c, Qt.rgba(0, 0, 0, 1), t) }
 
     function _lighten(c, t) { return root._mix(c, Qt.rgba(1, 1, 1, 1), t) }
 
-    function alpha(c, a) { return Qt.rgba(c.r, c.g, c.b, a) }
+    function alpha(c, a) {
+        if (!c)
+            return Qt.rgba(0, 0, 0, 0);
+
+        return Qt.rgba(c.r, c.g, c.b, a);
+    }
 
     // прозрачность по «стеклу»: в Nimbus blur-ползунок ведёт радиус Umbriel,
     // поэтому альфа выводится из root.glass, а не из Lucid-формулы blurAmount

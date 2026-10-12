@@ -259,14 +259,9 @@ Singleton {
     readonly property int durSlowEffects: Math.round(300 * root.motionScale)
 
     // ── Типографика ────────────────────────────────────────────────────
-    // Иконный шрифт бандлится в assets/fonts, чтобы не зависеть от системы.
-    FontLoader {
-        id: iconFontLoader
-        source: "file://" + Quickshell.env("HOME") + "/nimbus/assets/fonts/MaterialSymbolsRounded.ttf"
-    }
-    // Google Sans Flex (вариативный) тоже бандлится. Публичное имя семейства —
-    // textFont: на него завязаны все потребители, поэтому при любой ошибке
-    // загрузки оно откатывается на Noto Sans, а иконный loader не трогается.
+    // Google Sans Flex (вариативный) бандлится в assets/fonts. Публичное имя
+    // семейства — textFont: на него завязаны все потребители, поэтому при
+    // любой ошибке загрузки оно откатывается на Noto Sans.
     FontLoader {
         id: flexLoader
         source: "file://" + Quickshell.env("HOME") + "/nimbus/assets/fonts/GoogleSansFlex.ttf"
@@ -276,7 +271,6 @@ Singleton {
     readonly property bool flexActive: flexLoader.status === FontLoader.Ready
     readonly property string fontFamily: root.flexActive ? root.brandFamily : root.textFontFallback
     readonly property string textFont: root.fontFamily
-    readonly property string iconFont: iconFontLoader.status === FontLoader.Ready ? iconFontLoader.name : "Material Symbols Rounded"
 
     readonly property real typeBaseline: 1.0
     readonly property real fontScale: root.typeBaseline * root.uiScale

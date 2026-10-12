@@ -10,6 +10,12 @@ import ".."
 // разделов (180), справа — содержимое выбранного пункта. Ширину панели (620)
 // задаёт Island, контент невелик, поэтому прокрутка не нужна.
 // Внешний вид и погода пишут в Prefs → ~/nimbus/prefs.json.
+//
+// Анатомия Lucid: рейл — иконка + подпись, выбранная запись залита
+// secondaryContainer-пилюлей и иконка наполнена; контент — заголовок секции
+// (LText titleLarge) и группы-карточки ui/Card со строками 56–64dp
+// (заголовок bodyLarge + supporting bodySmall, trailing-контрол). Числовые
+// значения — tabular-цифрами. Дивайдеров нет — воздух вместо линий.
 RowLayout {
     id: page
 
@@ -85,7 +91,7 @@ RowLayout {
 
     // ── локальные компоненты ──────────────────────────────────────────
 
-    // заголовок раздела справа: titleMedium + пояснение
+    // заголовок раздела справа: titleLarge + пояснение
     component SectionHeader: ColumnLayout {
         id: sh
 
@@ -93,33 +99,31 @@ RowLayout {
         property string caption: ""
 
         Layout.fillWidth: true
-        Layout.bottomMargin: Theme.dp(2)
+        Layout.bottomMargin: Theme.dp(4)
         spacing: Theme.dp(2)
 
-        Text {
+        LText {
             Layout.fillWidth: true
             text: sh.title
+            role: "titleLarge"
+            weight: 560
             color: Theme.text
             elide: Text.ElideRight
-            font.family: Theme.textFont
-            font.pixelSize: Theme.typeSize("titleMedium")
-            font.weight: Theme.typeWeight("titleMedium")
         }
 
-        Text {
+        LText {
             Layout.fillWidth: true
             visible: sh.caption !== ""
             text: sh.caption
+            role: "bodySmall"
             color: Theme.subtext
             wrapMode: Text.WordWrap
-            font.family: Theme.textFont
-            font.pixelSize: Theme.typeSize("bodySmall")
-            font.weight: Theme.typeWeight("bodySmall")
         }
     }
 
-    // пункт рейла: высота 48, radiusMd; выбранный — accentContainer и
-    // fgAccentContainer, ховер — bgHover; иконка в контейнере 40×40 radiusMd
+    // пункт рейла Lucid: строка 50dp, выбранная запись — secondaryContainer
+    // пилюлей, иконка 22 наполняется, подпись LText labelLarge, ховер —
+    // StateLayer. Иконка слева, как в раскрытом рейле Lucid.
     component NavItem: Item {
         id: ni
 
@@ -130,225 +134,310 @@ RowLayout {
         signal clicked()
 
         Layout.fillWidth: true
-        implicitHeight: Theme.dp(48)
+        implicitHeight: Theme.dp(50)
 
         Rectangle {
             id: bg
 
             anchors.fill: parent
-            radius: Theme.radiusMd
-            color: ni.selected ? Theme.accentContainer
-                               : (area.containsMouse ? Theme.bgHover : "transparent")
+            radius: Theme.pill(height)
+            color: ni.selected ? Theme.secondaryContainer : "transparent"
 
             Behavior on color {
-                ColorAnimation { duration: Theme.durDefaultEffects }
+                ColorAnimation { duration: Theme.durShort }
             }
+        }
 
-            // state layer поверх выбранного (ховер/нажатие)
-            Rectangle {
-                anchors.fill: parent
-                radius: bg.radius
-                color: Theme.fgAccentContainer
-                opacity: ni.selected ? (area.pressed ? Theme.statePressed : (area.containsMouse ? Theme.stateHover : 0)) : 0
+        StateLayer {
+            id: area
 
-                Behavior on opacity {
-                    NumberAnimation { duration: Theme.ms(100); easing.type: Theme.easeStandard }
-                }
-            }
+            anchors.fill: parent
+            radius: Theme.pill(ni.height)
+            tint: ni.selected ? Theme.fgSecondaryContainer : Theme.text
+            onClicked: ni.clicked()
         }
 
         RowLayout {
             anchors.fill: parent
-            anchors.leftMargin: Theme.dp(4)
+            anchors.leftMargin: Theme.dp(14)
             anchors.rightMargin: Theme.dp(12)
             spacing: Theme.dp(12)
 
-            Rectangle { // контейнер иконки 40×40
+            Icon {
                 Layout.alignment: Qt.AlignVCenter
-                implicitWidth: Theme.dp(40)
-                implicitHeight: Theme.dp(40)
-                radius: Theme.radiusMd
-                color: "transparent"
+                name: ni.icon
+                size: Theme.dp(22)
+                fill: ni.selected ? 1 : 0
+                color: ni.selected ? Theme.fgSecondaryContainer
+                                   : (area.containsMouse ? Theme.text : Theme.subtext)
 
-                Icon {
-                    anchors.centerIn: parent
-                    name: ni.icon
-                    size: Theme.dp(20)
-                    color: ni.selected ? Theme.fgAccentContainer : Theme.subtext
+                Behavior on color {
+                    ColorAnimation { duration: Theme.durShort }
                 }
             }
 
-            Text {
+            LText {
                 Layout.fillWidth: true
                 Layout.alignment: Qt.AlignVCenter
                 text: ni.label
-                color: ni.selected ? Theme.fgAccentContainer : Theme.text
+                role: "labelLarge"
+                color: ni.selected ? Theme.fgSecondaryContainer
+                                   : (area.containsMouse ? Theme.text : Theme.subtext)
                 elide: Text.ElideRight
-                font.family: Theme.textFont
-                font.pixelSize: Theme.typeSize("labelLarge")
-                font.weight: Theme.typeWeight("labelLarge")
+
+                Behavior on color {
+                    ColorAnimation { duration: Theme.durShort }
+                }
             }
-        }
-
-        MouseArea {
-            id: area
-
-            anchors.fill: parent
-            hoverEnabled: true
-            cursorShape: Qt.PointingHandCursor
-            onClicked: ni.clicked()
         }
     }
 
-    // строка параметра: подпись + значение, ниже слайдер min..max
+    // строка параметра: подпись + значение справа, ниже слайдер min..max.
+    // Число — tabular, значение выровнено вправо. Слайдер работает в реальных
+    // единицах (from/to); committed отдаёт уже готовое значение.
     component ParamRow: ColumnLayout {
         id: pr
 
         property string label: ""
+        property string sub: ""
         property real min: 0
         property real max: 1
         property real value: 1
         // формат подписи справа: value * displayMul + suffix
         property real displayMul: 100
         property string suffix: "%"
+        readonly property string readout: Math.round(pr.value * pr.displayMul) + pr.suffix
 
         signal committed(real v)
 
         Layout.fillWidth: true
-        spacing: Theme.dp(2)
+        Layout.topMargin: Theme.dp(4)
+        Layout.bottomMargin: Theme.dp(4)
+        spacing: Theme.dp(6)
 
         RowLayout {
             Layout.fillWidth: true
             spacing: Theme.dp(8)
 
-            Text {
+            LText {
                 Layout.fillWidth: true
                 text: pr.label
+                role: "bodyLarge"
+                weight: 480
                 color: Theme.text
                 elide: Text.ElideRight
-                font.family: Theme.textFont
-                font.pixelSize: Theme.typeSize("bodyLarge")
-                font.weight: Theme.typeWeight("bodyLarge")
             }
 
-            Text {
-                text: Math.round(pr.value * pr.displayMul) + pr.suffix
+            LText {
+                text: pr.readout
+                role: "labelLarge"
+                tabular: true
                 color: Theme.subtext
-                font.family: Theme.textFont
-                font.pixelSize: Theme.typeSize("labelMedium")
-                font.weight: Theme.typeWeight("labelMedium")
             }
         }
 
         Slider {
             Layout.fillWidth: true
-            value: pr.max > pr.min ? (pr.value - pr.min) / (pr.max - pr.min) : 0
-            onCommitted: (v) => pr.committed(pr.min + v * (pr.max - pr.min))
+            size: "s"
+            from: pr.min
+            to: pr.max
+            value: pr.value
+            onCommitted: (v) => pr.committed(v)
+        }
+
+        LText {
+            Layout.fillWidth: true
+            visible: pr.sub !== ""
+            text: pr.sub
+            role: "bodySmall"
+            color: Theme.subtextDim
+            wrapMode: Text.WordWrap
         }
     }
 
-    // строка-переключатель: подпись + Switch
-    component ToggleRow: RowLayout {
+    // строка-переключатель Lucid: заголовок bodyLarge + supporting bodySmall,
+    // справа Switch; клик по всей строке переключает. Switch при клике ломает
+    // декларативную привязку — возвращаем её, чтобы внешние изменения
+    // (Prefs/опрос Umbriel) продолжали отражаться.
+    component ToggleRow: Rectangle {
         id: tr
 
         property string label: ""
+        property string sub: ""
+        property string icon: ""
         property bool checked: false
 
         signal toggled(bool value)
 
-        Layout.fillWidth: true
-        Layout.preferredHeight: Theme.dp(40)
-        spacing: Theme.dp(8)
-
-        Text {
-            Layout.fillWidth: true
-            text: tr.label
-            color: Theme.text
-            elide: Text.ElideRight
-            font.family: Theme.textFont
-            font.pixelSize: Theme.typeSize("bodyLarge")
-            font.weight: Theme.typeWeight("bodyLarge")
+        function _emit(v) {
+            tr.toggled(v);
+            sw.checked = Qt.binding(function () { return tr.checked; });
         }
 
-        Switch {
-            id: sw
-            Layout.alignment: Qt.AlignVCenter
-            checked: tr.checked
-            onToggled: tr.toggled(sw.checked)
+        Layout.fillWidth: true
+        implicitHeight: Math.max(Theme.dp(tr.sub !== "" ? 64 : 56), row.implicitHeight + Theme.dp(16))
+        radius: Theme.rad(16)
+        color: "transparent"
+
+        StateLayer {
+            anchors.fill: parent
+            radius: tr.radius
+            tint: tr.checked ? Theme.primary : Theme.text
+            onClicked: tr._emit(!tr.checked)
+        }
+
+        RowLayout {
+            id: row
+
+            anchors.fill: parent
+            anchors.leftMargin: Theme.dp(12)
+            anchors.rightMargin: Theme.dp(12)
+            spacing: Theme.dp(12)
+
+            Rectangle { // ведущая иконка 40×40
+                visible: tr.icon !== ""
+                Layout.alignment: Qt.AlignVCenter
+                implicitWidth: Theme.dp(40)
+                implicitHeight: Theme.dp(40)
+                radius: Theme.rad(12)
+                color: tr.checked ? Theme.accentContainer : Theme.bgTrack
+
+                Behavior on color {
+                    ColorAnimation { duration: Theme.durDefaultEffects }
+                }
+
+                Icon {
+                    anchors.centerIn: parent
+                    name: tr.icon
+                    size: Theme.dp(22)
+                    fill: tr.checked ? 1 : 0
+                    color: tr.checked ? Theme.fgAccentContainer : Theme.subtext
+
+                    Behavior on color {
+                        ColorAnimation { duration: Theme.durDefaultEffects }
+                    }
+                }
+            }
+
+            ColumnLayout {
+                Layout.fillWidth: true
+                Layout.alignment: Qt.AlignVCenter
+                spacing: Theme.dp(2)
+
+                LText {
+                    Layout.fillWidth: true
+                    text: tr.label
+                    role: "bodyLarge"
+                    weight: 480
+                    color: Theme.text
+                    elide: Text.ElideRight
+                }
+
+                LText {
+                    Layout.fillWidth: true
+                    visible: tr.sub !== ""
+                    text: tr.sub
+                    role: "bodySmall"
+                    color: Theme.subtext
+                    elide: Text.ElideRight
+                }
+            }
+
+            Switch {
+                id: sw
+
+                Layout.alignment: Qt.AlignVCenter
+                checked: tr.checked
+                onToggled: tr._emit(sw.checked)
+            }
         }
     }
 
-    // строка выбора из набора значений: ‹ значение ›
-    component ChoiceRow: RowLayout {
+    // строка выбора из набора значений. До 4 вариантов — связанная группа
+    // ButtonGroup (выбранный сегмент primary); больше — Chip-потоком, чтобы
+    // подписи не сжимались. committed отдаёт выбранный ключ.
+    component ChoiceRow: ColumnLayout {
         id: cr
 
         property string label: ""
+        property string sub: ""
         property var values: []
         property var labels: []
         property var value: 0
 
+        readonly property var opts: {
+            var a = [];
+            for (var i = 0; i < cr.values.length; i++)
+                a.push({ key: cr.values[i], label: cr.labels[i] !== undefined ? cr.labels[i] : String(cr.values[i]) });
+            return a;
+        }
+        readonly property bool useChips: cr.values.length > 4
+
         signal committed(var v)
 
-        function _idx() {
-            for (let i = 0; i < cr.values.length; i++)
-                if (cr.values[i] === cr.value) return i;
-            return 0;
-        }
-        function _step(d) {
-            const i = cr._idx();
-            const ni = Math.max(0, Math.min(cr.values.length - 1, i + d));
-            const nv = cr.values[ni];
-            if (nv !== cr.value) cr.committed(nv);
-        }
-
         Layout.fillWidth: true
-        Layout.preferredHeight: Theme.dp(40)
+        Layout.topMargin: Theme.dp(4)
+        Layout.bottomMargin: Theme.dp(4)
         spacing: Theme.dp(8)
 
-        Text {
+        LText {
             Layout.fillWidth: true
             text: cr.label
+            role: "bodyLarge"
+            weight: 480
             color: Theme.text
             elide: Text.ElideRight
-            font.family: Theme.textFont
-            font.pixelSize: Theme.typeSize("bodyLarge")
-            font.weight: Theme.typeWeight("bodyLarge")
         }
 
-        IconButton {
-            icon: "chevron_left"
+        ButtonGroup {
+            visible: !cr.useChips
+            Layout.fillWidth: true
+            options: cr.opts
+            current: cr.value
+            equalWidth: true
             size: "s"
-            variant: "standard"
-            onClicked: cr._step(-1)
+            onPicked: (k) => cr.committed(k)
         }
 
-        Text {
-            text: cr.labels[cr._idx()] || ""
-            color: Theme.subtext
-            horizontalAlignment: Text.AlignHCenter
-            Layout.preferredWidth: Theme.dp(64)
-            font.family: Theme.textFont
-            font.pixelSize: Theme.typeSize("labelMedium")
-            font.weight: Theme.typeWeight("labelMedium")
+        Flow {
+            id: chipFlow
+
+            visible: cr.useChips
+            Layout.fillWidth: true
+            // страховка, если позиционер ещё не посчитал высоту укладки
+            Layout.preferredHeight: Math.max(Theme.dp(30), chipFlow.implicitHeight)
+            spacing: Theme.dp(6)
+
+            Repeater {
+                model: cr.opts
+
+                Chip {
+                    required property var modelData
+                    text: modelData.label
+                    selected: cr.value === modelData.key
+                    onClicked: cr.committed(modelData.key)
+                }
+            }
         }
 
-        IconButton {
-            icon: "chevron_right"
-            size: "s"
-            variant: "standard"
-            onClicked: cr._step(1)
+        LText {
+            Layout.fillWidth: true
+            visible: cr.sub !== ""
+            text: cr.sub
+            role: "bodySmall"
+            color: Theme.subtextDim
+            wrapMode: Text.WordWrap
         }
     }
 
-    // мелкая приглушённая подпись-группа внутри карточки
-    component GroupCaption: Text {
+    // мелкая подпись-подгруппа внутри карточки (воздух вместо дивайдера)
+    component GroupCaption: LText {
         Layout.fillWidth: true
-        Layout.topMargin: Theme.dp(6)
-        color: Theme.subtextDim
+        Layout.topMargin: Theme.dp(8)
+        role: "labelLarge"
+        weight: 560
+        color: Theme.subtext
         elide: Text.ElideRight
-        font.family: Theme.textFont
-        font.pixelSize: Theme.typeSize("labelMedium")
-        font.weight: Theme.typeWeight("labelMedium")
     }
 
     // ── левая колонка: рейл разделов ──────────────────────────────────
@@ -413,13 +502,13 @@ RowLayout {
     ColumnLayout {
         Layout.fillWidth: true
         Layout.alignment: Qt.AlignTop
-        spacing: Theme.dp(10)
+        spacing: Theme.dp(12)
 
-        // 1. Интерфейс
+        // 0. Шелл (интерфейс)
         ColumnLayout {
             visible: page.section === 0
             Layout.fillWidth: true
-            spacing: Theme.dp(10)
+            spacing: Theme.dp(12)
 
             SectionHeader {
                 title: "Шелл"
@@ -472,6 +561,7 @@ RowLayout {
                     value: Prefs.blurAmount
                     displayMul: 1
                     suffix: "%"
+                    sub: "Радиус размытия Umbriel; влияет и на окна. 0% — без размытия, 100% — максимум."
                     onCommitted: (v) => {
                         const r = Math.round(v);
                         Prefs.set("blurAmount", r);
@@ -493,25 +583,14 @@ RowLayout {
                     value: Math.max(0, Prefs.surfaceTint)
                     onCommitted: (v) => Prefs.set("surfaceTint", Math.round(v * 20) / 20)
                 }
-
-                Text { // пояснение к ползунку размытия
-                    Layout.fillWidth: true
-                    Layout.topMargin: Theme.dp(2)
-                    text: "Интенсивность размытия фона (радиус Umbriel; влияет и на окна). 0% — без размытия, 100% — максимум."
-                    color: Theme.subtextDim
-                    wrapMode: Text.WordWrap
-                    font.family: Theme.textFont
-                    font.pixelSize: Theme.typeSize("bodySmall")
-                    font.weight: Theme.typeWeight("bodySmall")
-                }
             }
         }
 
-        // 2. Островок
+        // 1. Островок
         ColumnLayout {
             visible: page.section === 1
             Layout.fillWidth: true
-            spacing: Theme.dp(10)
+            spacing: Theme.dp(12)
 
             SectionHeader {
                 title: "Островок"
@@ -554,11 +633,11 @@ RowLayout {
             }
         }
 
-        // 3. Питание
+        // 2. Питание
         ColumnLayout {
             visible: page.section === 2
             Layout.fillWidth: true
-            spacing: Theme.dp(10)
+            spacing: Theme.dp(12)
 
             SectionHeader {
                 title: "Питание"
@@ -590,24 +669,22 @@ RowLayout {
                     onCommitted: (v) => { Prefs.set("idleSuspendMin", v); page.applyIdle() }
                 }
 
-                Text {
+                LText {
                     Layout.fillWidth: true
-                    Layout.topMargin: Theme.dp(2)
+                    Layout.topMargin: Theme.dp(4)
                     text: "Работает через hypridle (Umbriel): гашение — DPMS, блокировка — экран Nimbus, сон — systemd. Если монитор гаснет раньше выбранного — это его собственный таймер в прошивке."
+                    role: "bodySmall"
                     color: Theme.subtextDim
                     wrapMode: Text.WordWrap
-                    font.family: Theme.textFont
-                    font.pixelSize: Theme.typeSize("bodySmall")
-                    font.weight: Theme.typeWeight("bodySmall")
                 }
             }
         }
 
-        // 4. Уведомления
+        // 3. Уведомления
         ColumnLayout {
             visible: page.section === 3
             Layout.fillWidth: true
-            spacing: Theme.dp(10)
+            spacing: Theme.dp(12)
 
             SectionHeader {
                 title: "Уведомления"
@@ -634,11 +711,11 @@ RowLayout {
             }
         }
 
-        // 5. Погода
+        // 4. Погода
         ColumnLayout {
             visible: page.section === 4
             Layout.fillWidth: true
-            spacing: Theme.dp(10)
+            spacing: Theme.dp(12)
 
             SectionHeader {
                 title: "Погода"
@@ -648,51 +725,22 @@ RowLayout {
             Card {
                 Layout.fillWidth: true
 
-                RowLayout { // авто-определение города
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: Theme.dp(48)
-                    spacing: Theme.dp(12)
-
-                    ColumnLayout {
-                        Layout.fillWidth: true
-                        spacing: 0
-
-                        Text {
-                            Layout.fillWidth: true
-                            text: "Определять город автоматически"
-                            color: Theme.text
-                            elide: Text.ElideRight
-                            font.family: Theme.textFont
-                            font.pixelSize: Theme.typeSize("bodyLarge")
-                            font.weight: Theme.typeWeight("bodyLarge")
-                        }
-
-                        Text {
-                            Layout.fillWidth: true
-                            visible: Prefs.weatherAuto
-                            text: "По IP-адресу"
-                            color: Theme.subtext
-                            font.family: Theme.textFont
-                            font.pixelSize: Theme.typeSize("bodySmall")
-                            font.weight: Theme.typeWeight("bodySmall")
-                        }
-                    }
-
-                    Switch {
-                        id: autoSwitch
-                        Layout.alignment: Qt.AlignVCenter
-                        checked: Prefs.weatherAuto
-                        onToggled: Prefs.set("weatherAuto", autoSwitch.checked)
-                    }
+                ToggleRow { // авто-определение города
+                    label: "Определять город автоматически"
+                    sub: Prefs.weatherAuto ? "По IP-адресу" : ""
+                    checked: Prefs.weatherAuto
+                    onToggled: (v) => Prefs.set("weatherAuto", v)
                 }
 
                 RowLayout { // ручной город
                     Layout.fillWidth: true
+                    Layout.topMargin: Theme.dp(6)
                     spacing: Theme.dp(8)
 
                     TextField {
                         id: cityField
                         Layout.fillWidth: true
+                        variant: "filled"
                         enabled: !Prefs.weatherAuto
                         placeholder: "Например, Харьков"
                         text: Prefs.weatherCity
@@ -709,20 +757,20 @@ RowLayout {
 
                 RowLayout { // текущее место
                     Layout.fillWidth: true
-                    Layout.topMargin: Theme.dp(8)
+                    Layout.topMargin: Theme.dp(6)
                     spacing: Theme.dp(12)
 
                     Rectangle {
                         Layout.alignment: Qt.AlignVCenter
                         implicitWidth: Theme.dp(40)
                         implicitHeight: Theme.dp(40)
-                        radius: Theme.radiusPill
+                        radius: Theme.rad(12)
                         color: Theme.bgTrack
 
                         Icon {
                             anchors.centerIn: parent
                             name: "public"
-                            size: Theme.dp(20)
+                            size: Theme.dp(22)
                             color: Theme.subtext
                         }
                     }
@@ -730,37 +778,32 @@ RowLayout {
                     ColumnLayout {
                         Layout.fillWidth: true
                         Layout.alignment: Qt.AlignVCenter
-                        spacing: 0
+                        spacing: Theme.dp(2)
 
-                        Text {
+                        LText {
                             Layout.fillWidth: true
                             text: Prefs.weatherPlace !== "" ? Prefs.weatherPlace : "Место не определено"
+                            role: "bodyLarge"
+                            weight: 480
                             color: Theme.text
                             elide: Text.ElideRight
-                            font.family: Theme.textFont
-                            font.pixelSize: Theme.typeSize("bodyLarge")
-                            font.weight: Theme.typeWeight("bodyLarge")
                         }
 
-                        Text {
+                        LText {
                             Layout.fillWidth: true
                             visible: Weather.loading
                             text: "Обновление…"
+                            role: "bodySmall"
                             color: Theme.subtext
-                            font.family: Theme.textFont
-                            font.pixelSize: Theme.typeSize("bodySmall")
-                            font.weight: Theme.typeWeight("bodySmall")
                         }
 
-                        Text {
+                        LText {
                             Layout.fillWidth: true
                             visible: Weather.error !== ""
                             text: Weather.error
+                            role: "bodySmall"
                             color: Theme.error
                             elide: Text.ElideRight
-                            font.family: Theme.textFont
-                            font.pixelSize: Theme.typeSize("bodySmall")
-                            font.weight: Theme.typeWeight("bodySmall")
                         }
                     }
 
@@ -774,11 +817,11 @@ RowLayout {
             }
         }
 
-        // 6. Композитор (окна, раскладка, анимации, эффекты)
+        // 5. Композитор (окна, раскладка, анимации, эффекты)
         ColumnLayout {
             visible: page.section === 5
             Layout.fillWidth: true
-            spacing: Theme.dp(10)
+            spacing: Theme.dp(12)
 
             SectionHeader {
                 title: "Композитор"
@@ -1253,11 +1296,11 @@ RowLayout {
             }
         }
 
-        // 7. Ввод (мышь, клавиатура, фокус Umbriel)
+        // 6. Ввод (мышь, клавиатура, фокус Umbriel)
         ColumnLayout {
             visible: page.section === 6
             Layout.fillWidth: true
-            spacing: Theme.dp(10)
+            spacing: Theme.dp(12)
 
             SectionHeader {
                 title: "Ввод"
@@ -1430,11 +1473,11 @@ RowLayout {
             }
         }
 
-        // 8. Экран (монитор этого окна)
+        // 7. Экран (монитор этого окна)
         ColumnLayout {
             visible: page.section === 7
             Layout.fillWidth: true
-            spacing: Theme.dp(10)
+            spacing: Theme.dp(12)
 
             SectionHeader {
                 title: "Экран"
@@ -1515,6 +1558,7 @@ RowLayout {
                     value: page.umbVal("output." + page.outputName + ".min_workspaces", 1)
                     displayMul: 1
                     suffix: ""
+                    sub: "Требует workspaces = \"dynamic\" у этого вывода (иначе Umbriel игнорирует настройку)."
                     onCommitted: (v) => {
                         if (page.outputName === "") return;
                         page.setUmb("src/appearance.toml", "output:" + page.outputName, "min_workspaces", Math.round(v));
@@ -1591,11 +1635,11 @@ RowLayout {
     }
 
     // Switch и TextInput ломают биндинг при ручном изменении — синхронизируем
-    // состояние обратно при записи в Prefs.
+    // состояние обратно при записи в Prefs. (Переключатели ToggleRow держат
+    // привязку сами через Qt.binding, поэтому здесь остаётся только поле города.)
     Connections {
         target: Prefs
 
-        function onWeatherAutoChanged() { autoSwitch.checked = Prefs.weatherAuto }
         function onWeatherCityChanged() { cityField.text = Prefs.weatherCity }
     }
 }

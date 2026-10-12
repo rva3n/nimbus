@@ -1,8 +1,8 @@
 .pragma library
 // Nimbus → SymbolPaths aliases.
 //
-// Names that nimbus used with the old bundled icon font (ui/Glyphs.js) but that
-// are absent from the copied Material Symbols path set (ui/SymbolPaths.js).
+// Names that nimbus used with the old icon font but that are absent from the
+// copied Material Symbols path set (ui/SymbolPaths.js).
 // Each maps to the visually closest available glyph.
 var alias = {
     "brightness_6": "brightness_medium",

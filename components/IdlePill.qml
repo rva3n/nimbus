@@ -47,6 +47,11 @@ Item {
         }
         for (const id of allowed)
             if (!out.includes(id)) out.push(id);
+        // выключенный чип OpenCode не должен оставлять пустое место в капсуле
+        if (!Prefs.islandGo) {
+            const gi = out.indexOf("go");
+            if (gi !== -1) out.splice(gi, 1);
+        }
         return out;
     }
 

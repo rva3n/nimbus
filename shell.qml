@@ -196,6 +196,9 @@ ShellRoot {
     // ── IPC (compositor keybinds) ────────────────────────────────────
     IpcHandler {
         target: "nimbus"
+        // закрыть любой оверлей (панель/лончер/диспетчер/трей) — для скриптов
+        // и агентов: безопаснее, чем слать Escape через wtype
+        function closeAll() { root.closeOverlays(); }
         function launcher() { if (root.view === "launcher") { root.closeOverlays(); } else { root.openLauncher("apps"); } }
         function panel() { root.togglePanel() }
         function quicksettings() { root.togglePanel() }

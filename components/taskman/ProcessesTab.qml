@@ -6,6 +6,8 @@ import "../../ui"
 
 // Вкладка «Диспетчер»: поиск, таблица процессов (ProcList обновляет ps
 // каждые 2 с) и контекстное меню действий по правому клику на строке.
+// Строки — в языке Lucid: высота 42, tabular-цифры, StateLayer-ховер и
+// выбранная строка secondaryContainer; меню — размытая карточка radiusXl.
 Item {
     id: tab
 
@@ -41,7 +43,7 @@ Item {
     readonly property int colNi: Theme.dp(36)
     readonly property int colStat: Theme.dp(44)
     readonly property int colName: Theme.dp(170)
-    readonly property int menuW: Theme.dp(208)
+    readonly property int menuW: Theme.dp(216)
 
     property string query: ""
 
@@ -249,7 +251,7 @@ Item {
     ColumnLayout {
         id: col
         anchors.fill: parent
-        spacing: Theme.dp(8)
+        spacing: Theme.dp(10)
 
         // ── Тулбар: поиск слева, счётчик и статус справа ──────────────
         RowLayout {
@@ -259,13 +261,15 @@ Item {
             TextField {
                 Layout.alignment: Qt.AlignVCenter
                 Layout.preferredWidth: Theme.dp(280)
+                variant: "filled"
+                icon: "search"
                 placeholder: "Поиск по имени, команде или PID"
                 onTextChanged: tab.query = text
             }
 
             RowLayout {
                 Layout.alignment: Qt.AlignVCenter
-                spacing: Theme.dp(4)
+                spacing: Theme.dp(6)
 
                 Chip {
                     label: "CPU"
@@ -291,23 +295,20 @@ Item {
 
             Item { Layout.fillWidth: true }
 
-            Text {
+            LText {
                 Layout.alignment: Qt.AlignVCenter
-                text: tab.rowCount + " " + tab.procWord(tab.rowCount)
+                role: "labelSmall"
+                tabular: true
                 color: Theme.subtext
-                font.family: Theme.textFont
-                font.pixelSize: Theme.typeSize("labelSmall")
-                font.weight: Theme.typeWeight("labelSmall")
+                text: tab.rowCount + " " + tab.procWord(tab.rowCount)
             }
 
-            Text {
+            LText {
                 Layout.alignment: Qt.AlignVCenter
                 visible: ProcList.loading
-                text: "обновление…"
+                role: "labelSmall"
                 color: Theme.subtextDim
-                font.family: Theme.textFont
-                font.pixelSize: Theme.typeSize("labelSmall")
-                font.weight: Theme.typeWeight("labelSmall")
+                text: "обновление…"
             }
         }
 
@@ -323,91 +324,75 @@ Item {
                 Layout.leftMargin: Theme.dp(4)
             }
 
-            Text {
+            LText {
                 Layout.preferredWidth: tab.colName
                 Layout.alignment: Qt.AlignVCenter
-                text: "Процесс"
+                role: "labelSmall"
                 color: Theme.subtext
-                font.family: Theme.textFont
-                font.pixelSize: Theme.typeSize("labelSmall")
-                font.weight: Theme.typeWeight("labelSmall")
+                text: "Процесс"
                 elide: Text.ElideRight
             }
 
-            Text {
+            LText {
                 Layout.fillWidth: true
                 Layout.minimumWidth: Theme.dp(180)
                 Layout.alignment: Qt.AlignVCenter
-                text: "Команда"
+                role: "labelSmall"
                 color: Theme.subtext
-                font.family: Theme.textFont
-                font.pixelSize: Theme.typeSize("labelSmall")
-                font.weight: Theme.typeWeight("labelSmall")
+                text: "Команда"
                 elide: Text.ElideRight
             }
 
-            Text {
+            LText {
                 Layout.preferredWidth: tab.colPid
                 Layout.alignment: Qt.AlignVCenter
                 horizontalAlignment: Text.AlignRight
-                text: "PID"
+                role: "labelSmall"
                 color: Theme.subtext
-                font.family: Theme.textFont
-                font.pixelSize: Theme.typeSize("labelSmall")
-                font.weight: Theme.typeWeight("labelSmall")
+                text: "PID"
             }
 
-            Text {
+            LText {
                 Layout.preferredWidth: tab.colUser
                 Layout.alignment: Qt.AlignVCenter
-                text: "Пользователь"
+                role: "labelSmall"
                 color: Theme.subtext
-                font.family: Theme.textFont
-                font.pixelSize: Theme.typeSize("labelSmall")
-                font.weight: Theme.typeWeight("labelSmall")
+                text: "Пользователь"
             }
 
-            Text {
+            LText {
                 Layout.preferredWidth: tab.colCpu
                 Layout.alignment: Qt.AlignVCenter
                 horizontalAlignment: Text.AlignRight
-                text: "ЦП %"
+                role: "labelSmall"
                 color: Theme.subtext
-                font.family: Theme.textFont
-                font.pixelSize: Theme.typeSize("labelSmall")
-                font.weight: Theme.typeWeight("labelSmall")
+                text: "ЦП %"
             }
 
-            Text {
+            LText {
                 Layout.preferredWidth: tab.colMem
                 Layout.alignment: Qt.AlignVCenter
                 horizontalAlignment: Text.AlignRight
-                text: "Память %"
+                role: "labelSmall"
                 color: Theme.subtext
-                font.family: Theme.textFont
-                font.pixelSize: Theme.typeSize("labelSmall")
-                font.weight: Theme.typeWeight("labelSmall")
+                text: "Память %"
             }
 
-            Text {
+            LText {
                 Layout.preferredWidth: tab.colNi
                 Layout.alignment: Qt.AlignVCenter
                 horizontalAlignment: Text.AlignRight
-                text: "NI"
+                role: "labelSmall"
                 color: Theme.subtext
-                font.family: Theme.textFont
-                font.pixelSize: Theme.typeSize("labelSmall")
-                font.weight: Theme.typeWeight("labelSmall")
+                text: "NI"
             }
 
-            Text {
+            LText {
                 Layout.preferredWidth: tab.colStat
                 Layout.alignment: Qt.AlignVCenter
-                text: "Сост."
+                role: "labelSmall"
                 color: Theme.subtext
-                font.family: Theme.textFont
-                font.pixelSize: Theme.typeSize("labelSmall")
-                font.weight: Theme.typeWeight("labelSmall")
+                text: "Сост."
             }
         }
 
@@ -437,16 +422,35 @@ Item {
                     readonly property bool selected: tab.selectedPid === rowItem.proc.pid
 
                     width: listView.width
-                    height: Theme.dp(34)
+                    height: Theme.dp(42)
 
-                    Rectangle { // фон строки: hover / выбор
+                    Rectangle { // фон строки: выбор — secondaryContainer, иначе StateLayer-ховер
                         anchors.fill: parent
-                        radius: Theme.radiusSm
-                        color: rowItem.selected ? Theme.accentContainer
-                             : (rowArea.containsMouse ? Theme.bgHover : "transparent")
+                        anchors.topMargin: Theme.dp(1)
+                        anchors.bottomMargin: Theme.dp(1)
+                        radius: Theme.rad(10)
+                        color: rowItem.selected ? Theme.secondaryContainer : "transparent"
 
                         Behavior on color {
-                            ColorAnimation { duration: Theme.durQuick }
+                            ColorAnimation { duration: Theme.durDefaultEffects }
+                        }
+
+                        StateLayer {
+                            id: rowArea
+                            radius: Theme.rad(10)
+                            tint: rowItem.selected ? Theme.fgSecondaryContainer : Theme.text
+                            acceptedButtons: Qt.LeftButton | Qt.RightButton
+
+                            onClicked: (mouse) => {
+                                tab.selectedPid = rowItem.proc.pid;
+                                if (mouse.button === Qt.RightButton) {
+                                    // позиция меню — точка клика, переведённая во вкладку
+                                    const p = rowArea.mapToItem(tab, mouse.x, mouse.y);
+                                    tab.openMenu(rowItem.proc, p.x, p.y);
+                                } else if (rowItem.hasChildren) {
+                                    tab.toggleExpanded(rowItem.proc.pid);
+                                }
+                            }
                         }
                     }
 
@@ -466,129 +470,96 @@ Item {
                                 visible: rowItem.hasChildren
                                 name: rowItem.expanded ? "expand_more" : "chevron_right"
                                 size: Theme.dp(16)
-                                color: rowItem.selected ? Theme.fgAccentContainer : Theme.subtext
+                                color: rowItem.selected ? Theme.fgSecondaryContainer : Theme.subtext
                             }
                         }
 
-                        Text { // имя процесса
+                        LText { // имя процесса
                             Layout.preferredWidth: tab.colName
                             Layout.alignment: Qt.AlignVCenter
+                            role: "titleSmall"
+                            color: rowItem.selected ? Theme.fgSecondaryContainer : Theme.text
                             text: rowItem.proc.name
-                            color: rowItem.selected ? Theme.fgAccentContainer : Theme.text
                             elide: Text.ElideRight
-                            font.family: Theme.textFont
-                            font.pixelSize: Theme.typeSize("titleSmall")
-                            font.weight: Theme.typeWeight("titleSmall")
                         }
 
-                        Text { // полная команда — видно игру/путь, а не comm
+                        LText { // полная команда — видно игру/путь, а не comm
                             Layout.fillWidth: true
                             Layout.minimumWidth: Theme.dp(180)
                             Layout.alignment: Qt.AlignVCenter
+                            role: "bodySmall"
+                            color: rowItem.selected ? Theme.fgSecondaryContainer : Theme.subtextDim
                             text: rowItem.proc.args
-                            color: rowItem.selected ? Theme.fgAccentContainer : Theme.subtextDim
                             elide: Text.ElideRight
-                            font.family: Theme.textFont
-                            font.pixelSize: Theme.typeSize("bodySmall")
-                            font.weight: Theme.typeWeight("bodySmall")
                         }
 
-                        Text { // PID
+                        LText { // PID
                             Layout.preferredWidth: tab.colPid
                             Layout.alignment: Qt.AlignVCenter
                             horizontalAlignment: Text.AlignRight
+                            role: "bodySmall"
+                            tabular: true
+                            color: rowItem.selected ? Theme.fgSecondaryContainer : Theme.subtext
                             text: String(rowItem.proc.pid)
-                            color: rowItem.selected ? Theme.fgAccentContainer : Theme.subtext
-                            font.family: Theme.textFont
-                            font.pixelSize: Theme.typeSize("bodySmall")
-                            font.weight: Theme.typeWeight("bodySmall")
                         }
 
-                        Text { // пользователь
+                        LText { // пользователь
                             Layout.preferredWidth: tab.colUser
                             Layout.alignment: Qt.AlignVCenter
+                            role: "bodySmall"
+                            color: rowItem.selected ? Theme.fgSecondaryContainer : Theme.subtext
                             text: rowItem.proc.user
-                            color: rowItem.selected ? Theme.fgAccentContainer : Theme.subtext
                             elide: Text.ElideRight
-                            font.family: Theme.textFont
-                            font.pixelSize: Theme.typeSize("bodySmall")
-                            font.weight: Theme.typeWeight("bodySmall")
                         }
 
-                        Text { // ЦП %
+                        LText { // ЦП %
                             Layout.preferredWidth: tab.colCpu
                             Layout.alignment: Qt.AlignVCenter
                             horizontalAlignment: Text.AlignRight
-                            text: Number(rowItem.proc.cpu).toFixed(1)
-                            color: rowItem.selected ? Theme.fgAccentContainer
+                            role: "bodySmall"
+                            tabular: true
+                            color: rowItem.selected ? Theme.fgSecondaryContainer
                                                     : tab.cpuColor(rowItem.proc.cpu)
-                            font.family: Theme.textFont
-                            font.pixelSize: Theme.typeSize("bodySmall")
-                            font.weight: Theme.typeWeight("bodySmall")
+                            text: Number(rowItem.proc.cpu).toFixed(1)
                         }
 
-                        Text { // память %
+                        LText { // память %
                             Layout.preferredWidth: tab.colMem
                             Layout.alignment: Qt.AlignVCenter
                             horizontalAlignment: Text.AlignRight
+                            role: "bodySmall"
+                            tabular: true
+                            color: rowItem.selected ? Theme.fgSecondaryContainer : Theme.subtext
                             text: Number(rowItem.proc.mem).toFixed(1)
-                            color: rowItem.selected ? Theme.fgAccentContainer : Theme.subtext
-                            font.family: Theme.textFont
-                            font.pixelSize: Theme.typeSize("bodySmall")
-                            font.weight: Theme.typeWeight("bodySmall")
                         }
 
-                        Text { // nice
+                        LText { // nice
                             Layout.preferredWidth: tab.colNi
                             Layout.alignment: Qt.AlignVCenter
                             horizontalAlignment: Text.AlignRight
+                            role: "bodySmall"
+                            tabular: true
+                            color: rowItem.selected ? Theme.fgSecondaryContainer : Theme.subtext
                             text: String(rowItem.proc.ni)
-                            color: rowItem.selected ? Theme.fgAccentContainer : Theme.subtext
-                            font.family: Theme.textFont
-                            font.pixelSize: Theme.typeSize("bodySmall")
-                            font.weight: Theme.typeWeight("bodySmall")
                         }
 
-                        Text { // состояние
+                        LText { // состояние
                             Layout.preferredWidth: tab.colStat
                             Layout.alignment: Qt.AlignVCenter
+                            role: "bodySmall"
+                            color: rowItem.selected ? Theme.fgSecondaryContainer : Theme.subtext
                             text: rowItem.proc.stat
-                            color: rowItem.selected ? Theme.fgAccentContainer : Theme.subtext
-                            font.family: Theme.textFont
-                            font.pixelSize: Theme.typeSize("bodySmall")
-                            font.weight: Theme.typeWeight("bodySmall")
-                        }
-                    }
-
-                    MouseArea {
-                        id: rowArea
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        acceptedButtons: Qt.LeftButton | Qt.RightButton
-                        cursorShape: Qt.PointingHandCursor
-
-                        onClicked: (mouse) => {
-                            tab.selectedPid = rowItem.proc.pid;
-                            if (mouse.button === Qt.RightButton) {
-                                // позиция меню — точка клика, переведённая во вкладку
-                                const p = rowArea.mapToItem(tab, mouse.x, mouse.y);
-                                tab.openMenu(rowItem.proc, p.x, p.y);
-                            } else if (rowItem.hasChildren) {
-                                tab.toggleExpanded(rowItem.proc.pid);
-                            }
                         }
                     }
                 }
             }
 
-            Text { // пусто / ничего не найдено (во время обновления не мигаем)
+            LText { // пусто / ничего не найдено (во время обновления не мигаем)
                 anchors.centerIn: parent
                 visible: listView.count === 0 && !ProcList.loading
-                text: tab.query.trim() !== "" ? "Ничего не найдено" : "Нет процессов"
+                role: "bodyMedium"
                 color: Theme.subtext
-                font.family: Theme.textFont
-                font.pixelSize: Theme.typeSize("bodyMedium")
-                font.weight: Theme.typeWeight("bodyMedium")
+                text: tab.query.trim() !== "" ? "Ничего не найдено" : "Нет процессов"
             }
         }
     }
@@ -611,21 +582,22 @@ Item {
             x: tab.menuX
             y: tab.menuY
             width: tab.menuW
-            height: menuCol.implicitHeight + Theme.dp(8)
-            radius: Theme.radiusMd
-            color: Theme.mHigh
+            height: menuCol.implicitHeight + Theme.dp(10)
+            radius: Theme.radiusXl
+            color: Theme.withBlur(Theme.mHigh)
             border.width: 1
-            border.color: Theme.a(Theme.outline, 0.25)
+            border.color: Theme.a(Theme.outline, 0.2)
 
             Column {
                 id: menuCol
                 anchors.fill: parent
-                anchors.margins: Theme.dp(4)
+                anchors.margins: Theme.dp(5)
                 spacing: 0
 
                 MenuRow {
                     icon: "do_not_disturb_on"
                     label: "Остановить (TERM)"
+                    danger: true
                     onActivated: tab.runAction("term")
                 }
                 MenuRow {
@@ -674,7 +646,7 @@ Item {
         }
     }
 
-    // строка контекстного меню: иконка 16 + подпись labelLarge, hover bgHover
+    // строка контекстного меню: иконка 16 + подпись labelLarge, StateLayer-ховер
     component MenuRow: Item {
         id: mi
 
@@ -684,48 +656,41 @@ Item {
 
         signal activated()
 
-        implicitWidth: tab.menuW - Theme.dp(8)
-        implicitHeight: Theme.dp(36)
+        implicitWidth: tab.menuW - Theme.dp(10)
+        implicitHeight: Theme.dp(38)
 
         Rectangle {
             anchors.fill: parent
-            radius: Theme.radiusSm
-            color: miArea.containsMouse ? Theme.bgHover : "transparent"
+            radius: Theme.rad(12)
+            color: mi.danger && miArea.containsMouse ? Theme.a(Theme.error, 0.12) : "transparent"
 
-            Behavior on color {
-                ColorAnimation { duration: Theme.durQuick }
+            StateLayer {
+                id: miArea
+                radius: Theme.rad(12)
+                tint: mi.danger ? Theme.error : Theme.text
+                onClicked: mi.activated()
             }
         }
 
         Row {
             anchors.left: parent.left
-            anchors.leftMargin: Theme.dp(10)
+            anchors.leftMargin: Theme.dp(12)
             anchors.verticalCenter: parent.verticalCenter
             spacing: Theme.dp(10)
 
             Icon {
                 anchors.verticalCenter: parent.verticalCenter
                 name: mi.icon
-                size: Theme.dp(16)
+                size: Theme.dp(18)
                 color: mi.danger ? Theme.error : Theme.text
             }
 
-            Text {
+            LText {
                 anchors.verticalCenter: parent.verticalCenter
-                text: mi.label
+                role: "labelLarge"
                 color: mi.danger ? Theme.error : Theme.text
-                font.family: Theme.textFont
-                font.pixelSize: Theme.typeSize("labelLarge")
-                font.weight: Theme.typeWeight("labelLarge")
+                text: mi.label
             }
-        }
-
-        MouseArea {
-            id: miArea
-            anchors.fill: parent
-            hoverEnabled: true
-            cursorShape: Qt.PointingHandCursor
-            onClicked: mi.activated()
         }
     }
 }

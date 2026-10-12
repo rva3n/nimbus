@@ -3,8 +3,8 @@ import QtQuick.Layouts
 import "../../core"
 import "../../ui"
 
-// Вкладка «Система» диспетчера задач: рисованный логотип Nimbus слева и
-// справочная таблица о системе в две колонки справа (в духе fetch-скрипта).
+// Вкладка «Система» диспетчера задач: карточка-логотип Nimbus слева и
+// справочные данные о системе в Lucid-карточке справа (в духе fetch-скрипта).
 // Данные — из SysStats, константы сборки заданы здесь же.
 RowLayout {
     id: root
@@ -58,66 +58,64 @@ RowLayout {
     function orDash(v) { return (v === undefined || v === null || v === "") ? "—" : v }
 
     Layout.fillWidth: true
-    spacing: Theme.dp(20)
+    spacing: Theme.dp(16)
 
-    // ── Слева: логотип, имя и мини-чипы ────────────────────────────────
-    ColumnLayout {
-        Layout.preferredWidth: Theme.dp(260)
+    // ── Слева: карточка-логотип, имя и мини-чипы ──────────────────────
+    Card {
+        Layout.preferredWidth: Theme.dp(268)
+        Layout.fillHeight: true
         Layout.alignment: Qt.AlignTop
-        spacing: 0
+        pad: Theme.dp(20)
 
-        Item { // логотип: круг accentContainer, облако и искра
+        Item { // логотип: фигура M3 circle, облако и искра
             Layout.alignment: Qt.AlignHCenter
+            Layout.topMargin: Theme.dp(6)
             implicitWidth: Theme.dp(112)
             implicitHeight: Theme.dp(112)
 
-            Rectangle {
+            MaterialShape {
                 anchors.fill: parent
-                radius: width / 2
+                shape: "circle"
                 color: Theme.accentContainer
+            }
 
-                Icon {
-                    anchors.centerIn: parent
-                    name: "cloud"
-                    size: Theme.dp(56)
-                    color: Theme.fgAccentContainer
-                }
+            Icon {
+                anchors.centerIn: parent
+                name: "cloud"
+                size: Theme.dp(56)
+                color: Theme.fgAccentContainer
+            }
 
-                Icon { // искра у облака
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    anchors.verticalCenter: parent.verticalCenter
-                    anchors.horizontalCenterOffset: Theme.dp(28)
-                    anchors.verticalCenterOffset: -Theme.dp(26)
-                    name: "star"
-                    size: Theme.dp(18)
-                    color: Theme.accent
-                }
+            Icon { // искра у облака
+                anchors.horizontalCenter: parent.horizontalCenter
+                anchors.verticalCenter: parent.verticalCenter
+                anchors.horizontalCenterOffset: Theme.dp(28)
+                anchors.verticalCenterOffset: -Theme.dp(26)
+                name: "star"
+                size: Theme.dp(18)
+                color: Theme.accent
             }
         }
 
-        Text {
+        LText {
             Layout.alignment: Qt.AlignHCenter
             Layout.topMargin: Theme.dp(12)
-            text: root.appName
+            role: "headlineSmall"
             color: Theme.text
-            font.family: Theme.textFont
-            font.pixelSize: Theme.typeSize("headlineSmall")
-            font.weight: Theme.typeWeight("headlineSmall")
+            text: root.appName
         }
 
-        Text {
+        LText {
             Layout.alignment: Qt.AlignHCenter
             Layout.topMargin: Theme.dp(2)
-            text: "M3 shell для " + root.compositorName
+            role: "bodySmall"
             color: Theme.subtext
-            font.family: Theme.textFont
-            font.pixelSize: Theme.typeSize("bodySmall")
-            font.weight: Theme.typeWeight("bodySmall")
+            text: "M3 shell для " + root.compositorName
         }
 
         RowLayout { // мини-чипы: версия, лицензия, движок
             Layout.alignment: Qt.AlignHCenter
-            Layout.topMargin: Theme.dp(14)
+            Layout.topMargin: Theme.dp(16)
             spacing: Theme.dp(6)
 
             MiniChip { text: root.appVersion }
@@ -126,115 +124,123 @@ RowLayout {
         }
     }
 
-    // ── Справа: две колонки инфо-строк ─────────────────────────────────
-    RowLayout {
+    // ── Справа: Lucid-карточка с двумя колонками инфо-строк ───────────
+    Card {
         Layout.fillWidth: true
+        Layout.fillHeight: true
         Layout.alignment: Qt.AlignTop
-        spacing: Theme.dp(14)
+        title: "Система"
+        pad: Theme.dp(18)
 
-        ColumnLayout { // колонка A: система и процессор
+        RowLayout {
             Layout.fillWidth: true
-            Layout.alignment: Qt.AlignTop
-            spacing: Theme.dp(4)
+            spacing: Theme.dp(18)
 
-            InfoRow { icon: "info"; label: "ОС"; value: root.orDash(SysStats.distro) }
-            InfoRow { icon: "developer_board"; label: "Ядро"; value: root.orDash(SysStats.kernel) }
-            InfoRow { icon: "monitor"; label: "Платформа"; value: root.orDash(SysStats.host) }
-            InfoRow {
-                icon: "hourglass_top"; label: "Время работы"
-                value: SysStats.uptime > 0 ? root.fmtUptime(SysStats.uptime) : "—"
-            }
-            InfoRow { icon: "memory"; label: "Процессор"; value: root.orDash(SysStats.cpuModel) }
-            InfoRow {
-                icon: "grid_view"; label: "Ядра/потоки"
-                value: SysStats.cores > 0 ? String(SysStats.cores) : "—"
-            }
-            InfoRow { icon: "speed"; label: "Частота CPU"; value: root.fmtClock() }
-            InfoRow { icon: "storage"; label: "Память"; value: root.fmtGb(SysStats.memTotal) }
-            InfoRow {
-                visible: root.maxTempC > 0
-                icon: "device_thermostat"; label: "Темп. CPU"
-                value: Math.round(root.maxTempC) + " °C"
-            }
-        }
+            ColumnLayout { // колонка A: система и процессор
+                Layout.fillWidth: true
+                Layout.alignment: Qt.AlignTop
+                spacing: Theme.dp(2)
 
-        ColumnLayout { // колонка B: видеокарта, диски, софт
-            Layout.fillWidth: true
-            Layout.alignment: Qt.AlignTop
-            spacing: Theme.dp(4)
-
-            InfoRow { icon: "graphic_eq"; label: "Видеокарта"; value: root.orDash(SysStats.gpuModel) }
-            Repeater { // каждый mount — отдельная строка
-                model: SysStats.disks
-                delegate: ColumnLayout {
-                    id: diskCol
-                    required property var modelData
-
-                    Layout.fillWidth: true
-                    spacing: Theme.dp(4)
-
-                    InfoRow {
-                        icon: "storage"; label: diskCol.modelData.mount
-                        value: root.fmtDisk(diskCol.modelData)
-                    }
+                InfoRow { icon: "info"; label: "ОС"; value: root.orDash(SysStats.distro) }
+                InfoRow { icon: "developer_board"; label: "Ядро"; value: root.orDash(SysStats.kernel) }
+                InfoRow { icon: "monitor"; label: "Платформа"; value: root.orDash(SysStats.host) }
+                InfoRow {
+                    icon: "hourglass_top"; label: "Время работы"
+                    value: SysStats.uptime > 0 ? root.fmtUptime(SysStats.uptime) : "—"
+                }
+                InfoRow { icon: "memory"; label: "Процессор"; value: root.orDash(SysStats.cpuModel) }
+                InfoRow {
+                    icon: "grid_view"; label: "Ядра/потоки"; tabular: true
+                    value: SysStats.cores > 0 ? String(SysStats.cores) : "—"
+                }
+                InfoRow { icon: "speed"; label: "Частота CPU"; tabular: true; value: root.fmtClock() }
+                InfoRow { icon: "storage"; label: "Память"; tabular: true; value: root.fmtGb(SysStats.memTotal) }
+                InfoRow {
+                    visible: root.maxTempC > 0
+                    icon: "device_thermostat"; label: "Темп. CPU"; tabular: true
+                    value: Math.round(root.maxTempC) + " °C"
                 }
             }
-            InfoRow { icon: "cloud"; label: "Шелл"; value: root.appName + " " + root.appVersion }
-            InfoRow { icon: "dashboard"; label: "Композитор"; value: root.compositorName }
-            InfoRow { icon: "settings"; label: "Движок"; value: root.engineName }
-            InfoRow { icon: "folder"; label: "Конфиг"; value: root.configPath }
-            InfoRow { icon: "flag"; label: "Лицензия"; value: root.licenseName }
+
+            ColumnLayout { // колонка B: видеокарта, диски, софт
+                Layout.fillWidth: true
+                Layout.alignment: Qt.AlignTop
+                spacing: Theme.dp(2)
+
+                InfoRow { icon: "graphic_eq"; label: "Видеокарта"; value: root.orDash(SysStats.gpuModel) }
+                Repeater { // каждый mount — отдельная строка
+                    model: SysStats.disks
+                    delegate: ColumnLayout {
+                        id: diskCol
+                        required property var modelData
+
+                        Layout.fillWidth: true
+                        spacing: Theme.dp(2)
+
+                        InfoRow {
+                            icon: "storage"; label: diskCol.modelData.mount; tabular: true
+                            value: root.fmtDisk(diskCol.modelData)
+                        }
+                    }
+                }
+                InfoRow { icon: "cloud"; label: "Шелл"; value: root.appName + " " + root.appVersion }
+                InfoRow { icon: "dashboard"; label: "Композитор"; value: root.compositorName }
+                InfoRow { icon: "settings"; label: "Движок"; value: root.engineName }
+                InfoRow { icon: "folder"; label: "Конфиг"; value: root.configPath }
+                InfoRow { icon: "flag"; label: "Лицензия"; value: root.licenseName }
+            }
         }
     }
 
-    // компактная инфо-строка: иконка 28×28 на bgTrack, подпись и значение
+    // компактная инфо-строка: иконка на bgTrack, подпись и значение
     component InfoRow: Rectangle {
         id: infoRow
 
         property string icon: ""
         property string label: ""
         property string value: ""
+        property bool tabular: false
 
-        implicitHeight: Theme.dp(34)
+        implicitHeight: Theme.dp(38)
         Layout.fillWidth: true
         color: "transparent"
 
         RowLayout {
             anchors.fill: parent
-            spacing: Theme.dp(6)
+            spacing: Theme.dp(10)
 
             Rectangle { // контейнер иконки
-                implicitWidth: Theme.dp(28)
-                implicitHeight: Theme.dp(28)
-                radius: Theme.radiusSm
+                Layout.alignment: Qt.AlignVCenter
+                implicitWidth: Theme.dp(30)
+                implicitHeight: Theme.dp(30)
+                radius: Theme.rad(10)
                 color: Theme.bgTrack
 
                 Icon {
                     anchors.centerIn: parent
                     name: infoRow.icon
-                    size: Theme.dp(16)
+                    size: Theme.dp(17)
                     color: Theme.subtext
                 }
             }
 
-            Text { // подпись
+            LText { // подпись
                 Layout.fillWidth: true
+                Layout.alignment: Qt.AlignVCenter
                 elide: Text.ElideRight
-                text: infoRow.label
+                role: "bodySmall"
                 color: Theme.subtext
-                font.family: Theme.textFont
-                font.pixelSize: Theme.typeSize("bodySmall")
-                font.weight: Theme.typeWeight("bodySmall")
+                text: infoRow.label
             }
 
-            Text { // значение; длинные имена CPU/GPU обрезаются
+            LText { // значение; длинные имена CPU/GPU обрезаются
+                Layout.alignment: Qt.AlignVCenter
                 Layout.maximumWidth: Theme.dp(170)
                 elide: Text.ElideRight
-                text: infoRow.value
+                role: "bodyMedium"
+                tabular: infoRow.tabular
                 color: Theme.text
-                font.family: Theme.textFont
-                font.pixelSize: Theme.typeSize("bodyMedium")
-                font.weight: Theme.typeWeight("bodyMedium")
+                text: infoRow.value
             }
         }
     }
@@ -246,18 +252,16 @@ RowLayout {
         property string text: ""
 
         implicitWidth: chipText.implicitWidth + Theme.dp(18)
-        implicitHeight: Theme.dp(22)
+        implicitHeight: Theme.dp(24)
         radius: Theme.radiusPill
         color: Theme.bgTrack
 
-        Text {
+        LText {
             id: chipText
             anchors.centerIn: parent
-            text: chip.text
+            role: "labelSmall"
             color: Theme.subtext
-            font.family: Theme.textFont
-            font.pixelSize: Theme.typeSize("labelSmall")
-            font.weight: Theme.typeWeight("labelSmall")
+            text: chip.text
         }
     }
 }

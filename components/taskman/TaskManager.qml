@@ -5,6 +5,8 @@ import "../../ui"
 
 // Диспетчер задач: шапка с вкладками «Диспетчер / Монитор / Система» и
 // содержимое выбранной вкладки. Закрытие — кнопка справа (shell.closeOverlays).
+// Анатомия шапки — Lucid: заголовок, чипы-табы (selected = secondaryContainer),
+// дивайдер и тональная кнопка закрытия.
 ColumnLayout {
     id: tm
 
@@ -20,44 +22,59 @@ ColumnLayout {
     }
 
     Layout.fillWidth: true
-    spacing: Theme.dp(10)
+    spacing: Theme.dp(12)
 
-    // ── Шапка: вкладки слева, закрытие справа ─────────────────────────
-    RowLayout {
+    // ── Шапка: заголовок и вкладки слева, закрытие справа ─────────────
+    ColumnLayout {
         Layout.fillWidth: true
-        spacing: Theme.dp(8)
+        spacing: Theme.dp(10)
 
-        Chip {
-            Layout.alignment: Qt.AlignVCenter
-            label: "Диспетчер"
-            icon: "dashboard"
-            selected: tm.tab === 0
-            onClicked: { tm.tab = 0; if (tm.shell) tm.shell.taskmanTab = 0; }
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: Theme.dp(10)
+
+            LText {
+                Layout.alignment: Qt.AlignVCenter
+                role: "titleMedium"
+                text: "Диспетчер задач"
+                color: Theme.text
+            }
+
+            RowLayout {
+                Layout.alignment: Qt.AlignVCenter
+                spacing: Theme.dp(8)
+
+                Chip {
+                    label: "Диспетчер"
+                    icon: "dashboard"
+                    selected: tm.tab === 0
+                    onClicked: { tm.tab = 0; if (tm.shell) tm.shell.taskmanTab = 0; }
+                }
+
+                Chip {
+                    label: "Монитор"
+                    icon: "monitor_heart"
+                    selected: tm.tab === 1
+                    onClicked: { tm.tab = 1; if (tm.shell) tm.shell.taskmanTab = 1; }
+                }
+
+                Chip {
+                    label: "Система"
+                    icon: "info"
+                    selected: tm.tab === 2
+                    onClicked: { tm.tab = 2; if (tm.shell) tm.shell.taskmanTab = 2; }
+                }
+            }
+
+            Item { Layout.fillWidth: true }
+
+            IconButton {
+                Layout.alignment: Qt.AlignVCenter
+                icon: "close"
+                onClicked: if (tm.shell) tm.shell.closeOverlays()
+            }
         }
 
-        Chip {
-            Layout.alignment: Qt.AlignVCenter
-            label: "Монитор"
-            icon: "monitor_heart"
-            selected: tm.tab === 1
-            onClicked: { tm.tab = 1; if (tm.shell) tm.shell.taskmanTab = 1; }
-        }
-
-        Chip {
-            Layout.alignment: Qt.AlignVCenter
-            label: "Система"
-            icon: "info"
-            selected: tm.tab === 2
-            onClicked: { tm.tab = 2; if (tm.shell) tm.shell.taskmanTab = 2; }
-        }
-
-        Item { Layout.fillWidth: true }
-
-        IconButton {
-            Layout.alignment: Qt.AlignVCenter
-            icon: "close"
-            onClicked: if (tm.shell) tm.shell.closeOverlays()
-        }
     }
 
     // ── Содержимое вкладок ────────────────────────────────────────────

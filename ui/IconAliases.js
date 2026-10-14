@@ -11,7 +11,6 @@ var alias = {
     "north": "arrow_upward",
     "south": "arrow_downward",
     "play_circle": "play_arrow",
-    "push_pin": "pin",
     "storage": "hard_drive",
     "system_update_alt": "update"
 };

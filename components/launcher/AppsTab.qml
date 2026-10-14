@@ -98,7 +98,7 @@ Item {
     readonly property var rows: root.calcResult !== "" ? [root.calcRow].concat(root.apps) : root.apps
     readonly property int count: root.rows.length
 
-    implicitHeight: Theme.dp(400)
+    implicitHeight: Theme.dp(440)
 
     function activate(index) {
         // индекс 0 занят строкой калькулятора — копируем результат
@@ -340,7 +340,7 @@ Item {
                     Rectangle {
                         anchors.fill: parent
                         visible: !rowItem.hasIcon
-                        radius: Math.round(parent.width * 0.35)
+                        radius: parent.width / 2
                         color: Theme.withBlur(Theme.bgTile)
                     }
 
@@ -349,6 +349,7 @@ Item {
                         visible: rowItem.hasIcon
                         source: rowItem.iconPath
                         size: 35
+                        radius: size / 2
                     }
 
                     Icon {
@@ -404,7 +405,7 @@ Item {
                     visible: rowItem.showActions
                     icon: "push_pin"
                     size: "s"
-                    variant: rowItem.pinned ? "filled" : "standard"
+                    variant: rowItem.pinned ? "filled" : "tonal"
                     onClicked: Apps.togglePin(rowItem.modelData)
                 }
 
@@ -414,7 +415,7 @@ Item {
                     visible: rowItem.showActions
                     icon: rowItem.hidden ? "visibility_off" : "visibility"
                     size: "s"
-                    variant: rowItem.hidden ? "filled" : "standard"
+                    variant: rowItem.hidden ? "filled" : "tonal"
                     onClicked: Apps.toggleHide(rowItem.modelData)
                 }
             }

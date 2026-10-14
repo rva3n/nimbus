@@ -61,7 +61,19 @@ Singleton {
         tilesOrder: "",
         tilesHidden: "",
         widgetsEnabled: false,
-        widgetsLayout: {}
+        widgetsLayout: {},
+        mangohudEnabled: false,
+        mangohudFPS: true,
+        mangohudCPU: true,
+        mangohudGPU: true,
+        mangohudRAM: true,
+        mangohudVRAM: false,
+        mangohudFrameTime: true,
+        mangohudVersion: false,
+        mangohudEngine: false,
+        mangohudIO: false,
+        mangohudMedia: false,
+        mangohudHudAlpha: 1.0
     })
 
     Process {
@@ -127,6 +139,18 @@ Singleton {
             property string tilesHidden: ""
             property bool widgetsEnabled: false
             property var widgetsLayout: ({})
+            property bool mangohudEnabled: false
+            property bool mangohudFPS: true
+            property bool mangohudCPU: true
+            property bool mangohudGPU: true
+            property bool mangohudRAM: true
+            property bool mangohudVRAM: false
+            property bool mangohudFrameTime: true
+            property bool mangohudVersion: false
+            property bool mangohudEngine: false
+            property bool mangohudIO: false
+            property bool mangohudMedia: false
+            property real mangohudHudAlpha: 1.0
         }
     }
 
@@ -178,6 +202,18 @@ Singleton {
     readonly property string tilesHidden: a.tilesHidden
     readonly property bool widgetsEnabled: a.widgetsEnabled
     readonly property var widgetsLayout: a.widgetsLayout
+    readonly property bool mangohudEnabled: a.mangohudEnabled
+    readonly property bool mangohudFPS: a.mangohudFPS
+    readonly property bool mangohudCPU: a.mangohudCPU
+    readonly property bool mangohudGPU: a.mangohudGPU
+    readonly property bool mangohudRAM: a.mangohudRAM
+    readonly property bool mangohudVRAM: a.mangohudVRAM
+    readonly property bool mangohudFrameTime: a.mangohudFrameTime
+    readonly property bool mangohudVersion: a.mangohudVersion
+    readonly property bool mangohudEngine: a.mangohudEngine
+    readonly property bool mangohudIO: a.mangohudIO
+    readonly property bool mangohudMedia: a.mangohudMedia
+    readonly property real mangohudHudAlpha: a.mangohudHudAlpha
 
     // Инстанцирование ленивых синглтонов: без ссылки на них QML их не создаёт,
     // и NightLight/Sounds никогда бы не отреагировали на эти префы.

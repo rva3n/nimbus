@@ -353,18 +353,20 @@ ColumnLayout {
                 }
 
                 IconButton { // pin: закреплённая строка — filled
+                    z: 1
                     Layout.alignment: Qt.AlignVCenter
                     icon: "push_pin"
-                    size: "s"
+                    size: "xs"
                     variant: ci.pinned ? "filled" : "standard"
                     onClicked: ci.pinned ? Clip.unpin(ci.modelData.id) : Clip.pin(ci.modelData.id)
                 }
 
                 IconButton { // удалить: ghost-кнопка в error-тоне
+                    z: 1
                     Layout.alignment: Qt.AlignVCenter
                     visible: !ci.pinned
                     icon: "delete"
-                    size: "s"
+                    size: "xs"
                     tintOverride: Theme.error
                     onClicked: Clip.del(ci.modelData.id)
                 }

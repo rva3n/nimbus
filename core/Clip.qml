@@ -68,12 +68,30 @@ Singleton {
         const mime = (type === "image") ? " --type image/png" : "";
         Quickshell.execDetached(["sh", "-c", "cliphist decode " + shq(id) + " | wl-copy" + mime]);
     }
+    // cliphist и jq пишут в фоне (execDetached не ждёт завершения), поэтому
+    // после удаления/закрепления перечитываем списки спустя короткую паузу —
+    // иначе UI показывает старое состояние до повторного открытия вкладки
+    Timer {
+        id: resync
+        interval: 350
+        onTriggered: c.refresh()
+    }
+    function refreshLater() { resync.restart() }
+
+    // cliphist delete принимает строку из stdin и сверяет её с записью целиком
+    // (id идёт первым полем), поэтому находим строку по id и передаём как есть;
+    // строку из списка убираем сразу — UI не ждёт cliphist
     function del(id) {
-        Quickshell.execDetached(["sh", "-c", "cliphist list | grep -m1 -P '^" + id + "\\t' | cliphist delete"]);
+        c.items = c.items.filter(function (it) { return String(it.id) !== String(id); });
+        Quickshell.execDetached(["sh", "-c",
+            "LINE=$(cliphist list 2>/dev/null | awk -F'\\t' -v id=" + shq(id)
+            + " '$1 == id { print; exit }'); "
+            + "[ -n \"$LINE\" ] && printf '%s' \"$LINE\" | cliphist delete"]);
+        refreshLater();
     }
     function wipe() { Quickshell.execDetached(["sh", "-c", "cliphist wipe"]); c.items = []; }
-    function pin(id) { Quickshell.execDetached(["sh", "-c", "bash " + shq(Quickshell.configDir + "/scripts/clip-pin.sh") + " " + shq(id)]); }
-    function unpin(id) { Quickshell.execDetached(["sh", "-c", "bash " + shq(Quickshell.configDir + "/scripts/clip-unpin.sh") + " " + shq(id)]); }
+    function pin(id) { Quickshell.execDetached(["sh", "-c", "bash " + shq(Quickshell.env("HOME") + "/nimbus/scripts/clip-pin.sh") + " " + shq(id)]); refreshLater(); }
+    function unpin(id) { Quickshell.execDetached(["sh", "-c", "bash " + shq(Quickshell.env("HOME") + "/nimbus/scripts/clip-unpin.sh") + " " + shq(id)]); refreshLater(); }
     function copyPin(p) {
         if (p.type === "image") Quickshell.execDetached(["sh", "-c", "wl-copy --type image/png < " + shq(p.file)]);
         else Quickshell.execDetached(["sh", "-c", "printf %s " + shq(p.text) + " | wl-copy"]);

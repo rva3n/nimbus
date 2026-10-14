@@ -40,14 +40,14 @@ PanelWindow {
                                  : (Osd.visible && view === "idle") ? "osd" : view
     readonly property bool big: mode === "panel" || mode === "launcher" || mode === "taskman" || mode === "tray"
     readonly property string page: win.shell ? win.shell.panelPage : ""
-    // ширина панели: лончер 560, настройки 620, диспетчер 920, трей 360, остальное 404
-    readonly property int panelW: win.mode === "launcher" ? 560
-        : (win.page === "settings" ? 620
+    // ширина панели: лончер 620, настройки 620, диспетчер 920, трей 360, остальное 404
+    readonly property int panelW: win.mode === "launcher" ? 620
+        : ((win.page === "settings" || win.page === "games") ? 620
         : (win.mode === "taskman" ? 920
         : (win.mode === "tray" ? 360 : 404)))
     // активное окно во весь экран на этом output → остров уступает игрушке
     readonly property bool fullscreenActive: win.screen
-        ? Umbriel.fullscreenFor(win.screen.name, win.screen.width, win.screen.height) : false
+        ? Umbriel.fullscreenFor(win.screen.name) : false
     // панель по запросу, OSD и тосты показываются всегда; idle прячется в fullscreen
     visible: win.big || Osd.visible || Notif.visible || !win.fullscreenActive
     // Максимальная высота панели: 75% экрана, чтобы высокие страницы (обои,
@@ -304,6 +304,7 @@ PanelWindow {
                 CalendarPage { win: win }
                 TimersPage { win: win }
                 SettingsPage { win: win }
+                GamesPage { win: win }
                 OpenCodePage { win: win }
 
                 TaskManager { visible: win.mode === "taskman"; shell: win.shell; initialTab: win.shell ? win.shell.taskmanTab : 0 }
@@ -441,6 +442,7 @@ PanelWindow {
                                       : page === "timers" ? "Таймеры"
                                       : page === "opencode" ? "OpenCode"
                                       : page === "emoji" ? "Эмодзи"
+                                      : page === "games" ? "Игры"
                                       : page === "settings" ? "Настройки" : ""
 
     property string wifiSel: ""

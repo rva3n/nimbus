@@ -34,6 +34,9 @@ Rectangle {
     }
 
     implicitHeight: Math.max(Theme.dp(tr.sub !== "" ? 64 : 56), row.implicitHeight + Theme.dp(16))
+    // строка всегда тянется на всю ширину карточки: в ColumnLayout у Rectangle
+    // без этого нулевая ширина, и Switch наезжает на подписи
+    Layout.fillWidth: true
     radius: Theme.rad(16)
     color: "transparent"
 

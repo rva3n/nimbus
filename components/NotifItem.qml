@@ -138,7 +138,7 @@ Item {
             implicitWidth: Theme.dp(32)
             implicitHeight: Theme.dp(32)
             radius: Theme.radiusPill
-            color: Theme.accentContainer
+            color: (ni.item && ni.item.appIcon) ? "transparent" : Theme.accentContainer
 
             Icon {
                 anchors.centerIn: parent
@@ -149,10 +149,10 @@ Item {
             }
 
             AppIcon {
-                anchors.centerIn: parent
+                anchors.fill: parent
                 visible: !!(ni.item && ni.item.appIcon)
                 source: ni.item ? (ni.item.appIcon || "") : ""
-                size: 22
+                size: 32
             }
         }
 

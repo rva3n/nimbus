@@ -363,14 +363,8 @@ Item {
             sl.released(sl.live);
             sl.committed(sl.live);
         }
-        onWheel: (wheel) => {
-            var step = sl.stepSize > 0 ? sl.stepSize : (sl.to - sl.from) / 20;
-            var d = wheel.angleDelta.y !== 0 ? wheel.angleDelta.y : wheel.angleDelta.x;
-            sl.live = sl.snap(sl.value + (d > 0 ? step : -step));
-            sl.moved(sl.live);
-            sl.released(sl.live);
-            sl.committed(sl.live);
-        }
+        // onWheel removed: mouse wheel scrolling on sliders is annoying and
+        // interferes with usage. Slider still works with click/drag.
     }
 
     // клик по глифу поверх трека (если бейджа нет, но iconClickable включён)

@@ -21,7 +21,8 @@ RowLayout {
 
     property var win: null
     // выбранный раздел: 0 — шелл, 1 — островок, 2 — питание,
-    // 3 — уведомления, 4 — погода, 5 — композитор, 6 — ввод, 7 — экран
+    // 3 — уведомления, 4 — погода, 5 — композитор, 6 — ввод, 7 — экран,
+    // 8 — тема, 9 — ночной свет («Игры» — панельная страница, не раздел)
     property int section: 0
 
     // имя монитора, на котором открыта панель (для раздела «Экран»)
@@ -595,6 +596,12 @@ RowLayout {
             label: "Экран"
             selected: page.section === 7
             onClicked: page.section = 7
+        }
+        NavItem {
+            icon: "sports_esports"
+            label: "Игры"
+            selected: false
+            onClicked: { if (page.win && page.win.shell) page.win.shell.setPage("games") }
         }
     }
 
@@ -1238,6 +1245,8 @@ RowLayout {
         }
 
         // 5. Композитор (окна, раскладка, анимации, эффекты)
+        // Прокрутку длинного раздела ведёт внешний Flickable в Island.qml:
+        // вложенный Flickable не имеет implicitHeight и схлопывал страницу в 0
         ColumnLayout {
             visible: page.section === 5
             Layout.fillWidth: true

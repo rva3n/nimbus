@@ -11,6 +11,10 @@ Singleton {
     property var windows: []
     property var activeWindow: null
     property string keyboardLayout: ""
+    // id активного воркспейса каждого вывода: {"DP-1": "DP-1:1"}.
+    // Берём из события `workspaces`: оно приходит на любое переключение, в том
+    // числе на пустой воркспейс, где `windows` может опоздать/не измениться.
+    property var activeWorkspaces: ({})
 
     // «English (US)» → US, «Russian» → RU
     function shortLayout(name) {
@@ -36,6 +40,7 @@ Singleton {
         id: layoutProc
         running: true
         command: ["umbriel", "subscribe", "keyboard_layout"]
+        onExited: running = true
         stdout: SplitParser {
             onRead: line => root._layout(line)
         }
@@ -63,21 +68,54 @@ Singleton {
         return out;
     }
 
-    // Активное окно во весь экран (для авто-скрытия острова): отдельного поля
-    // у Umbriel нет, поэтому смотрим геометрию активного окна на этом output.
-    function fullscreenFor(output, w, h) {
-        const a = activeWindow;
-        if (!output || !a)
-            return false;
-        if (String(a.workspace || "").indexOf(output + ":") !== 0)
-            return false;
-        return a.w >= w - 2 && a.h >= h - 2 && a.x <= 2 && a.y <= 2;
+    // Активное окно этого вывода: сначала окно сиденьца (active), иначе окно
+    // на АКТИВНОМ воркспейсе вывода. Флаг `focused` сам по себе не годится —
+    // он посорспейсный (окно скрытого воркспейса тоже focused=true).
+    function activeWindowFor(output) {
+        if (!output) return null;
+        let fallback = null;
+        const wsId = root.activeWorkspaces[output];
+        for (let i = 0; i < root.windows.length; i++) {
+            const w = root.windows[i];
+            if (!w) continue;
+            if (w.output !== output && String(w.workspace || "").indexOf(output + ":") !== 0)
+                continue;                                 // чужой вывод
+            if (w.active === true) return w;              // окно сиденьца
+            if (fallback === null && wsId && w.workspace === wsId) fallback = w;
+        }
+        return fallback;
+    }
+
+    // Окно во весь экран на этом output → остров уступает. Сравниваем с
+    // активным воркспейсом вывода, а не с «последним активным окном».
+    function fullscreenFor(output) {
+        const a = root.activeWindowFor(output);
+        return !!(a && a.fullscreen === true);
+    }
+
+    // activeWindow остаётся свойством (API для прочего UI), но пересчитывается
+    // от текущих данных, чтобы не зависнуть на окне ушедшего воркспейса.
+    function refreshActiveWindow() {
+        let act = null;
+        for (let i = 0; i < root.windows.length; i++)
+            if (root.windows[i].active === true) { act = root.windows[i]; break; }
+        root.activeWindow = act;
     }
 
     function _workspaces(line) {
         try {
             const m = JSON.parse(line);
-            if (m.event === "workspaces" && m.data) root.workspaces = m.data;
+            if (m.event === "workspaces" && m.data) {
+                root.workspaces = m.data;
+                const act = {};
+                for (let i = 0; i < m.data.length; i++) {
+                    const ws = m.data[i];
+                    if (ws && ws.active === true && ws.output) act[ws.output] = ws.id;
+                }
+                root.activeWorkspaces = act;
+                // `windows` мог не прийти (пустой воркспейс) — пересчитываем сами
+                root.refreshActiveWindow();
+            }
         } catch (e) {}
     }
     function _windows(line) {
@@ -85,10 +123,7 @@ Singleton {
             const m = JSON.parse(line);
             if (m.event === "windows" && m.data) {
                 root.windows = m.data;
-                let act = null;
-                for (let i = 0; i < m.data.length; i++)
-                    if (m.data[i].active) { act = m.data[i]; break; }
-                root.activeWindow = act;
+                root.refreshActiveWindow();
             }
         } catch (e) {}
     }
@@ -97,12 +132,14 @@ Singleton {
         id: wsProc
         running: true
         command: ["umbriel", "subscribe", "workspaces"]
+        onExited: running = true
         stdout: SplitParser { onRead: line => root._workspaces(line) }
     }
     Process {
         id: winProc
         running: true
         command: ["umbriel", "subscribe", "windows"]
+        onExited: running = true
         stdout: SplitParser { onRead: line => root._windows(line) }
     }
 }

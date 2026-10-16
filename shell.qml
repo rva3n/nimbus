@@ -259,6 +259,7 @@ ShellRoot {
         function pageCalendar() { root.view = "panel"; root.panelPage = "calendar"; }
         function pageTimers() { root.view = "panel"; root.panelPage = "timers"; }
     function pageGames() { root.view = "panel"; root.panelPage = "games"; }
+    function pageUpdates() { root.view = "panel"; root.panelPage = "updates"; }
         function emoji() {
             if (root.view === "launcher" && root.launcherTab === "emoji")
                 root.closeOverlays();

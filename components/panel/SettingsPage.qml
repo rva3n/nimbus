@@ -84,7 +84,7 @@ RowLayout {
         Prefs.set("weatherCity", cityField.text.trim());
     }
 
-    // Применить таймауты питания (hypridle) — сразу после смены настроек.
+    // Применить таймауты питания (oberonidle) — сразу после смены настроек.
     function applyIdle() {
         Quickshell.execDetached(["sh", Quickshell.env("HOME") + "/oberon/scripts/set-idle.sh",
                                  String(Prefs.idleScreenMin), String(Prefs.idleLockMin), String(Prefs.idleSuspendMin)]);
@@ -603,6 +603,12 @@ RowLayout {
             selected: false
             onClicked: { if (page.win && page.win.shell) page.win.shell.setPage("games") }
         }
+        NavItem {
+            icon: "update"
+            label: "Обновления"
+            selected: false
+            onClicked: { if (page.win && page.win.shell) page.win.shell.setPage("updates") }
+        }
     }
 
     // ── правая колонка: содержимое выбранного раздела ─────────────────
@@ -994,7 +1000,7 @@ RowLayout {
                 LText {
                     Layout.fillWidth: true
                     Layout.topMargin: Theme.dp(4)
-                    text: "Работает через hypridle (Umbriel): гашение — DPMS, блокировка — экран Oberon, сон — systemd. Если монитор гаснет раньше выбранного — это его собственный таймер в прошивке."
+                    text: "Работает через oberonidle (Umbriel): гашение — DPMS, блокировка — экран Oberon, сон — systemd. Если монитор гаснет раньше выбранного — это его собственный таймер в прошивке."
                     role: "bodySmall"
                     color: Theme.subtextDim
                     wrapMode: Text.WordWrap

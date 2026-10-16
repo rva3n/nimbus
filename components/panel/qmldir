@@ -9,5 +9,6 @@ WeatherPage 1.0 WeatherPage.qml
 CalendarPage 1.0 CalendarPage.qml
 TimersPage 1.0 TimersPage.qml
 GamesPage 1.0 GamesPage.qml
+UpdatesPage 1.0 UpdatesPage.qml
 SettingsPage 1.0 SettingsPage.qml
 OpenCodePage 1.0 OpenCodePage.qml

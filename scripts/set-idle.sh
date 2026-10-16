@@ -5,7 +5,7 @@
 S=$(printf '%s' "${1:-}" | tr -dc 0-9); [ -n "$S" ] || S=10
 L=$(printf '%s' "${2:-}" | tr -dc 0-9); [ -n "$L" ] || L=0
 U=$(printf '%s' "${3:-}" | tr -dc 0-9); [ -n "$U" ] || U=60
-CONF="$HOME/.config/umbriel/hypridle.conf"
+CONF="$HOME/.config/umbriel/oberonidle.conf"
 
 {
     echo "# Сгенерировано Oberon (Настройки → Питание); ручные правки будут перезаписаны."

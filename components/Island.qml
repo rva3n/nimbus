@@ -42,7 +42,7 @@ PanelWindow {
     readonly property string page: win.shell ? win.shell.panelPage : ""
     // ширина панели: лончер 620, настройки 620, диспетчер 920, трей 360, остальное 404
     readonly property int panelW: win.mode === "launcher" ? 620
-        : ((win.page === "settings" || win.page === "games") ? 620
+        : ((win.page === "settings" || win.page === "games" || win.page === "updates") ? 620
         : (win.mode === "taskman" ? 920
         : (win.mode === "tray" ? 360 : 404)))
     // активное окно во весь экран на этом output → остров уступает игрушке
@@ -305,6 +305,7 @@ PanelWindow {
                 TimersPage { win: win }
                 SettingsPage { win: win }
                 GamesPage { win: win }
+                UpdatesPage { win: win }
                 OpenCodePage { win: win }
 
                 TaskManager { visible: win.mode === "taskman"; shell: win.shell; initialTab: win.shell ? win.shell.taskmanTab : 0 }
@@ -443,6 +444,7 @@ PanelWindow {
                                       : page === "opencode" ? "OpenCode"
                                       : page === "emoji" ? "Эмодзи"
                                       : page === "games" ? "Игры"
+                                      : page === "updates" ? "Обновления"
                                       : page === "settings" ? "Настройки" : ""
 
     property string wifiSel: ""

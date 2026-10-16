@@ -140,8 +140,21 @@ RowLayout {
         "clock": "Часы",
         "tray": "Трей"
     })
-    readonly property var chipOrder: Array.isArray(Prefs.islandOrder) && Prefs.islandOrder.length > 0
-                                   ? Prefs.islandOrder : ["kb", "weather", "ws", "clock", "tray"]
+    readonly property var chipOrder: {
+        const allowed = ["kb", "weather", "ws", "clock", "tray"];
+        const raw = Prefs.islandOrder;
+        const out = [];
+        if (raw && typeof raw.length === "number") {
+            for (let i = 0; i < raw.length; i++) {
+                const id = raw[i];
+                if (typeof id === "string" && allowed.includes(id) && !out.includes(id))
+                    out.push(id);
+            }
+        }
+        for (const id of allowed)
+            if (!out.includes(id)) out.push(id);
+        return out;
+    }
 
     // Поднять/опустить чип в порядке островка (массив пишется целиком).
     function moveChip(i, delta) {

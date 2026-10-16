@@ -15,6 +15,9 @@ Singleton {
 
     readonly property bool ready: store._loaded
     property bool _loaded: false
+    property bool _corruptBackupRequired: false
+    property bool _corruptBackupPending: false
+    property bool _corruptBackupDone: false
 
     // ── состояние: var-объекты пересоздаются целиком, чтобы биндинги видели смены ──
     property var enabledMap: ({})
@@ -115,8 +118,20 @@ Singleton {
                 store.enabledMap = s.enabled;
                 store.pos = s.pos;
             }
-        } catch (e) {}
-        store._loaded = true;
+            if (!store._corruptBackupPending) {
+                store._corruptBackupRequired = false;
+                store._corruptBackupDone = false;
+            }
+            store._loaded = true;
+        } catch (e) {
+            if (!store._corruptBackupRequired) {
+                store.enabledMap = ({});
+                store.pos = ({});
+            }
+            store._corruptBackupRequired = true;
+            store._loaded = store._corruptBackupDone;
+            store.backupCorrupt();
+        }
     }
 
     function load() {
@@ -133,7 +148,38 @@ Singleton {
             onRead: line => store.parseLine(line)
         }
 
-        onExited: store._loaded = true  // пустой/отсутствующий файл — тоже готово
+        onExited: {
+            if (!store._corruptBackupRequired || store._corruptBackupDone)
+                store._loaded = true;  // пустой/отсутствующий файл — тоже готово
+            if (store._loaded && store._dirty) {
+                store._dirty = false;
+                store.save();
+            }
+        }
+    }
+
+    Process {
+        id: corruptProc
+
+        onExited: (code) => {
+            store._corruptBackupPending = false;
+            if (code === 0) {
+                store._corruptBackupDone = true;
+                store._loaded = true;
+                if (store._dirty) {
+                    store._dirty = false;
+                    store.save();
+                }
+            }
+        }
+    }
+
+    function backupCorrupt() {
+        if (store._corruptBackupPending || store._corruptBackupDone)
+            return;
+        store._corruptBackupPending = true;
+        corruptProc.command = ["cp", "--", store.path, store.path + ".corrupt-" + Date.now()];
+        corruptProc.running = true;
     }
 
     Timer {
@@ -164,6 +210,10 @@ Singleton {
     function scheduleSave() { saveTimer.restart(); }
 
     function save() {
+        if (!store._loaded || (store._corruptBackupRequired && !store._corruptBackupDone)) {
+            store._dirty = true;
+            return;
+        }
         if (store.saving) {
             store._dirty = true;
             return ;
@@ -172,7 +222,7 @@ Singleton {
         const j = JSON.stringify({ "enabled": store.enabledMap, "pos": store.pos });
         const dir = Quickshell.env("HOME") + "/.local/state/oberon";
         writeProc.command = ["sh", "-c",
-            "mkdir -p " + store.shq(dir) + "; printf %s " + store.shq(j) + " > " + store.shq(store.path + ".tmp") + "; mv -f " + store.shq(store.path + ".tmp") + " " + store.shq(store.path)];
+            "mkdir -p " + store.shq(dir) + " && printf %s " + store.shq(j) + " > " + store.shq(store.path + ".tmp") + " && mv -f " + store.shq(store.path + ".tmp") + " " + store.shq(store.path)];
         writeProc.running = false;
         writeProc.running = true;
     }

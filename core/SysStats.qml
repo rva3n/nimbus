@@ -4,7 +4,7 @@ import Quickshell
 import Quickshell.Io
 
 // Системные метрики: CPU, память, диск, температура, uptime.
-// Читается из /proc и df раз в две секунды.
+// Читается из /proc и df раз в три секунды, пока видны системные метрики.
 Singleton {
     id: s
 
@@ -45,8 +45,14 @@ Singleton {
     property var coreLoads: []   // загрузка по ядрам, 0..1
     property real netRx: 0       // байт/с
     property real netTx: 0
+    property bool taskmanActive: false
+    // Вне диспетчера метрики нужны системному desktop-виджету.
+    readonly property bool active: s.taskmanActive
+        || (Prefs.widgetsEnabled && WidgetsStore.ready && WidgetsStore.isEnabled("system"))
 
     property var _prevCores: null
+    property var _tempsBuf: []
+    property var _coreLoadsBuf: []
     property double _prevNetTime: 0
     property real _prevNetRx: 0
     property real _prevNetTx: 0
@@ -137,17 +143,15 @@ Singleton {
             if (isNaN(v))
                 return;
             if (v > 1000) v /= 1000;
-            const arr = s.temps.slice();
             // у одного hwmon несколько датчиков: имя с подписью, если есть
-            arr.push({ name: p[0] || "", label: p[1] || "", c: v });
-            s.temps = arr;
+            s._tempsBuf.push({ name: p[0] || "", label: p[1] || "", c: v });
         } else if (line.startsWith("CORE ")) {
             const v = line.slice(5).split(/\s+/).filter(x => x !== "").slice(0, 8).map(Number);
             if (v.length < 8)
                 return;
             const total = v.reduce((a, b) => a + b, 0);
             const idle = v[3] + (v[4] || 0);
-            const idx = s.coreLoads.length;
+            const idx = s._coreLoadsBuf.length;
             const prev = s._prevCores ? s._prevCores[idx] : null;
             let load = 0;
             if (prev) {
@@ -156,9 +160,7 @@ Singleton {
                 if (dt > 0)
                     load = Math.max(0, Math.min(1, 1 - di / dt));
             }
-            const arr = s.coreLoads.slice();
-            arr.push(load);
-            s.coreLoads = arr;
+            s._coreLoadsBuf.push(load);
             const pc = s._prevCores ? s._prevCores.slice() : [];
             pc[idx] = { total: total, idle: idle };
             s._prevCores = pc;
@@ -214,6 +216,10 @@ Singleton {
         stdout: SplitParser {
             onRead: line => s._line(line)
         }
+        onExited: {
+            s.temps = s._tempsBuf;
+            s.coreLoads = s._coreLoadsBuf;
+        }
     }
 
     // Статичная информация о железе и системе (для «О системе» диспетчера)
@@ -239,15 +245,16 @@ Singleton {
     }
 
     Timer {
-        interval: 2000
-        running: true
+        interval: 3000
+        running: s.active
         repeat: true
         triggeredOnStart: true
         onTriggered: {
-            // массивные метрики собираются заново каждый тик
-            s.temps = [];
-            s.coreLoads = [];
-            proc.running = false;
+            if (!s.active || proc.running)
+                return;
+            // Собираем массивы отдельно и публикуем целиком после завершения процесса.
+            s._tempsBuf = [];
+            s._coreLoadsBuf = [];
             proc.running = true;
         }
     }

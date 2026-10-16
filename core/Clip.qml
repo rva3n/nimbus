@@ -30,7 +30,7 @@ Singleton {
         command: ["sh", "-c",
             "C=\"$HOME/.cache/oberon/clip\"; mkdir -p \"$C\"; " +
             "cliphist list 2>/dev/null | head -60 | sed 's/\\t/|/' | while IFS='|' read -r id rest; do " +
-            "case \"$rest\" in *\"binary data\"*) cliphist decode \"$id\" > \"$C/$id.png\" 2>/dev/null; printf '%s|image|%s\\n' \"$id\" \"$rest\";; " +
+            "case \"$rest\" in *\"binary data\"*) [ -s \"$C/$id.png\" ] || cliphist decode \"$id\" > \"$C/$id.png\" 2>/dev/null; printf '%s|image|%s\\n' \"$id\" \"$rest\";; " +
             "*) printf '%s|text|%s\\n' \"$id\" \"$rest\";; esac; done"]
         stdout: SplitParser { onRead: line => c.parseEntry(line) }
         onExited: {
@@ -89,7 +89,7 @@ Singleton {
             + "[ -n \"$LINE\" ] && printf '%s' \"$LINE\" | cliphist delete"]);
         refreshLater();
     }
-    function wipe() { Quickshell.execDetached(["sh", "-c", "cliphist wipe"]); c.items = []; }
+    function wipe() { Quickshell.execDetached(["sh", "-c", "cliphist wipe; rm -f \"$HOME/.cache/oberon/clip/\"*.png"]); c.items = []; }
     function pin(id) { Quickshell.execDetached(["sh", "-c", "bash " + shq(Quickshell.env("HOME") + "/oberon/scripts/clip-pin.sh") + " " + shq(id)]); refreshLater(); }
     function unpin(id) { Quickshell.execDetached(["sh", "-c", "bash " + shq(Quickshell.env("HOME") + "/oberon/scripts/clip-unpin.sh") + " " + shq(id)]); refreshLater(); }
     function copyPin(p) {

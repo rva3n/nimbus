@@ -83,6 +83,8 @@ Singleton {
                     w.place = j.city || "";
                     w.lat = j.lat;
                     w.lon = j.lon;
+                    Prefs.set("weatherLat", w.lat);
+                    Prefs.set("weatherLon", w.lon);
                     Prefs.set("weatherPlace", w.place);
                     w.fetch();
                 } catch (e) {
@@ -170,20 +172,21 @@ Singleton {
         const hTimes = h.time || [];
         const hTemps = h.temperature_2m || [];
         const hCodes = h.weather_code || [];
-        const now = new Date();
-        const hourFloor = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours());
+        const utcOffsetSeconds = Number(j.utc_offset_seconds) || 0;
+        const cityNow = new Date(Date.now() + utcOffsetSeconds * 1000);
+        const hourFloor = cityNow.toISOString().slice(0, 13) + ":00";
         let start = 0;
         for (let i = 0; i < hTimes.length; i++) {
-            if (new Date(hTimes[i]) >= hourFloor) {
+            if (String(hTimes[i]) >= hourFloor) {
                 start = i;
                 break;
             }
         }
         const hours = [];
         for (let i = start; i < Math.min(hTimes.length, start + 12); i++) {
-            const d = new Date(hTimes[i]);
+            const t = String(hTimes[i]);
             hours.push({
-                label: ("0" + d.getHours()).slice(-2) + ":00",
+                label: t.slice(11, 13) + ":00",
                 temp: Math.round(hTemps[i]),
                 code: Math.round(hCodes[i])
             });
@@ -221,9 +224,9 @@ Singleton {
             geoProc.running = false;
             geoProc.running = true;
         } else if (Prefs.weatherCity !== "") {
-            const q = encodeURIComponent(Prefs.weatherCity);
             geocodeProc.command = ["sh", "-c",
-                "curl -s --max-time 15 'https://geocoding-api.open-meteo.com/v1/search?name=" + q + "&count=1&language=ru&format=json' | jq -c '.results[0] // empty' 2>/dev/null"];
+                "curl -s --max-time 15 -G --data-urlencode \"name=$1\" --data-urlencode 'count=1' --data-urlencode 'language=ru' --data-urlencode 'format=json' 'https://geocoding-api.open-meteo.com/v1/search' | jq -c '.results[0] // empty' 2>/dev/null",
+                "oberon-geocode", Prefs.weatherCity];
             geocodeProc.running = false;
             geocodeProc.running = true;
         } else if (Prefs.weatherLat !== 0) {

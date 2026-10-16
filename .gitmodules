@@ -33,3 +33,7 @@
 [submodule "wallpapers"]
 	path = wallpapers
 	url = https://github.com/rva3n/oberon-wallpapers.git
+[submodule "third_party/umbriel"]
+	path = third_party/umbriel
+	url = https://github.com/rva3n/umbriel.git
+	branch = main

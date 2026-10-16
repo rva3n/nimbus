@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Window
 import "../core"
 
 // M3 Expressive-кнопка-иконка Oberon (порт lucidui/IconButton.qml). У checkable
@@ -101,6 +102,8 @@ Item {
             tint: ib.content
             disabled: ib.disabled
             acceptedButtons: Qt.LeftButton | Qt.RightButton
+            onEntered: if (ib.tooltip !== "") tip.showTip(area, ib.tooltip)
+            onExited: tip.hideTip(area)
             onClicked: (mouse) => {
                 if (mouse.button === Qt.RightButton) {
                     ib.rightClicked();
@@ -132,6 +135,13 @@ Item {
 
         }
 
+    }
+
+    Tooltip {
+        id: tip
+
+        parent: Window.window ? Window.window.contentItem : ib
+        z: 1000
     }
 
 }

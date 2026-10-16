@@ -19,7 +19,7 @@ command -v cmake >/dev/null 2>&1 || die "нет cmake — поставь: sudo p
 command -v cargo >/dev/null 2>&1 || die "нет cargo — поставь: sudo pacman -S rust (или rustup)"
 
 missing=0
-for d in quickshell matugen awww cava hypridle cli11 vulkan-headers hyprwayland-scanner hyprland-protocols; do
+for d in quickshell matugen awww cava hypridle umbriel cli11 vulkan-headers hyprwayland-scanner hyprland-protocols; do
 	[ -n "$(ls -A "$ROOT/third_party/$d" 2>/dev/null)" ] || missing=1
 done
 if [ "$missing" = 1 ]; then

@@ -24,7 +24,10 @@ Rectangle {
     onVizBarsChanged: w.syncCava()
 
     function syncCava() {
-        Cava.want(w.cavaUid, w.vizBars);
+        if (w.visible)
+            Cava.want(w.cavaUid, w.vizBars);
+        else
+            Cava.drop(w.cavaUid);
     }
 
     Item {

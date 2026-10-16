@@ -14,6 +14,11 @@ Singleton {
 
     // по возрастанию ts; mutation — только через присвоение нового массива
     property var items: []
+    property bool _loaded: false
+    property bool _loading: false
+    property bool _corruptBackupRequired: false
+    property bool _corruptBackupPending: false
+    property bool _corruptBackupDone: false
     readonly property string path: Quickshell.env("HOME") + "/.local/state/oberon/reminders.json"
     // отмеченные дни для ui/MonthView (marked): ключи "г-м-д", месяц 0-based
     readonly property var marks: {
@@ -49,7 +54,17 @@ Singleton {
             // присваиваем только если что-то реально изменилось — иначе лишний
             // пересбор подписчиков (Repeater) на каждой перечитке
             if (JSON.stringify(arr) !== JSON.stringify(rem.items)) rem.items = arr;
-        } catch (e) {}
+            if (!rem._corruptBackupPending) {
+                rem._corruptBackupRequired = false;
+                rem._corruptBackupDone = false;
+            }
+        } catch (e) {
+            if (!rem._corruptBackupRequired)
+                rem.items = [];
+            rem._loaded = false;
+            rem._corruptBackupRequired = true;
+            rem.backupCorrupt();
+        }
     }
 
     // ── чтение ────────────────────────────────────────────────────────
@@ -62,12 +77,45 @@ Singleton {
             onRead: line => rem.parseLine(line)
         }
 
-        onExited: rem._afterLoad()
+        onExited: {
+            rem._loading = false;
+            rem._loaded = !rem._corruptBackupRequired || rem._corruptBackupDone;
+            rem._afterLoad();
+            if (rem._loaded && rem._dirty) {
+                rem._dirty = false;
+                rem.save();
+            }
+        }
     }
 
     function load() {
+        rem._loading = true;
         readProc.running = false;
         readProc.running = true;
+    }
+
+    Process {
+        id: corruptProc
+
+        onExited: (code) => {
+            rem._corruptBackupPending = false;
+            if (code === 0) {
+                rem._corruptBackupDone = true;
+                rem._loaded = !rem._loading;
+                if (rem._loaded && rem._dirty) {
+                    rem._dirty = false;
+                    rem.save();
+                }
+            }
+        }
+    }
+
+    function backupCorrupt() {
+        if (rem._corruptBackupPending || rem._corruptBackupDone)
+            return;
+        rem._corruptBackupPending = true;
+        corruptProc.command = ["cp", "--", rem.path, rem.path + ".corrupt-" + Date.now()];
+        corruptProc.running = true;
     }
 
     function _afterLoad() {
@@ -105,6 +153,10 @@ Singleton {
     function scheduleSave() { saveTimer.restart(); }
 
     function save() {
+        if (rem._loading || !rem._loaded || (rem._corruptBackupRequired && !rem._corruptBackupDone)) {
+            rem._dirty = true;
+            return;
+        }
         if (rem.saving) {
             rem._dirty = true;
             return ;
@@ -113,7 +165,7 @@ Singleton {
         const j = JSON.stringify(rem.items);
         const dir = Quickshell.env("HOME") + "/.local/state/oberon";
         writeProc.command = ["sh", "-c",
-            "mkdir -p " + rem.shq(dir) + "; printf %s " + rem.shq(j) + " > " + rem.shq(rem.path + ".tmp") + "; mv -f " + rem.shq(rem.path + ".tmp") + " " + rem.shq(rem.path)];
+            "mkdir -p " + rem.shq(dir) + " && printf %s " + rem.shq(j) + " > " + rem.shq(rem.path + ".tmp") + " && mv -f " + rem.shq(rem.path + ".tmp") + " " + rem.shq(rem.path)];
         writeProc.running = false;
         writeProc.running = true;
     }

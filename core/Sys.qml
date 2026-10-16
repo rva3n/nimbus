@@ -67,7 +67,15 @@ Singleton {
     Process {
         id: wifiConnectProc
         property string targetSsid: ""
+        property string pendingPassword: ""
         property var queued: null         // { ssid, password } следующего запроса подключения
+        stdinEnabled: true
+        onStarted: {
+            if (wifiConnectProc.pendingPassword !== "") {
+                wifiConnectProc.write(wifiConnectProc.pendingPassword + "\n");
+                wifiConnectProc.pendingPassword = "";
+            }
+        }
         onExited: (code) => {
             if (code !== 0) s._fail("Не удалось подключиться к «" + targetSsid + "»");
             if (wifiConnectProc.queued) {
@@ -82,10 +90,20 @@ Singleton {
     }
     function _startConnect(ssid, password) {
         // timeout: зависший вызов прервётся и разблокирует очередь (код 124 → тост)
-        const cmd = ["timeout", "30", "nmcli", "dev", "wifi", "connect", ssid];
-        if (password && password.length > 0) cmd.push("password", password);
         wifiConnectProc.targetSsid = ssid;
-        wifiConnectProc.command = cmd;
+        wifiConnectProc.pendingPassword = password || "";
+        if (wifiConnectProc.pendingPassword !== "") {
+            // У `device wifi connect` нет passwd-file; создаём/переиспользуем
+            // профиль и передаём секрет в `connection up` через stdin.
+            wifiConnectProc.command = ["timeout", "30", "sh", "-c",
+                "set -e; if ! nmcli connection modify id \"$1\" wifi-sec.key-mgmt wpa-psk >/dev/null 2>&1; then " +
+                "nmcli connection add type wifi ifname '*' con-name \"$1\" ssid \"$1\" wifi-sec.key-mgmt wpa-psk >/dev/null; fi; " +
+                "IFS= read -r password || exit 1; " +
+                "printf '802-11-wireless-security.psk:%s\\n' \"$password\" | nmcli connection up id \"$1\" passwd-file /dev/stdin",
+                "oberon-wifi", ssid];
+        } else {
+            wifiConnectProc.command = ["timeout", "30", "nmcli", "device", "wifi", "connect", ssid];
+        }
         wifiConnectProc.running = true;
     }
     function connectWifi(ssid, password) {

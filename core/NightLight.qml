@@ -95,12 +95,27 @@ Singleton {
 
     // ── реакция на префы ──────────────────────────────────────────────
     onPrefsOnChanged: sync()
-    onTempChanged: sync()
+    onTempChanged: syncDebounce.restart()
     onModeChanged: sync()
-    onGeoOkChanged: sync()
+    onGeoOkChanged: if (mode === "sunset") syncDebounce.restart()
     Component.onCompleted: sync()
 
+    Connections {
+        target: Prefs
+
+        function onWeatherLatChanged() { if (nl.mode === "sunset") syncDebounce.restart() }
+        function onWeatherLonChanged() { if (nl.mode === "sunset") syncDebounce.restart() }
+    }
+
+    Timer {
+        id: syncDebounce
+
+        interval: 500
+        onTriggered: nl.sync()
+    }
+
     function sync() {
+        syncDebounce.stop();
         if (!Prefs.ready) return;
         if (!prefsOn) {
             schedTimer.running = false;

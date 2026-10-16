@@ -468,6 +468,7 @@ ColumnLayout {
     // «Обновить всё» — только по клику мышью (вне клавиатурного выбора)
     function updateAll() {
         if (tab.shell) tab.shell.closeOverlays();
+        tab._installedLoaded = false;
         tab.runInTerminal(["paru", "-Syu"]);
     }
 
@@ -480,6 +481,7 @@ ColumnLayout {
             return;
         }
         if (tab.shell) tab.shell.closeOverlays();
+        tab._installedLoaded = false;
         if (tab.detailAur) tab.runInTerminal(["paru", "-Rns", "--", t.pkg]);
         else Quickshell.execDetached(["pkexec", "pacman", "-Rns", "--noconfirm", "--", t.pkg]);
         tab.pending = "";
@@ -495,6 +497,7 @@ ColumnLayout {
         if (!it) return;
         if (!it.installed) {
             if (tab.shell) tab.shell.closeOverlays();
+            tab._installedLoaded = false;
             if (it.aur) tab.runInTerminal(["paru", "-S", "--", it.name]);
             else Quickshell.execDetached(["pkexec", "pacman", "-S", "--noconfirm", "--", it.name]);
             return;

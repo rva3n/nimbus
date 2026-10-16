@@ -19,7 +19,23 @@ ColumnLayout {
         tab = initialTab;
         if (tm.shell)
             tm.shell.taskmanTab = tab;
+        tm.syncPollers();
+    } else {
+        tm.syncPollers();
     }
+
+    onInitialTabChanged: {
+        if (tm.visible)
+            tm.tab = tm.initialTab;
+    }
+    onTabChanged: tm.syncPollers()
+
+    function syncPollers() {
+        ProcList.active = tm.visible && tm.tab === 0;
+        SysStats.taskmanActive = tm.visible && (tm.tab === 1 || tm.tab === 2);
+    }
+
+    Component.onCompleted: tm.syncPollers()
 
     Layout.fillWidth: true
     spacing: Theme.dp(12)

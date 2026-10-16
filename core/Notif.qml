@@ -34,8 +34,9 @@ Singleton {
 
     function save() {
         const j = serialize();
+        const tmp = root.statePath + ".tmp";
         Quickshell.execDetached(["sh", "-c",
-            "mkdir -p " + shq(Quickshell.stateDir) + "; printf %s " + shq(j) + " > " + shq(root.statePath)]);
+            "mkdir -p " + shq(Quickshell.stateDir) + " && printf %s " + shq(j) + " > " + shq(tmp) + " && mv -f " + shq(tmp) + " " + shq(root.statePath)]);
     }
     // Debounced write: coalesces bursts of add/dismiss/clear.
     function scheduleSave() { saveTimer.restart(); }

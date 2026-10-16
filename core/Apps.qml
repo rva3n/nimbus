@@ -29,8 +29,9 @@ Singleton {
     function load() { readProc.running = false; readProc.running = true; }
     function save() {
         const j = JSON.stringify({ pinned: a.pinned, hidden: a.hidden });
+        const path = Quickshell.stateDir + "/launcher.json";
         Quickshell.execDetached(["sh", "-c",
-            "mkdir -p " + shq(Quickshell.stateDir) + "; printf %s " + shq(j) + " > " + shq(Quickshell.stateDir + "/launcher.json")]);
+            "mkdir -p " + shq(Quickshell.stateDir) + " && printf %s " + shq(j) + " > " + shq(path + ".tmp") + " && mv -f " + shq(path + ".tmp") + " " + shq(path)]);
     }
 
     function keyOf(app) {

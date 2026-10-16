@@ -73,6 +73,7 @@ Singleton {
     }
 
     function apply() {
+        retry.stop();
         if (root.bands <= 0) {
             proc.running = false;
             root.liveBands = 0;
@@ -102,6 +103,18 @@ Singleton {
         onTriggered: root.apply()
     }
 
+    // Падение cava не должно оставлять визуализаторы без данных,
+    // но и перезапускать процесс в tight loop нельзя.
+    Timer {
+        id: retry
+
+        interval: 1500
+        onTriggered: {
+            if (root.bands > 0 && !proc.running)
+                root.apply();
+        }
+    }
+
     // опрос — пятая часть окна свежести движения (1 s → 100 ms)
     Timer {
         interval: 100
@@ -114,6 +127,7 @@ Singleton {
         id: proc
 
         running: false
+        onExited: if (root.bands > 0) retry.restart()
         onRunningChanged: {
             root.running = proc.running;
             if (!proc.running) {

@@ -271,6 +271,11 @@ Item {
                 id: chipLoader
                 required property string modelData
                 anchors.verticalCenter: parent.verticalCenter
+                visible: chipLoader.modelData === "kb" ? (Umbriel.keyboardLayout !== "" && Prefs.islandLayout)
+                       : chipLoader.modelData === "weather" ? Prefs.islandWeather
+                       : chipLoader.modelData === "ws" ? Prefs.islandWorkspaces
+                       : chipLoader.modelData === "clock" ? Prefs.islandClock
+                       : Prefs.islandTray
                 // id Component'ов не свойства — ссылаемся напрямую по id
                 sourceComponent: chipLoader.modelData === "kb" ? kbChip
                                : chipLoader.modelData === "weather" ? weatherChip

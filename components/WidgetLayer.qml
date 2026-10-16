@@ -242,6 +242,7 @@ PanelWindow {
                 }
 
                 IconButton {
+                    z: 1
                     visible: board.editing
                     anchors.top: parent.top
                     anchors.right: parent.right
@@ -249,6 +250,7 @@ PanelWindow {
                     icon: "visibility_off"
                     tooltip: "Скрыть"
                     onClicked: WidgetsStore.toggle(host.modelData)
+                    onRightClicked: board.editing = false
                 }
 
                 MouseArea {

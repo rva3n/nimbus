@@ -255,7 +255,7 @@ PanelWindow {
                             // не в фокусе — тянется к кругу; armed — к чистому
                             // кругу и красному кольцу
                             morph: tile.isArmed ? 0 : (tile.hot ? 0.0 : 0.55)
-                            color: tile.isArmed ? Theme.error : (tile.hot ? Theme.primary : Theme.withBlur(Theme.surfaceHigh))
+                            color: tile.isArmed ? Theme.error : (tile.hot ? Theme.primary : Theme.withBlur(Theme.surfaceHi))
                             rotation: tile.isArmed ? 360 : (tile.hot ? 22 : 0)
                             scale: tap.pressed ? 0.92 : (tile.hot ? 1.06 : 1)
 

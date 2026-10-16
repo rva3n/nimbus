@@ -154,6 +154,12 @@ Singleton {
         }
     }
 
+    Timer {
+        id: saveTimer
+        interval: 200
+        onTriggered: file.writeAdapter()
+    }
+
     readonly property real uiScale: a.uiScale
     readonly property real cornerScale: a.cornerScale
     readonly property real motionScale: a.motionScale
@@ -235,10 +241,21 @@ Singleton {
         if (fixed) file.writeAdapter();
     }
 
-    // Установить значение (ключ = имя свойства адаптера) и сохранить файл.
+    // Установить значение (ключ = имя свойства адаптера) и сохранить файл с debounce.
+    function _sameValue(current, value) {
+        if (current === value)
+            return true;
+        if (current === null || value === null || typeof current !== "object" || typeof value !== "object")
+            return false;
+        try { return JSON.stringify(current) === JSON.stringify(value); }
+        catch (e) { return false; }
+    }
+
     function set(key, value) {
+        if (p._sameValue(a[key], value))
+            return;
         a[key] = value;
-        file.writeAdapter();
+        saveTimer.restart();
     }
 
     Component.onCompleted: {

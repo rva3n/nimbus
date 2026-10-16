@@ -10,6 +10,7 @@ Singleton {
 
     property var items: []   // [{user, pid, ppid, ni, cpu, mem, stat, args, name}]
     property bool loading: false
+    property bool active: false
 
     // накопитель текущего прогона ps — items меняется один раз за цикл
     property var _buf: []
@@ -37,13 +38,14 @@ Singleton {
 
     Timer {
         interval: 2000
-        running: true
+        running: p.active
         repeat: true
         triggeredOnStart: true
         onTriggered: {
+            if (!p.active || psProc.running)
+                return;
             p._buf = [];
             p.loading = true;
-            psProc.running = false;
             psProc.running = true;
         }
     }

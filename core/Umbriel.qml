@@ -40,10 +40,15 @@ Singleton {
         id: layoutProc
         running: true
         command: ["umbriel", "subscribe", "keyboard_layout"]
-        onExited: running = true
+        onExited: layoutRetry.restart()
         stdout: SplitParser {
             onRead: line => root._layout(line)
         }
+    }
+    Timer {
+        id: layoutRetry
+        interval: 1500
+        onTriggered: layoutProc.running = true
     }
 
     function workspacesFor(output) {
@@ -132,14 +137,24 @@ Singleton {
         id: wsProc
         running: true
         command: ["umbriel", "subscribe", "workspaces"]
-        onExited: running = true
+        onExited: wsRetry.restart()
         stdout: SplitParser { onRead: line => root._workspaces(line) }
+    }
+    Timer {
+        id: wsRetry
+        interval: 1500
+        onTriggered: wsProc.running = true
     }
     Process {
         id: winProc
         running: true
         command: ["umbriel", "subscribe", "windows"]
-        onExited: running = true
+        onExited: winRetry.restart()
         stdout: SplitParser { onRead: line => root._windows(line) }
+    }
+    Timer {
+        id: winRetry
+        interval: 1500
+        onTriggered: winProc.running = true
     }
 }

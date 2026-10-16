@@ -144,7 +144,8 @@ Singleton {
     }
     function fetchMotion(url) {
         motionProc.command = ["sh", "-c",
-            "curl -s --max-time 25 '" + url + "' | grep -oE '/media/[0-9]+/[A-Za-z0-9._-]+' | sort -u | head -200"];
+            "curl -s --max-time 25 \"$1\" | grep -oE '/media/[0-9]+/[A-Za-z0-9._-]+' | sort -u | head -200",
+            "oberon-motion", url];
         motionProc.running = false; motionProc.running = true;
     }
     function searchMotion() {
@@ -252,8 +253,9 @@ Singleton {
 
     function saveState() {
         const json = JSON.stringify({ path: w.currentPath, video: w.currentIsVideo, auto: w.autoEnabled, autoMin: w.autoMinutes });
+        const path = Quickshell.stateDir + "/wallpaper.json";
         Quickshell.execDetached(["sh", "-c",
-            "mkdir -p " + shq(Quickshell.stateDir) + "; printf %s " + shq(json) + " > " + shq(Quickshell.stateDir + "/wallpaper.json")]);
+            "mkdir -p " + shq(Quickshell.stateDir) + " && printf %s " + shq(json) + " > " + shq(path + ".tmp") + " && mv -f " + shq(path + ".tmp") + " " + shq(path)]);
     }
 
     Process {

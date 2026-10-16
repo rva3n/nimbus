@@ -38,7 +38,7 @@ ColumnLayout {
             checked: Prefs.mangohudEnabled
             onToggled: (v) => {
                 Prefs.set("mangohudEnabled", v);
-                gamesPage.applyMangoHud();
+                gamesPage.scheduleMangoHudApply();
             }
         }
     }
@@ -58,25 +58,25 @@ ColumnLayout {
             label: "FPS"
             sub: "Кадры в секунду"
             checked: Prefs.mangohudFPS
-            onToggled: (v) => { Prefs.set("mangohudFPS", v); gamesPage.applyMangoHud(); }
+            onToggled: (v) => { Prefs.set("mangohudFPS", v); gamesPage.scheduleMangoHudApply(); }
         }
         ToggleRow {
             label: "CPU"
             sub: "Загрузка процессора"
             checked: Prefs.mangohudCPU
-            onToggled: (v) => { Prefs.set("mangohudCPU", v); gamesPage.applyMangoHud(); }
+            onToggled: (v) => { Prefs.set("mangohudCPU", v); gamesPage.scheduleMangoHudApply(); }
         }
         ToggleRow {
             label: "GPU"
             sub: "Загрузка видеокарты"
             checked: Prefs.mangohudGPU
-            onToggled: (v) => { Prefs.set("mangohudGPU", v); gamesPage.applyMangoHud(); }
+            onToggled: (v) => { Prefs.set("mangohudGPU", v); gamesPage.scheduleMangoHudApply(); }
         }
         ToggleRow {
             label: "RAM"
             sub: "Использование оперативной памяти"
             checked: Prefs.mangohudRAM
-            onToggled: (v) => { Prefs.set("mangohudRAM", v); gamesPage.applyMangoHud(); }
+            onToggled: (v) => { Prefs.set("mangohudRAM", v); gamesPage.scheduleMangoHudApply(); }
         }
 
         LText {
@@ -90,37 +90,37 @@ ColumnLayout {
             label: "VRAM"
             sub: "Использование видеопамяти"
             checked: Prefs.mangohudVRAM
-            onToggled: (v) => { Prefs.set("mangohudVRAM", v); gamesPage.applyMangoHud(); }
+            onToggled: (v) => { Prefs.set("mangohudVRAM", v); gamesPage.scheduleMangoHudApply(); }
         }
         ToggleRow {
             label: "Время кадра"
             sub: "Frame time в миллисекундах"
             checked: Prefs.mangohudFrameTime
-            onToggled: (v) => { Prefs.set("mangohudFrameTime", v); gamesPage.applyMangoHud(); }
+            onToggled: (v) => { Prefs.set("mangohudFrameTime", v); gamesPage.scheduleMangoHudApply(); }
         }
         ToggleRow {
             label: "Версия MangoHud"
             sub: "Показывать версию в углу оверлея"
             checked: Prefs.mangohudVersion
-            onToggled: (v) => { Prefs.set("mangohudVersion", v); gamesPage.applyMangoHud(); }
+            onToggled: (v) => { Prefs.set("mangohudVersion", v); gamesPage.scheduleMangoHudApply(); }
         }
         ToggleRow {
             label: "Движок игры"
             sub: "Название графического API и движка"
             checked: Prefs.mangohudEngine
-            onToggled: (v) => { Prefs.set("mangohudEngine", v); gamesPage.applyMangoHud(); }
+            onToggled: (v) => { Prefs.set("mangohudEngine", v); gamesPage.scheduleMangoHudApply(); }
         }
         ToggleRow {
             label: "Ввод-вывод"
             sub: "Статистика дискового I/O"
             checked: Prefs.mangohudIO
-            onToggled: (v) => { Prefs.set("mangohudIO", v); gamesPage.applyMangoHud(); }
+            onToggled: (v) => { Prefs.set("mangohudIO", v); gamesPage.scheduleMangoHudApply(); }
         }
         ToggleRow {
             label: "Медиа"
             sub: "Информация о воспроизводимом медиа"
             checked: Prefs.mangohudMedia
-            onToggled: (v) => { Prefs.set("mangohudMedia", v); gamesPage.applyMangoHud(); }
+            onToggled: (v) => { Prefs.set("mangohudMedia", v); gamesPage.scheduleMangoHudApply(); }
         }
 
         RowLayout {
@@ -147,6 +147,7 @@ ColumnLayout {
                 text: Math.round(Prefs.mangohudHudAlpha * 100) + "%"
             }
             Slider {
+                id: hudAlphaSlider
                 Layout.preferredWidth: Theme.dp(160)
                 from: 0
                 to: 1
@@ -154,10 +155,20 @@ ColumnLayout {
                 onMoved: (v) => {
                     const rounded = Math.round(v * 100) / 100;
                     Prefs.set("mangohudHudAlpha", rounded);
-                    gamesPage.applyMangoHud();
                 }
+                onCommitted: (v) => gamesPage.scheduleMangoHudApply()
             }
         }
+    }
+
+    Timer {
+        id: mangoHudApplyTimer
+        interval: 500
+        onTriggered: if (!hudAlphaSlider.dragging) gamesPage.applyMangoHud()
+    }
+
+    function scheduleMangoHudApply() {
+        mangoHudApplyTimer.restart();
     }
 
     // Применить настройки MangoHud: записать конфиг в ~/.config/MangoHud/MangoHud.conf

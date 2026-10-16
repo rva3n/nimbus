@@ -10,6 +10,7 @@ Item {
     activeFocusOnTab: !chip.disabled
 
     property string kind: "filter"
+    property string size: "md"
     property string label: ""
     // синоним label (Lucid-имя)
     property alias text: chip.label
@@ -40,9 +41,10 @@ Item {
     }
 
     readonly property bool showLead: (chip.kind === "filter" && chip.selected) || chip.icon !== ""
-    readonly property color content: chip.selected ? Theme.fgSecondaryContainer : (chip.kind === "assist" ? Theme.text : Theme.subtext)
+    readonly property color content: chip.selected ? Theme.fgSecondaryContainer
+        : (chip.kind === "assist" || chip.kind === "suggestion" ? Theme.text : Theme.subtext)
 
-    implicitHeight: Theme.dp(30)
+    implicitHeight: chip.size === "sm" ? Theme.dp(26) : Theme.dp(30)
     implicitWidth: row.implicitWidth + (chip.showLead ? Theme.dp(10) : Theme.dp(14)) + (chip.closable ? Theme.dp(8) : Theme.dp(14))
     opacity: chip.disabled ? Theme.disabledContent : 1
 
@@ -59,7 +61,7 @@ Item {
         id: bg
 
         anchors.fill: parent
-        radius: Theme.rad(8)
+        radius: chip.size === "sm" ? Theme.radiusPill : Theme.rad(8)
         color: chip.selected ? Theme.secondaryContainer : "transparent"
         border.width: chip.selected ? 0 : 1
         border.color: Theme.outline
@@ -74,7 +76,7 @@ Item {
         StateLayer {
             id: area
 
-            radius: Theme.rad(8)
+            radius: bg.radius
             tint: chip.content
             disabled: chip.disabled
             onClicked: chip.activate()
@@ -93,13 +95,13 @@ Item {
             visible: chip.showLead
             anchors.verticalCenter: parent.verticalCenter
             name: (chip.kind === "filter" && chip.selected) ? "check" : chip.icon
-            size: Theme.dp(17)
+            size: Theme.dp(chip.size === "sm" ? 14 : 17)
             color: chip.selected ? Theme.fgSecondaryContainer : Theme.primary
         }
 
         LText {
             anchors.verticalCenter: parent.verticalCenter
-            role: "labelLarge"
+            role: chip.size === "sm" ? "labelMedium" : "labelLarge"
             text: chip.label
             color: chip.content
         }
@@ -108,7 +110,7 @@ Item {
             visible: chip.closable
             anchors.verticalCenter: parent.verticalCenter
             name: "close"
-            size: Theme.dp(16)
+            size: Theme.dp(chip.size === "sm" ? 14 : 16)
             color: chip.content
 
             MouseArea {

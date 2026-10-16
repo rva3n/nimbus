@@ -142,7 +142,7 @@ Item {
                 Rectangle { // подложка: выбранная — secondaryContainer, ховер — bgHover
                     anchors.fill: parent
                     anchors.margins: Theme.dp(1)
-                    radius: Theme.radiusSm
+                    radius: Theme.radiusMd
                     color: row.selected ? Theme.secondaryContainer
                          : (rowArea.containsMouse ? Theme.bgHover : "transparent")
 
@@ -156,8 +156,8 @@ Item {
                     width: Theme.dp(22)
                     height: Theme.dp(22)
                     source: trayList.resolveIconSource(row.modelData.icon)
-                    sourceSize.width: 44
-                    sourceSize.height: 44
+                    sourceSize.width: Theme.dp(44)
+                    sourceSize.height: Theme.dp(44)
                     smooth: true
                     asynchronous: true
                     fillMode: Image.PreserveAspectFit

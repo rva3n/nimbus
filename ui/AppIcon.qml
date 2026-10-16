@@ -5,13 +5,13 @@ import "../core"
 
 // Иконка приложения: резолвится системной темой иконок (см. прагму
 // IconTheme в shell.qml) и рисуется в натуральном цвете — без перекраски.
-//   AppIcon { source: path; size: 13 }
+//   AppIcon { source: path; size: Theme.dp(24) }
 // radius > 0 — обрезка по кругу (radius = size/2).
 Item {
     id: root
 
     property string source: ""
-    property real size: 13   // сторона, dp
+    property real size: Theme.dp(24) // отображаемая сторона, px
     property real radius: 0  // радиус обрезки; 0 = без обрезки
 
     // Голые имена (например, хинты уведомлений) резолвим системной темой
@@ -26,8 +26,8 @@ Item {
         return Quickshell.iconPath(root.source, true) || "";
     }
 
-    implicitWidth: Theme.dp(size)
-    implicitHeight: Theme.dp(size)
+    implicitWidth: size
+    implicitHeight: size
 
     // Обрезка по кругу через Shape с clip
     Shape {

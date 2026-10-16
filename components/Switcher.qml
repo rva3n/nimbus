@@ -264,7 +264,7 @@ PanelWindow {
                                     anchors.centerIn: parent
                                     visible: tile.iconPath !== ""
                                     source: tile.iconPath
-                                    size: Math.round(Math.min(56, inner.height * 0.42))
+                                    size: Math.round(Math.min(Theme.dp(56), inner.height * 0.42))
                                 }
                                 Icon {
                                     anchors.centerIn: parent
@@ -320,7 +320,7 @@ PanelWindow {
                                 anchors.verticalCenter: parent.verticalCenter
                                 visible: tile.iconPath !== ""
                                 source: tile.iconPath
-                                size: 16
+                                size: Theme.dp(16)
                             }
                             Icon {
                                 anchors.verticalCenter: parent.verticalCenter

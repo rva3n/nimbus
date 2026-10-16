@@ -386,7 +386,8 @@ Singleton {
         font.bold: true
     }
 
-    // ── Legacy-метрики старого острова ─────────────────────────────────
+    // DEPRECATED: legacy-метрики старого острова. Новые вызовы используют
+    // именованные radius-токены и dp(...); эти алиасы пока оставлены для совместимости.
     readonly property int radius: root.radiusLg
     readonly property int pad: 12
     readonly property int height: 34

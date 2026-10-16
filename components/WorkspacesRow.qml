@@ -176,7 +176,7 @@ Row {
                             anchors.fill: parent
                             visible: appIcon.iconPath !== ""
                             source: appIcon.iconPath
-                            size: 14
+                            size: Theme.dp(14)
                         }
                     }
                 }

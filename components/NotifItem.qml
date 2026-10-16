@@ -107,7 +107,7 @@ Item {
         id: bg
 
         anchors.fill: parent
-        radius: Theme.rad(16)
+        radius: Theme.radiusMd
         color: niArea.containsMouse ? Theme.bgHover : "transparent"
 
         Behavior on color {
@@ -152,7 +152,7 @@ Item {
                 anchors.fill: parent
                 visible: !!(ni.item && ni.item.appIcon)
                 source: ni.item ? (ni.item.appIcon || "") : ""
-                size: 32
+                size: Theme.dp(32)
             }
         }
 

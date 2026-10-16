@@ -180,8 +180,8 @@ PanelWindow {
             id: pill
             x: shadowHost.padH
             y: shadowHost.padTop
-            width: win.big ? Theme.dp(win.panelW) : (idlePill.implicitWidth + Theme.pad * 2)
-            height: win.big ? Math.min(contentCol.implicitHeight + Theme.dp(32), win.panelMax) : Math.max(Theme.height, idlePill.implicitHeight + Theme.dp(6))
+            width: win.big ? Theme.dp(win.panelW) : (idlePill.implicitWidth + Theme.dp(12) * 2)
+            height: win.big ? Math.min(contentCol.implicitHeight + Theme.dp(32), win.panelMax) : Math.max(Theme.dp(34), idlePill.implicitHeight + Theme.dp(6))
             // idle — Lucid-пилюля (radiusPill), панель — крупный скруглённый
             // контейнер (radiusXl / shapeXlInc для лончера). Без обводки.
             // notch: капсула прижата к кромке — верхние углы прямые, низ полный

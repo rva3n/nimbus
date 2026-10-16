@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Layouts
 import "../core"
 
 // M3-строка списка на собственном контейнере (порт lucidui/ListItem.qml).
@@ -10,6 +11,7 @@ Item {
 
     property string headline: ""
     property string supporting: ""
+    property string supportingRole: "bodyMedium"
     property string overline: ""
     property string icon: ""
     // удобные алиасы под имена из ТЗ
@@ -27,12 +29,21 @@ Item {
     property bool clickable: true
     property bool selected: false
     property bool disabled: false
+    property bool leadingVisible: true
     property int supportingLines: 1
     property real outerRadius: Theme.dp(20)
     property real innerRadius: Theme.dp(5)
+    property real leadingMargin: Theme.dp(14)
+    property real textStartMargin: Theme.dp(18)
+    property real leadingTextSpacing: Theme.dp(12)
+    property real textSpacing: Theme.dp(1)
+    property real textTrailingSpacing: Theme.dp(12)
+    property real trailingMargin: Theme.dp(16)
+    property real trailingSpacing: Theme.dp(8)
+    property color stateTint: Theme.text
     property alias leading: leadSlot.data
     property alias trailing: trailSlot.data
-    readonly property bool hasLeading: li.icon !== "" || leadSlot.children.length > 0
+    readonly property bool hasLeading: li.icon !== "" || (li.leadingVisible && leadSlot.children.length > 0)
     readonly property bool _first: li.position === "" ? li.first : (li.position === "top" || li.position === "single")
     readonly property bool _last: li.position === "" ? li.last : (li.position === "bottom" || li.position === "single")
 
@@ -40,6 +51,7 @@ Item {
 
     implicitHeight: Math.max(li.supporting !== "" || li.overline !== "" ? Theme.dp(64) : Theme.dp(52), col.implicitHeight + Theme.dp(20))
     implicitWidth: Theme.dp(320)
+    Layout.fillWidth: true
     opacity: li.disabled ? Theme.disabledContent : 1
 
     Rectangle {
@@ -65,7 +77,7 @@ Item {
         visible: li.clickable
         enabled: li.clickable && !li.disabled
         radius: li.innerRadius
-        tint: Theme.text
+        tint: li.stateTint
         onClicked: li.clicked()
     }
 
@@ -76,7 +88,7 @@ Item {
         width: li.hasLeading ? Theme.dp(40) : 0
         height: Theme.dp(40)
         anchors.left: parent.left
-        anchors.leftMargin: Theme.dp(14)
+        anchors.leftMargin: li.leadingMargin
         anchors.verticalCenter: parent.verticalCenter
 
         Icon {
@@ -100,11 +112,11 @@ Item {
         id: col
 
         anchors.left: li.hasLeading ? leadBox.right : parent.left
-        anchors.leftMargin: li.hasLeading ? Theme.dp(12) : Theme.dp(18)
+        anchors.leftMargin: li.hasLeading ? li.leadingTextSpacing : li.textStartMargin
         anchors.right: trailSlot.left
-        anchors.rightMargin: Theme.dp(12)
+        anchors.rightMargin: li.textTrailingSpacing
         anchors.verticalCenter: parent.verticalCenter
-        spacing: 1
+        spacing: li.textSpacing
 
         LText {
             visible: li.overline !== ""
@@ -128,7 +140,7 @@ Item {
             visible: li.supporting !== ""
             width: parent.width
             text: li.supporting
-            role: "bodyMedium"
+            role: li.supportingRole
             color: li.selected ? Theme.alpha(Theme.fgSecondaryContainer, 0.8) : Theme.subtext
             wrapMode: li.supportingLines > 1 ? Text.WordWrap : Text.NoWrap
             maximumLineCount: li.supportingLines
@@ -141,9 +153,9 @@ Item {
         id: trailSlot
 
         anchors.right: parent.right
-        anchors.rightMargin: Theme.dp(16)
+        anchors.rightMargin: li.trailingMargin
         anchors.verticalCenter: parent.verticalCenter
-        spacing: Theme.dp(8)
+        spacing: li.trailingSpacing
     }
 
 }

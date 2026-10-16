@@ -235,7 +235,7 @@ ColumnLayout {
                             anchors.centerIn: parent
                             visible: parent.iconPath !== ""
                             source: parent.iconPath
-                            size: 22
+                            size: Theme.dp(22)
                         }
                     }
 
@@ -340,7 +340,7 @@ ColumnLayout {
                             anchors.centerIn: parent
                             visible: parent.iconPath !== ""
                             source: parent.iconPath
-                            size: 22
+                            size: Theme.dp(22)
                         }
                     }
 

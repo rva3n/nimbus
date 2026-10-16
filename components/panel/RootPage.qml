@@ -531,7 +531,7 @@ ColumnLayout {
                                 anchors.centerIn: parent
                                 visible: modelData.appIcon !== ""
                                 source: modelData.appIcon
-                                size: 13
+                                size: Theme.dp(14)
                             }
 
                             Icon {

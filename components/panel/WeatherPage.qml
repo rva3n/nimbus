@@ -265,49 +265,53 @@ ColumnLayout {
             Repeater {
                 model: Weather.daily.slice(0, 5)
 
-                delegate: RowLayout {
+                delegate: ListItem {
                     required property var modelData
                     required property int index
 
+                    readonly property int count: Math.min(Weather.daily.length, 5)
+
                     Layout.fillWidth: true
-                    Layout.preferredHeight: Theme.dp(44)
-                    spacing: Theme.dp(12)
+                    implicitHeight: Theme.dp(44)
+                    position: index === 0 ? (count === 1 ? "single" : "top")
+                        : (index === count - 1 ? "bottom" : "middle")
+                    clickable: false
+                    containerColor: "transparent"
+                    textStartMargin: 0
+                    textTrailingSpacing: Theme.dp(12)
+                    trailingMargin: 0
+                    trailingSpacing: Theme.dp(12)
+                    headline: modelData.day
 
-                    LText {
-                        Layout.fillWidth: true
-                        Layout.alignment: Qt.AlignVCenter
-                        role: "bodyLarge"
-                        weight: 480
-                        color: Theme.text
-                        elide: Text.ElideRight
-                        text: modelData.day
-                    }
+                    trailing: Row {
+                        spacing: Theme.dp(12)
 
-                    Icon {
-                        Layout.alignment: Qt.AlignVCenter
-                        name: Weather.wmoIcon(modelData.code, true)
-                        size: Theme.dp(18)
-                        color: Theme.subtext
-                    }
+                        Icon {
+                            anchors.verticalCenter: parent.verticalCenter
+                            name: Weather.wmoIcon(modelData.code, true)
+                            size: Theme.dp(18)
+                            color: Theme.subtext
+                        }
 
-                    LText { // минимум — колонка вправо
-                        Layout.preferredWidth: Theme.dp(38)
-                        Layout.alignment: Qt.AlignVCenter
-                        horizontalAlignment: Text.AlignRight
-                        role: "bodyMedium"
-                        tabular: true
-                        color: Theme.subtext
-                        text: Math.round(modelData.min) + "°"
-                    }
+                        LText { // минимум — колонка вправо
+                            width: Theme.dp(38)
+                            anchors.verticalCenter: parent.verticalCenter
+                            horizontalAlignment: Text.AlignRight
+                            role: "bodyMedium"
+                            tabular: true
+                            color: Theme.subtext
+                            text: Math.round(modelData.min) + "°"
+                        }
 
-                    LText { // максимум — фикс. ширина, вправо
-                        Layout.preferredWidth: Theme.dp(42)
-                        Layout.alignment: Qt.AlignVCenter
-                        horizontalAlignment: Text.AlignRight
-                        role: "bodyMedium"
-                        tabular: true
-                        color: Theme.text
-                        text: Math.round(modelData.max) + "°"
+                        LText { // максимум — фикс. ширина, вправо
+                            width: Theme.dp(42)
+                            anchors.verticalCenter: parent.verticalCenter
+                            horizontalAlignment: Text.AlignRight
+                            role: "bodyMedium"
+                            tabular: true
+                            color: Theme.text
+                            text: Math.round(modelData.max) + "°"
+                        }
                     }
                 }
             }

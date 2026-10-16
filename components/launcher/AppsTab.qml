@@ -27,7 +27,7 @@ Item {
     readonly property int leadSlot: Theme.dp(40)
     readonly property int edge: Theme.dp(16)
     readonly property int between: Theme.dp(12)
-    readonly property int selRadius: Theme.rad(14)
+    readonly property int selRadius: Theme.radiusMd
 
     readonly property var apps: {
         const q = root.query.toLowerCase().trim();
@@ -353,7 +353,7 @@ Item {
                         anchors.centerIn: parent
                         visible: rowItem.hasIcon
                         source: rowItem.iconPath
-                        size: 35
+                        size: Theme.dp(36)
                         radius: size / 2
                     }
 

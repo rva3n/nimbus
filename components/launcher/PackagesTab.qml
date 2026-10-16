@@ -715,7 +715,7 @@ ColumnLayout {
                             anchors.centerIn: parent
                             visible: rowItem.hasIcon
                             source: rowItem.pkgIcon
-                            size: 35
+                            size: Theme.dp(36)
                         }
 
                         Icon {
@@ -1013,7 +1013,7 @@ ColumnLayout {
                             anchors.centerIn: parent
                             visible: appRow.hasIcon
                             source: appRow.modelData.icon
-                            size: 35
+                            size: Theme.dp(36)
                         }
 
                         Icon { // фолбэк-глиф для неразрешённых иконок
@@ -1118,7 +1118,7 @@ ColumnLayout {
                         anchors.centerIn: parent
                         visible: tab.detailTarget !== null && tab.detailTarget.icon !== ""
                         source: tab.detailTarget ? tab.detailTarget.icon : ""
-                        size: 22
+                        size: Theme.dp(22)
                     }
                     Icon {
                         anchors.centerIn: parent

@@ -155,10 +155,10 @@ Singleton {
     readonly property color bgHover: root.mHighest
     readonly property color bgActive: root.atTone(root.mHighest, root.toneOf(root.mHighest) + root._dir * 3)
     readonly property color bgBright: root.mBright
-    readonly property color bgTrack: root.mHighest
+    readonly property color bgTrack: root.mLow
     // legacy-алиасы старого острова: панель — bg, карточка — surface, ховер — surfaceHi
     readonly property color surface: root.mHigh
-    readonly property color surfaceHi: root.mHighest
+    readonly property color surfaceHi: root.mBright
 
     readonly property color text: root.cOnSurface
     readonly property color subtext: root.cOnSurfaceVariant
@@ -175,21 +175,21 @@ Singleton {
     readonly property color fgAccentContainer: root.containerInk(root._containerSeed)
     readonly property color accentMuted: root.atTone(root.withSat(root.cPrimary, 0.55), (root.toneOf(root.cPrimary) + root.toneOf(root.cOnSurfaceVariant)) / 2)
     readonly property color accentBorder: root.alpha(root.accent, 0.45)
-    readonly property color secondaryContainer: root.accentContainer
-    readonly property color fgSecondaryContainer: root.fgAccentContainer
-    readonly property color tertiaryContainer: root.accentContainer
-    readonly property color fgTertiaryContainer: root.fgAccentContainer
+    readonly property color secondaryContainer: root.cSecondaryContainer
+    readonly property color fgSecondaryContainer: root.cOnSecondaryContainer
+    readonly property color tertiaryContainer: root.cTertiaryContainer
+    readonly property color fgTertiaryContainer: root.cOnTertiaryContainer
 
     readonly property color outline: root.tint(root.cOutlineVariant, 1.8)
     readonly property color outlineStrong: root.tint(root.cOutline, 1.8)
     readonly property color error: root.cError
-    readonly property color fgError: root.fgOnFill
-    readonly property color errorContainer: root.containerFill(root.cError, root._containerTone, root._cardSatFloor)
-    readonly property color fgErrorContainer: root.containerInk(root.cError)
+    readonly property color fgError: root.cOnError
+    readonly property color errorContainer: root.cErrorContainer
+    readonly property color fgErrorContainer: root.cOnErrorContainer
     readonly property color success: root.isGreenish(root.cTertiary) ? root.cTertiary : root.statusHue(145)
-    readonly property color fgSuccess: root.fgOnFill
+    readonly property color fgSuccess: root.isGreenish(root.cTertiary) ? root.cOnTertiary : root.atTone(root.success, root.isLight ? 98 : 20)
     readonly property color warning: root.statusHue(45)
-    readonly property color fgWarning: root.fgOnFill
+    readonly property color fgWarning: root.atTone(root.warning, root.isLight ? 98 : 20)
     readonly property color shadow: root.cShadow
     readonly property color scrim: root.alpha(root.cScrim, 0.5)
     readonly property color inverseSurface: root.cInverseSurface
@@ -198,13 +198,13 @@ Singleton {
 
     // M3-имена для нового кода
     readonly property color primary: root.accent
-    readonly property color fgPrimary: root.fgAccent
-    readonly property color primaryContainer: root.accentContainer
-    readonly property color fgPrimaryContainer: root.fgAccentContainer
+    readonly property color fgPrimary: root.cOnPrimary
+    readonly property color primaryContainer: root.cPrimaryContainer
+    readonly property color fgPrimaryContainer: root.cOnPrimaryContainer
     readonly property color secondary: root.containerFill(root.withHue(root.cPrimary, root._secondaryHue), root.toneOf(root.cSecondary))
-    readonly property color fgSecondary: root.fgOnFill
+    readonly property color fgSecondary: root.cOnSecondary
     readonly property color tertiary: root.containerFill(root.withHue(root.cPrimary, root._tertiaryHue), root.isLight ? 42 : 80)
-    readonly property color fgTertiary: root.fgOnFill
+    readonly property color fgTertiary: root.cOnTertiary
     readonly property color divider: root.alpha(root.cOutlineVariant, root.isLight ? 0.7 : 0.55)
 
     // ── State layer ────────────────────────────────────────────────────

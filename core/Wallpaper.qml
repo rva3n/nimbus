@@ -3,7 +3,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 
-// Wallpaper manager: local files + Wallhaven search; applies via awww (image/gif)
+// Wallpaper manager: local files + Wallhaven search; applies via oberonwall (image/gif)
 // or mpvpaper (video). Persists the current choice.
 Singleton {
     id: w
@@ -65,7 +65,7 @@ Singleton {
     Process {
         id: localProc
         command: ["sh", "-c",
-            "find \"$HOME/Pictures\" \"$HOME/Изображения\" \"$HOME/Загрузки\" -maxdepth 3 -type f " +
+            "find \"$HOME/oberon/wallpapers\" \"$HOME/Изображения\" \"$HOME/Загрузки\" -maxdepth 3 -type f " +
             "-not -path '*/Screenshots/*' -not -path '*/screenshots/*' " +
             "\\( -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.png' -o -iname '*.webp' -o -iname '*.gif' " +
             "-o -iname '*.mp4' -o -iname '*.webm' -o -iname '*.mkv' -o -iname '*.mov' \\) 2>/dev/null | sort | head -300"]
@@ -237,7 +237,7 @@ Singleton {
     }
 
     // Реколоринг с текущего источника без смены обоев — для настроек темы
-    // (themeScheme / themeMode / themeContrast), чтобы не дёргать awww/mpvpaper.
+    // (themeScheme / themeMode / themeContrast), чтобы не дёргать oberonwall/mpvpaper.
     property bool _themeOnlyPending: false
     function applyThemeOnly() {
         if (_themeOnlyPending) return; // слить частые дёргания в одно применение

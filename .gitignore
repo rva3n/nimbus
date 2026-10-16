@@ -4,3 +4,4 @@ prefs.json
 # Мусор/логи
 logs/
 scripts/__pycache__/
+build/

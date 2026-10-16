@@ -1,0 +1,26 @@
+[submodule "third_party/quickshell"]
+	path = third_party/quickshell
+	url = https://github.com/rva3n/quickshell.git
+	branch = oberon
+[submodule "third_party/matugen"]
+	path = third_party/matugen
+	url = https://github.com/rva3n/matugen.git
+	branch = oberon
+[submodule "third_party/awww"]
+	path = third_party/awww
+	url = https://github.com/rva3n/awww.git
+	branch = oberon
+[submodule "third_party/cava"]
+	path = third_party/cava
+	url = https://github.com/rva3n/cava.git
+	branch = oberon
+[submodule "third_party/hypridle"]
+	path = third_party/hypridle
+	url = https://github.com/rva3n/hypridle.git
+	branch = oberon
+[submodule "third_party/cli11"]
+	path = third_party/cli11
+	url = https://github.com/rva3n/CLI11.git
+[submodule "third_party/vulkan-headers"]
+	path = third_party/vulkan-headers
+	url = https://github.com/rva3n/Vulkan-Headers.git

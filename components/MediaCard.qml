@@ -4,7 +4,7 @@ import "../core"
 import "../ui"
 
 // Карточка медиаплеера: анатомия медиа-карточки контроль-центра Lucid —
-// заполненный withBlur(surfaceHigh) контейнер shapeLgInc, обложка dp(64)
+// заполненный Theme.mHigh контейнер shapeLgInc, обложка dp(64)
 // shapeLg, titleSmall/bodySmall, транспорт standard и тонкий seek ui/Slider.
 // API прежний (artFile/artUrl/player, pos/seeking/dragFrac) — картой
 // пользуются Lockscreen (и панель).
@@ -54,8 +54,8 @@ Rectangle {
 
     implicitHeight: main.implicitHeight + Theme.dp(16)
     radius: Theme.shapeLgInc
-    // глубина стекла следует за ползунком «Размытие фона» (Theme.glass)
-    color: Theme.withBlur(Theme.mHigh)
+    // фиксированная поверхность карточки, без зависимости от размытия фона
+    color: Theme.mHigh
     clip: true
 
     // позиция в Mpris меняется не реактивно — читаем её сами раз в 500 мс

@@ -220,6 +220,7 @@ FocusScope {
         Layout.fillWidth: true
         radius: Theme.shapeXl
         pad: Theme.dp(10)
+        color: Theme.withBlur(Theme.mHigh)
 
         AppsTab {
             id: appsTab

@@ -162,7 +162,7 @@ Singleton {
 
     readonly property color text: root.cOnSurface
     readonly property color subtext: root.cOnSurfaceVariant
-    readonly property color subtextDim: root.tint(root.atTone(root.cOnSurfaceVariant, root.isLight ? 50 : 65), 1.5)
+    readonly property color subtextDim: root.tint(root.atTone(root.cOnSurfaceVariant, root.isLight ? 48 : 67), 1.5)
 
     // Акцент и его контейнеры. NB: имена не начинаются с on<Role> — иначе QML
     // парсит свойство как обработчик сигнала. Поэтому fg*.

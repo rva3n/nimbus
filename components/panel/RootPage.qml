@@ -6,10 +6,10 @@ import ".."
 import "../../ui"
 
 // Корневая страница панели в анатомии Lucid control centre:
-// слайдеры громкости/яркости (size m, inactive = withBlur(surfaceHighest)),
+// слайдеры громкости/яркости (size m, inactive = surfaceHighest),
 // плитки быстрого доступа как горизонтальные QuickTile Lucid (иконка-бейдж,
-// заголовок/подпись, шеврон; ON — accentContainer, OFF — размытая
-// surfaceHighest), редактор плиток по карандашу (порядок/скрытые в Prefs,
+// заголовок/подпись, шеврон; ON — accentContainer, OFF — surfaceHighest),
+// редактор плиток по карандашу (порядок/скрытые в Prefs,
 // защитный код:нет ключей → текущий вид) и карточка уведомлений,
 // сгруппированная по appName (иконка + имя + Badge-счётчик, строки NotifItem).
 ColumnLayout {
@@ -221,7 +221,7 @@ ColumnLayout {
 
     // ── плитка быстрого доступа Lucid ──────────────────────────────────
     // Бейдж-иконка 44dp слева, заголовок titleSmall + подпись bodySmall,
-    // шеврон справа. OFF — размытая surfaceHighest и стадионные торцы,
+    // шеврон справа. OFF — surfaceHighest и стадионные торцы,
     // ON — accentContainer и скругление shapeLgInc (фирменный морф Lucid).
     // Тап открывает страницу; в режиме редактирования тап-off и вместо
     // шеврона — круг «×» (удалить из панели).
@@ -254,7 +254,7 @@ ColumnLayout {
 
             anchors.fill: parent
             radius: qt.active ? Theme.shapeLgInc : Theme.pill(height)
-            color: qt.active ? Theme.accentContainer : Theme.withBlur(Theme.mHighest)
+            color: qt.active ? Theme.accentContainer : Theme.mHighest
 
             Behavior on radius {
                 NumberAnimation {
@@ -378,7 +378,7 @@ ColumnLayout {
             size: "m"
             icon: Pipewire.defaultAudioSink && Pipewire.defaultAudioSink.audio.muted ? "volume_off" : "volume_up"
             value: Pipewire.defaultAudioSink ? Pipewire.defaultAudioSink.audio.volume : 0
-            inactiveColor: Theme.withBlur(Theme.mHighest)
+            inactiveColor: Theme.mHighest
             onMoved: (v) => { if (Pipewire.defaultAudioSink) Pipewire.defaultAudioSink.audio.volume = v; }
             onCommitted: (v) => { if (Pipewire.defaultAudioSink) Pipewire.defaultAudioSink.audio.volume = v; }
             onIconClicked: if (rootPage.win && rootPage.win.shell) rootPage.win.shell.togglePage("volume")
@@ -389,7 +389,7 @@ ColumnLayout {
             size: "m"
             icon: "brightness_6"
             value: Sys.brightnessFraction
-            inactiveColor: Theme.withBlur(Theme.mHighest)
+            inactiveColor: Theme.mHighest
             onCommitted: (v) => { Sys.setBrightnessPct(v * 100); }
             onIconClicked: if (rootPage.win && rootPage.win.shell) rootPage.win.shell.togglePage("brightness")
         }

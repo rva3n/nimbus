@@ -4,7 +4,7 @@ import "../core"
 import "../ui"
 
 // M3 Expressive-плитка быстрого доступа (анатомия Lucid SmallTile):
-// скруглённый контейнер rad(12) с размытой поверхностью surfaceHighest,
+// скруглённый контейнер rad(12) с поверхностью surfaceHighest,
 // иконка dp(24) и подпись labelLarge. ON — accentContainer, OFF — нейтральная
 // поверхность; ховер/нажатие/рябь — StateLayer; нажатие слегка морфит плитку.
 // tileCols/tileW/tileH повторяют раскладку Lucid: tileW из ширины контента,
@@ -43,7 +43,7 @@ Item {
 
         anchors.fill: parent
         radius: Theme.rad(12)
-        color: tile.active ? Theme.accentContainer : Theme.withBlur(Theme.mHighest)
+        color: tile.active ? Theme.accentContainer : Theme.mHighest
 
         Behavior on color {
             ColorAnimation {

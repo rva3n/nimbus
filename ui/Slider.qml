@@ -126,7 +126,7 @@ Item {
         MaterialShape {
             anchors.fill: parent
             shape: "cookie9"
-            color: sl.hot ? sl.activeColor : Theme.withBlur(Theme.mHighest)
+            color: sl.hot ? sl.activeColor : Theme.mHighest
             rotation: sl.hot ? 20 : 0
 
             Behavior on color {

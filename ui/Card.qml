@@ -2,8 +2,8 @@ import QtQuick
 import QtQuick.Layouts
 import "../core"
 
-// Групповая M3-карточка: размытый заполненный контейнер Lucid-анатомии
-// (withBlur(surfaceHigh), радиус shapeLgInc), необязательный заголовок и
+// Групповая M3-карточка: заполненный контейнер Lucid-анатомии
+// (Theme.mHigh, радиус shapeLgInc), необязательный заголовок и
 // действие справа. Контент по умолчанию кладётся в ColumnLayout.
 //   Card { Layout.fillWidth: true; title: "Сети"; actionIcon: "refresh"
 //          onActionClicked: ...; RowLayout { ... } }
@@ -18,10 +18,10 @@ Rectangle {
 
     default property alias content: layout.data
 
-    // анатомия карточки Lucid: плоский размытый контейнер без обводки
+    // анатомия карточки Lucid: плоский контейнер без обводки
     radius: Theme.shapeLgInc
-    // глубина стекла следует за ползунком «Размытие фона» (Theme.glass)
-    color: Theme.withBlur(Theme.mHigh)
+    // фиксированная поверхность карточки, без зависимости от размытия фона
+    color: Theme.mHigh
     implicitWidth: Theme.dp(300)
     implicitHeight: layout.implicitHeight + pad * 2
     clip: true

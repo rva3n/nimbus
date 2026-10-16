@@ -69,7 +69,7 @@ RowLayout {
         inlineValue: true
         valueText: (v) => osdRow.silent ? "mute" : Math.round(v) + "%"
         activeColor: osdRow.silent ? Theme.outlineStrong : Theme.primary
-        inactiveColor: Theme.withBlur(Theme.mHighest)
+        inactiveColor: Theme.mHighest
         easeValue: true
         // OSD только показывает уровень (значение задаёт Osd) — драг не нужен
         enabled: false

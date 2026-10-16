@@ -7,7 +7,7 @@ import "../../ui"
 // Вкладка «Диспетчер»: поиск, таблица процессов (ProcList обновляет ps
 // каждые 2 с) и контекстное меню действий по правому клику на строке.
 // Строки — в языке Lucid: высота 42, tabular-цифры, StateLayer-ховер и
-// выбранная строка secondaryContainer; меню — размытая карточка radiusXl.
+// выбранная строка secondaryContainer; меню — карточка mHigh radiusXl.
 Item {
     id: tab
 
@@ -693,7 +693,7 @@ Item {
             width: tab.menuW
             height: menuCol.implicitHeight + Theme.dp(10)
             radius: Theme.radiusXl
-            color: Theme.withBlur(Theme.mHigh)
+            color: Theme.mHigh
             border.width: 1
             border.color: Theme.a(Theme.outline, 0.2)
 

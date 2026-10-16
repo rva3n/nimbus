@@ -222,7 +222,8 @@ PanelWindow {
                         }
 
                         // превью-карточка окна (Lucid: radius rad(18)/rad(12),
-                        // withBlur-заливки). Живого захвата у Umbriel нет,
+                        // фиксированные заливки mHighest/mHigh). Живого захвата
+                        // у Umbriel нет,
                         // поэтому внутри — иконка приложения.
                         Rectangle {
                             id: shot
@@ -230,7 +231,7 @@ PanelWindow {
                             width: tile.width
                             height: switcher.thumbH
                             radius: tile.selected ? Theme.rad(18) : Theme.rad(12)
-                            color: Theme.withBlur(tile.selected ? Theme.mHighest : Theme.mHigh)
+                            color: tile.selected ? Theme.mHighest : Theme.mHigh
                             border.width: tile.selected ? 3 : 0
                             border.color: Theme.primary
                             scale: tap.pressed ? 0.985 : (tile.selected ? 1.03 : 1)
@@ -255,7 +256,7 @@ PanelWindow {
                                 anchors.fill: parent
                                 anchors.margins: Theme.dp(5)
                                 radius: Math.max(Theme.dp(6), shot.radius - Theme.dp(5))
-                                color: Theme.withBlur(Theme.bgSunken)
+                                color: Theme.bgSunken
                                 border.width: tile.selected ? 2 : 1
                                 border.color: tile.selected ? Theme.accent : Theme.a(Theme.text, 0.25)
 

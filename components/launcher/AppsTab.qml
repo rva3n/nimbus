@@ -274,7 +274,7 @@ Item {
                 anchors.fill: parent
                 visible: rowItem.isCalc
                 radius: Theme.shapeXl
-                color: rowItem.index === root.sel ? Theme.secondaryContainer : Theme.withBlur(Theme.mHigh)
+                color: rowItem.index === root.sel ? Theme.secondaryContainer : Theme.mHigh
 
                 Behavior on color {
                     ColorAnimation { duration: Theme.durDefaultEffects }
@@ -346,7 +346,7 @@ Item {
                         anchors.fill: parent
                         visible: !rowItem.hasIcon
                         radius: parent.width / 2
-                        color: Theme.withBlur(Theme.bgTile)
+                        color: Theme.bgTile
                     }
 
                     AppIcon {

@@ -708,7 +708,7 @@ ColumnLayout {
                             anchors.fill: parent
                             visible: !rowItem.hasIcon
                             radius: Math.round(parent.width * 0.35)
-                            color: Theme.withBlur(Theme.bgTile)
+                            color: Theme.bgTile
                         }
 
                         AppIcon {
@@ -1006,7 +1006,7 @@ ColumnLayout {
                             anchors.fill: parent
                             visible: !appRow.hasIcon
                             radius: Math.round(parent.width * 0.35)
-                            color: Theme.withBlur(Theme.bgTile)
+                            color: Theme.bgTile
                         }
 
                         AppIcon {
@@ -1079,7 +1079,7 @@ ColumnLayout {
         Rectangle { // Lucid-карточка панели деталей
             anchors.fill: parent
             radius: Theme.shapeXl
-            color: Theme.withBlur(Theme.mHigh)
+            color: Theme.mHigh
         }
 
         ColumnLayout {

@@ -217,7 +217,7 @@ ColumnLayout {
                     Layout.preferredWidth: Theme.dp(52)
                     Layout.preferredHeight: Theme.dp(76)
                     radius: Theme.shapeLg
-                    color: Theme.withBlur(Theme.mHighest)
+                    color: Theme.mHighest
 
                     ColumnLayout {
                         anchors.fill: parent

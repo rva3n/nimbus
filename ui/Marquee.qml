@@ -68,7 +68,7 @@ Item {
         loops: Animation.Infinite
 
         PauseAnimation {
-            duration: 2200
+            duration: Theme.ms(2200)
         }
 
         NumberAnimation {
@@ -76,7 +76,7 @@ Item {
             property: "offset"
             from: 0
             to: probe.implicitWidth + mq.gap
-            duration: Math.max(1, (probe.implicitWidth + mq.gap) / mq.speed * 1000)
+            duration: Theme.ms(Math.max(1, (probe.implicitWidth + mq.gap) / mq.speed * 1000))
         }
 
         ScriptAction {

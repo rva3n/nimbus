@@ -92,7 +92,7 @@ Item {
                 "shape": echo.draw(),
                 "tilt": Math.random() * 90 - 45,
                 "turn": (Math.random() < 0.5 ? -1 : 1) * (150 + Math.random() * 110),
-                "lag": Math.min(n, 12) * 24,
+                "lag": Theme.ms(Math.min(n, 12) * 24),
                 "at": 0,
                 "ghost": "",
                 "hold": false,

@@ -270,7 +270,7 @@ PanelWindow {
 
                             Behavior on rotation {
                                 NumberAnimation {
-                                    duration: tile.isArmed ? 900 : Theme.durSlowSpatial
+                                    duration: tile.isArmed ? Theme.ms(900) : Theme.durSlowSpatial
                                     easing.type: Easing.Bezier
                                     easing.bezierCurve: Theme.curveDefaultSpatial
                                 }

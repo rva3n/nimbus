@@ -61,7 +61,7 @@ Rectangle {
             RotationAnimation on rotation {
                 from: 0
                 to: 360
-                duration: 24000
+                duration: Theme.ms(24000)
                 loops: Animation.Infinite
                 running: w.playing
             }

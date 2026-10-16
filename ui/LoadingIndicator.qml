@@ -23,7 +23,7 @@ Item {
         running: li.running && li.visible
         from: 0
         to: li.sequence.length
-        duration: li.sequence.length * 650
+        duration: li.sequence.length * Theme.ms(650)
         loops: Animation.Infinite
     }
 

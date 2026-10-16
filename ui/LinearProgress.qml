@@ -97,7 +97,7 @@ Item {
         running: lp._wavy && lp.animated && lp.visible
         from: 0
         to: Math.PI * 2
-        duration: 1400
+        duration: Theme.ms(1400)
         loops: Animation.Infinite
     }
 

@@ -173,14 +173,12 @@ ColumnLayout {
         Layout.fillWidth: true
         Layout.preferredHeight: Theme.dp(220)
 
-        Text {
+        LText {
             anchors.centerIn: parent
             text: tab.query.trim() !== "" ? "Ничего не найдено"
                 : (Clip.loading ? "Загрузка…" : "Буфер пуст")
+            role: "bodyMedium"
             color: Theme.subtext
-            font.family: Theme.textFont
-            font.pixelSize: Theme.typeSize("bodyMedium")
-            font.weight: Theme.typeWeight("bodyMedium")
         }
     }
 
@@ -220,15 +218,13 @@ ColumnLayout {
                 }
             }
 
-            Text {
+            LText {
                 Layout.fillWidth: true
                 Layout.alignment: Qt.AlignVCenter
                 text: "Очистить историю"
+                role: "bodySmall"
                 color: Theme.error
                 elide: Text.ElideRight
-                font.family: Theme.textFont
-                font.pixelSize: Theme.typeSize("bodySmall")
-                font.weight: Theme.typeWeight("bodySmall")
             }
         }
 
@@ -343,18 +339,16 @@ ColumnLayout {
                     }
                 }
 
-                Text {
+                LText {
                     Layout.fillWidth: true
                     Layout.alignment: Qt.AlignVCenter
                     text: ci.label
+                    role: "bodySmall"
                     color: ci.selected ? Theme.fgSecondaryContainer : Theme.text
                     // pins и короткие — одна строка, длинные — максимум две
                     elide: Text.ElideRight
                     wrapMode: ci.pinned ? Text.NoWrap : Text.Wrap
                     maximumLineCount: ci.pinned ? 1 : 2
-                    font.family: Theme.textFont
-                    font.pixelSize: Theme.typeSize("bodySmall")
-                    font.weight: Theme.typeWeight("bodySmall")
                 }
 
                 IconButton { // pin: закреплённая строка — filled

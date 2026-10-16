@@ -427,13 +427,11 @@ Item {
         }
     }
 
-    Text { // пусто / нет результатов поиска
+    LText { // пусто / нет результатов поиска
         anchors.centerIn: parent
         visible: appList.count === 0
         text: root.query.trim() !== "" ? "Ничего не найдено" : "Пусто"
+        role: "bodyMedium"
         color: Theme.subtext
-        font.family: Theme.textFont
-        font.pixelSize: Theme.typeSize("bodyMedium")
-        font.weight: Theme.typeWeight("bodyMedium")
     }
 }

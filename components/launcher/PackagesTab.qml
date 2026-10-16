@@ -774,14 +774,12 @@ ColumnLayout {
             }
         }
 
-        Text { // пусто / идёт поиск
+        LText { // пусто / идёт поиск
             anchors.centerIn: parent
             visible: resultView.count === 0
             text: tab.searching ? "Поиск…" : "Ничего не найдено"
+            role: "bodyMedium"
             color: Theme.subtext
-            font.family: Theme.textFont
-            font.pixelSize: Theme.typeSize("bodyMedium")
-            font.weight: Theme.typeWeight("bodyMedium")
         }
     }
 
@@ -795,14 +793,12 @@ ColumnLayout {
         Layout.rightMargin: Theme.dp(8)
         spacing: Theme.dp(4)
 
-        Text { // repo · version · установлено · AUR-статистика
+        LText { // repo · version · установлено · AUR-статистика
             Layout.fillWidth: true
             text: tab.detailsText
             color: Theme.subtext
             elide: Text.ElideRight
-            font.family: Theme.textFont
-            font.pixelSize: Theme.typeSize("labelSmall")
-            font.weight: Theme.typeWeight("labelSmall")
+            role: "labelSmall"
         }
 
         RowLayout {
@@ -1056,14 +1052,12 @@ ColumnLayout {
                 }
             }
 
-            Text { // пусто / ещё грузится
+            LText { // пусто / ещё грузится
                 anchors.centerIn: parent
                 visible: appView.count === 0
                 text: tab._installedLoaded ? "Нет установленных приложений" : "Загрузка…"
                 color: Theme.subtext
-                font.family: Theme.textFont
-                font.pixelSize: Theme.typeSize("bodyMedium")
-                font.weight: Theme.typeWeight("bodyMedium")
+                role: "bodyMedium"
             }
         }
     }
@@ -1139,19 +1133,17 @@ ColumnLayout {
                 }
             }
 
-            Text { // описание (перенос)
+            LText { // описание (перенос)
                 Layout.fillWidth: true
                 Layout.leftMargin: Theme.dp(4)
                 visible: tab.dDescription !== ""
                 text: tab.dDescription
                 color: Theme.text
                 wrapMode: Text.WordWrap
-                font.family: Theme.textFont
-                font.pixelSize: Theme.typeSize("bodySmall")
-                font.weight: Theme.typeWeight("bodySmall")
+                role: "bodySmall"
             }
 
-            Text { // зависимости
+            LText { // зависимости
                 Layout.fillWidth: true
                 Layout.leftMargin: Theme.dp(4)
                 visible: tab.dDeps.length > 0
@@ -1160,12 +1152,10 @@ ColumnLayout {
                 textFormat: Text.StyledText
                 color: Theme.subtext
                 wrapMode: Text.WordWrap
-                font.family: Theme.textFont
-                font.pixelSize: Theme.typeSize("bodySmall")
-                font.weight: Theme.typeWeight("bodySmall")
+                role: "bodySmall"
             }
 
-            Text { // обратные зависимости
+            LText { // обратные зависимости
                 Layout.fillWidth: true
                 Layout.leftMargin: Theme.dp(4)
                 visible: tab.dRequired.length > 0
@@ -1174,12 +1164,10 @@ ColumnLayout {
                 textFormat: Text.StyledText
                 color: Theme.subtext
                 wrapMode: Text.WordWrap
-                font.family: Theme.textFont
-                font.pixelSize: Theme.typeSize("bodySmall")
-                font.weight: Theme.typeWeight("bodySmall")
+                role: "bodySmall"
             }
 
-            Text { // опциональные зависимости
+            LText { // опциональные зависимости
                 Layout.fillWidth: true
                 Layout.leftMargin: Theme.dp(4)
                 visible: tab.dOptional.length > 0
@@ -1188,32 +1176,26 @@ ColumnLayout {
                 textFormat: Text.StyledText
                 color: Theme.subtext
                 wrapMode: Text.WordWrap
-                font.family: Theme.textFont
-                font.pixelSize: Theme.typeSize("bodySmall")
-                font.weight: Theme.typeWeight("bodySmall")
+                role: "bodySmall"
             }
 
-            Text { // размер · сборщик · дата установки
+            LText { // размер · сборщик · дата установки
                 Layout.fillWidth: true
                 Layout.leftMargin: Theme.dp(4)
                 visible: tab.dMeta !== ""
                 text: tab.dMeta
                 color: Theme.subtextDim
                 wrapMode: Text.WordWrap
-                font.family: Theme.textFont
-                font.pixelSize: Theme.typeSize("labelSmall")
-                font.weight: Theme.typeWeight("labelSmall")
+                role: "labelSmall"
             }
 
-                    Text { // состояние загрузки
+                    LText { // состояние загрузки
                         Layout.fillWidth: true
                         Layout.leftMargin: Theme.dp(4)
                         visible: tab.detailLoading
                         text: "Загрузка сведений…"
                         color: Theme.subtextDim
-                        font.family: Theme.textFont
-                        font.pixelSize: Theme.typeSize("labelSmall")
-                        font.weight: Theme.typeWeight("labelSmall")
+                        role: "labelSmall"
                     }
                 }
             }

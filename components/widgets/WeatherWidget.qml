@@ -100,10 +100,9 @@ Rectangle {
                         width: Theme.dp(106)
                         // роль «подпись»: слишком длинное описание съедает ширину карточки
                         visible: text !== ""
+                        role: "bodySmall"
                         color: Theme.subtext
                         elide: Text.ElideRight
-                        font.pixelSize: Theme.dp(12)
-                        font.family: Theme.fontFamily
                         text: Weather.error !== "" ? "не удалось получить погоду" : (Weather.hasData ? Weather.desc : "загрузка…")
                     }
 

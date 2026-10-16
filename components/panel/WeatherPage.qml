@@ -18,40 +18,6 @@ ColumnLayout {
     readonly property bool hasHumidity: !isNaN(Weather.humidity)
     readonly property bool hasWind: !isNaN(Weather.wind)
 
-    // чип-выделение: пилюля h26, внутри иконка 13 + подпись labelMedium
-    component StatChip: Rectangle {
-        id: chip
-
-        property string icon: ""
-        property string label: ""
-
-        implicitHeight: Theme.dp(26)
-        implicitWidth: chipRow.implicitWidth + Theme.dp(20)
-        radius: Theme.radiusPill
-        color: Theme.bgTrack
-
-        RowLayout {
-            id: chipRow
-
-            anchors.centerIn: parent
-            spacing: Theme.dp(4)
-
-            Icon {
-                Layout.alignment: Qt.AlignVCenter
-                name: chip.icon
-                size: Theme.dp(13)
-                color: Theme.subtext
-            }
-
-            LText {
-                Layout.alignment: Qt.AlignVCenter
-                role: "labelMedium"
-                text: chip.label
-                color: Theme.subtext
-            }
-        }
-    }
-
     // ── загрузка и ошибка ─────────────────────────────────────────────
     LText {
         visible: Weather.loading && !Weather.hasData
@@ -169,18 +135,51 @@ ColumnLayout {
                 Layout.fillWidth: true
                 spacing: Theme.dp(6)
 
-                StatChip {
+                Chip {
+                    size: "sm"
+                    kind: "suggestion"
+                    interactive: false
+                    horizontalPadding: 10
+                    contentSpacing: 4
+                    iconSize: 13
+                    backgroundColor: Theme.bgTrack
+                    borderWidth: 0
+                    customColors: true
+                    foregroundColor: Theme.subtext
+                    iconColor: Theme.subtext
                     icon: "device_thermostat"
                     label: "Ощущается " + Math.round(Weather.feels) + "°"
                 }
 
-                StatChip {
+                Chip {
+                    size: "sm"
+                    kind: "suggestion"
+                    interactive: false
+                    horizontalPadding: 10
+                    contentSpacing: 4
+                    iconSize: 13
+                    backgroundColor: Theme.bgTrack
+                    borderWidth: 0
+                    customColors: true
+                    foregroundColor: Theme.subtext
+                    iconColor: Theme.subtext
                     visible: page.hasHumidity
                     icon: "water_drop"
                     label: Math.round(Weather.humidity) + "%"
                 }
 
-                StatChip {
+                Chip {
+                    size: "sm"
+                    kind: "suggestion"
+                    interactive: false
+                    horizontalPadding: 10
+                    contentSpacing: 4
+                    iconSize: 13
+                    backgroundColor: Theme.bgTrack
+                    borderWidth: 0
+                    customColors: true
+                    foregroundColor: Theme.subtext
+                    iconColor: Theme.subtext
                     visible: page.hasWind
                     icon: "air"
                     label: Math.round(Weather.wind) + " м/с"

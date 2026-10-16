@@ -362,19 +362,19 @@ ColumnLayout {
             onContentHeightChanged: page.scrollLogToEnd()
             onHeightChanged: page.scrollLogToEnd()
 
-            Text {
+            LText {
                 id: logText
 
                 width: logFlick.width
                 height: implicitHeight
+                role: "bodySmall"
+                mono: true
                 text: page.applyLog.length > 0
                       ? page.applyLog.join("\n")
                       : page.applying ? "Ожидание вывода…" : "Нет строк вывода."
                 textFormat: Text.PlainText
                 wrapMode: Text.WrapAnywhere
                 color: page.applyLog.length > 0 ? Theme.text : Theme.subtext
-                font.family: "monospace"
-                font.pixelSize: Theme.typeSize("bodySmall")
                 verticalAlignment: Text.AlignTop
             }
         }

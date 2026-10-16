@@ -118,9 +118,48 @@ RowLayout {
             Layout.topMargin: Theme.dp(16)
             spacing: Theme.dp(6)
 
-            MiniChip { text: root.appVersion }
-            MiniChip { text: root.licenseName }
-            MiniChip { text: root.engineName }
+            Chip {
+                size: "sm"
+                kind: "suggestion"
+                interactive: false
+                implicitHeight: Theme.dp(24)
+                horizontalPadding: 9
+                textRole: "labelSmall"
+                backgroundColor: Theme.bgTrack
+                borderWidth: 0
+                customColors: true
+                foregroundColor: Theme.subtext
+                iconColor: Theme.subtext
+                text: root.appVersion
+            }
+            Chip {
+                size: "sm"
+                kind: "suggestion"
+                interactive: false
+                implicitHeight: Theme.dp(24)
+                horizontalPadding: 9
+                textRole: "labelSmall"
+                backgroundColor: Theme.bgTrack
+                borderWidth: 0
+                customColors: true
+                foregroundColor: Theme.subtext
+                iconColor: Theme.subtext
+                text: root.licenseName
+            }
+            Chip {
+                size: "sm"
+                kind: "suggestion"
+                interactive: false
+                implicitHeight: Theme.dp(24)
+                horizontalPadding: 9
+                textRole: "labelSmall"
+                backgroundColor: Theme.bgTrack
+                borderWidth: 0
+                customColors: true
+                foregroundColor: Theme.subtext
+                iconColor: Theme.subtext
+                text: root.engineName
+            }
         }
     }
 
@@ -242,26 +281,6 @@ RowLayout {
                 color: Theme.text
                 text: infoRow.value
             }
-        }
-    }
-
-    // мини-чип метаданных: labelSmall на bgTrack
-    component MiniChip: Rectangle {
-        id: chip
-
-        property string text: ""
-
-        implicitWidth: chipText.implicitWidth + Theme.dp(18)
-        implicitHeight: Theme.dp(24)
-        radius: Theme.radiusPill
-        color: Theme.bgTrack
-
-        LText {
-            id: chipText
-            anchors.centerIn: parent
-            role: "labelSmall"
-            color: Theme.subtext
-            text: chip.text
         }
     }
 }

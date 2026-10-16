@@ -117,13 +117,11 @@ ColumnLayout {
 
         Item { Layout.fillWidth: true }
 
-        Text {
+        LText {
             Layout.alignment: Qt.AlignVCenter
             text: tab.count
+            role: "labelSmall"
             color: Theme.subtextDim
-            font.family: Theme.textFont
-            font.pixelSize: Theme.typeSize("labelSmall")
-            font.weight: Theme.typeWeight("labelSmall")
         }
     }
 
@@ -148,16 +146,14 @@ ColumnLayout {
             onActivated: (i) => tab.activate(i)
         }
 
-        Text { // статус загрузки/пустоты
+        LText { // статус загрузки/пустоты
             anchors.centerIn: parent
             visible: grid.count === 0
             text: !tab.ready ? "Загрузка…"
                 : tab.query.trim() !== "" ? "Ничего не найдено"
                 : "Нет данных"
+            role: "bodyMedium"
             color: Theme.subtext
-            font.family: Theme.textFont
-            font.pixelSize: Theme.typeSize("bodyMedium")
-            font.weight: Theme.typeWeight("bodyMedium")
         }
     }
 

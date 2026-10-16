@@ -124,38 +124,6 @@ WlSessionLock {
                 }
             }
 
-            // чип-пилюля состояния: иконка + подпись
-            component StatusChip: Rectangle {
-                id: chip
-                property string icon: ""
-                property string label: ""
-                property bool active: true
-
-                implicitWidth: chipRow.implicitWidth + Theme.dp(20)
-                implicitHeight: Theme.dp(28)
-                radius: Theme.pill(height)
-                color: chip.active ? Theme.bgTile : Theme.a(Theme.bgTile, 0.5)
-                border.width: 1
-                border.color: Theme.a(Theme.outline, 0.3)
-
-                RowLayout {
-                    id: chipRow
-                    anchors.centerIn: parent
-                    spacing: Theme.dp(6)
-
-                    Icon {
-                        name: chip.icon
-                        size: Theme.dp(16)
-                        color: chip.active ? Theme.text : Theme.subtextDim
-                    }
-                    LText {
-                        text: chip.label
-                        role: "labelMedium"
-                        color: chip.active ? Theme.text : Theme.subtextDim
-                    }
-                }
-            }
-
             // ── фон: обои + frost + scrim gradient ─────────────────────
             Item {
                 id: paperBox
@@ -252,22 +220,76 @@ WlSessionLock {
                     spacing: Theme.dp(8)
                     topPadding: Theme.dp(6)
 
-                    StatusChip {
+                    Chip {
+                        size: "sm"
+                        kind: "suggestion"
+                        interactive: false
+                        implicitHeight: Theme.dp(28)
+                        cornerRadius: Theme.pill(Theme.dp(28))
+                        horizontalPadding: 10
+                        contentSpacing: 6
+                        iconSize: 16
+                        backgroundColor: Theme.bgTile
+                        borderWidth: 1
+                        borderColor: Theme.a(Theme.outline, 0.3)
+                        customColors: true
+                        foregroundColor: Theme.text
+                        iconColor: Theme.text
                         visible: lock.battery !== null && lock.battery.isPresent
                         icon: "battery_full"
                         label: lock.battery ? Math.round((lock.battery.percentage || 0) * 100) + "%" : ""
                     }
-                    StatusChip {
+                    Chip {
+                        size: "sm"
+                        kind: "suggestion"
+                        interactive: false
+                        implicitHeight: Theme.dp(28)
+                        cornerRadius: Theme.pill(Theme.dp(28))
+                        horizontalPadding: 10
+                        contentSpacing: 6
+                        iconSize: 16
+                        backgroundColor: Sys.wifiEnabled ? Theme.bgTile : Theme.a(Theme.bgTile, 0.5)
+                        borderWidth: 1
+                        borderColor: Theme.a(Theme.outline, 0.3)
+                        customColors: true
+                        foregroundColor: Sys.wifiEnabled ? Theme.text : Theme.subtextDim
+                        iconColor: Sys.wifiEnabled ? Theme.text : Theme.subtextDim
                         icon: "wifi"
                         label: "Wi-Fi"
-                        active: Sys.wifiEnabled
                     }
-                    StatusChip {
+                    Chip {
+                        size: "sm"
+                        kind: "suggestion"
+                        interactive: false
+                        implicitHeight: Theme.dp(28)
+                        cornerRadius: Theme.pill(Theme.dp(28))
+                        horizontalPadding: 10
+                        contentSpacing: 6
+                        iconSize: 16
+                        backgroundColor: Sys.btEnabled ? Theme.bgTile : Theme.a(Theme.bgTile, 0.5)
+                        borderWidth: 1
+                        borderColor: Theme.a(Theme.outline, 0.3)
+                        customColors: true
+                        foregroundColor: Sys.btEnabled ? Theme.text : Theme.subtextDim
+                        iconColor: Sys.btEnabled ? Theme.text : Theme.subtextDim
                         icon: "bluetooth"
                         label: "Bluetooth"
-                        active: Sys.btEnabled
                     }
-                    StatusChip {
+                    Chip {
+                        size: "sm"
+                        kind: "suggestion"
+                        interactive: false
+                        implicitHeight: Theme.dp(28)
+                        cornerRadius: Theme.pill(Theme.dp(28))
+                        horizontalPadding: 10
+                        contentSpacing: 6
+                        iconSize: 16
+                        backgroundColor: Theme.bgTile
+                        borderWidth: 1
+                        borderColor: Theme.a(Theme.outline, 0.3)
+                        customColors: true
+                        foregroundColor: Theme.text
+                        iconColor: Theme.text
                         visible: Weather.hasData
                         icon: Weather.icon
                         label: Math.round(Weather.temp) + "°"

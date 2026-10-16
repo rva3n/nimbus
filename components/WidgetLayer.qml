@@ -149,16 +149,44 @@ PanelWindow {
                 // px-анатомия карточки: ширина из store, высота — контент
                 readonly property real dw: host.def ? Theme.dp(host.def.w) : Theme.dp(200)
 
-                // позиция: во время перетаскивания — живые dragX/dragY, иначе store
-                readonly property var storePos: WidgetsStore.posOf(host.modelData, board.defX(host.modelData), board.defY(host.modelData))
+                // Позиция хранится в долях доступной области карточки.
+                readonly property var defaultPos: WidgetsStore.defPos(host.modelData,
+                    board.width, board.height, Theme.uiScale, host.width, host.height)
+                readonly property var storePos: WidgetsStore.posOf(host.modelData,
+                    host.defaultPos.rx, host.defaultPos.ry)
                 property real dragX: 0
                 property real dragY: 0
                 property bool dragging: false
 
                 readonly property real dh: loder.item ? (loder.item as Item).implicitHeight : (host.def ? Theme.dp(host.def.h) : Theme.dp(100))
+                readonly property real maxX: Math.max(0, board.width - host.width)
+                readonly property real maxY: Math.max(0, board.height - host.height)
 
-                x: host.dragging ? host.dragX : host.storePos.x
-                y: host.dragging ? host.dragY : host.storePos.y
+                function migrateLegacyPosition() {
+                    if (!WidgetsStore.ready || !loder.item || board.width <= 0 || board.height <= 0
+                        || host.width <= 0 || host.height <= 0)
+                        return;
+                    WidgetsStore.migrateLegacy(host.modelData, board.width, board.height, host.width, host.height);
+                }
+
+                Component.onCompleted: Qt.callLater(() => host.migrateLegacyPosition())
+                onWidthChanged: host.migrateLegacyPosition()
+                onHeightChanged: host.migrateLegacyPosition()
+                onDhChanged: host.migrateLegacyPosition()
+
+                Connections {
+                    target: WidgetsStore
+                    function onReadyChanged() { Qt.callLater(() => host.migrateLegacyPosition()); }
+                    function onPosChanged() { Qt.callLater(() => host.migrateLegacyPosition()); }
+                }
+                Connections {
+                    target: board
+                    function onWidthChanged() { host.migrateLegacyPosition(); }
+                    function onHeightChanged() { host.migrateLegacyPosition(); }
+                }
+
+                x: host.dragging ? host.dragX : Math.max(0, Math.min(host.maxX, host.storePos.rx * host.maxX))
+                y: host.dragging ? host.dragY : Math.max(0, Math.min(host.maxY, host.storePos.ry * host.maxY))
                 width: host.dw
                 height: host.dh
                 visible: host.shown
@@ -296,15 +324,19 @@ PanelWindow {
 
                     function act(nx, ny) {
                         const m = Theme.dp(8);
-                        host.dragX = Math.max(m, Math.min(win.width - host.width - m, nx));
-                        host.dragY = Math.max(m, Math.min(win.height - host.height - m, ny));
+                        const mx = Math.min(m, host.maxX / 2);
+                        const my = Math.min(m, host.maxY / 2);
+                        host.dragX = Math.max(mx, Math.min(host.maxX - mx, nx));
+                        host.dragY = Math.max(my, Math.min(host.maxY - my, ny));
                     }
 
                     function drop() {
                         const g = Theme.dp(8);
                         // мягкий снап к сетке хранит «аккуратность» после ручного перетаскивания
                         dl.act(Math.round(host.dragX / g) * g, Math.round(host.dragY / g) * g);
-                        WidgetsStore.move(host.modelData, host.dragX, host.dragY);
+                        WidgetsStore.moveRel(host.modelData,
+                            host.maxX > 0 ? host.dragX / host.maxX : 0,
+                            host.maxY > 0 ? host.dragY / host.maxY : 0);
                         host.dragging = false;
                     }
 
@@ -316,15 +348,6 @@ PanelWindow {
 
             }
 
-        }
-
-        // дефолт-позиции требуют экран этого окна
-        function defX(id) {
-            return WidgetsStore.defPos(id, board.width, board.height, Theme.uiScale).x;
-        }
-
-        function defY(id) {
-            return WidgetsStore.defPos(id, board.width, board.height, Theme.uiScale).y;
         }
 
     }

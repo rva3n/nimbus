@@ -9,12 +9,23 @@ Singleton {
 
     property var workspaces: []
     property var windows: []
+    property var outputData: []
     property var activeWindow: null
     property string keyboardLayout: ""
     // id активного воркспейса каждого вывода: {"DP-1": "DP-1:1"}.
     // Берём из события `workspaces`: оно приходит на любое переключение, в том
     // числе на пустой воркспейс, где `windows` может опоздать/не измениться.
     property var activeWorkspaces: ({})
+
+    readonly property string activeOutput: {
+        const list = Array.isArray(root.outputData) ? root.outputData : [];
+        for (let i = 0; i < list.length; i++) {
+            const output = list[i];
+            if (output && output.focused === true && output.name)
+                return String(output.name);
+        }
+        return "";
+    }
 
     // «English (US)» → US, «Russian» → RU
     function shortLayout(name) {
@@ -132,6 +143,13 @@ Singleton {
             }
         } catch (e) {}
     }
+    function _outputs(line) {
+        try {
+            const m = JSON.parse(line);
+            if (m.event === "outputs" && Array.isArray(m.data))
+                root.outputData = m.data;
+        } catch (e) {}
+    }
 
     Process {
         id: wsProc
@@ -156,5 +174,17 @@ Singleton {
         id: winRetry
         interval: 1500
         onTriggered: winProc.running = true
+    }
+    Process {
+        id: outputProc
+        running: true
+        command: ["umbriel", "subscribe", "outputs"]
+        onExited: outputRetry.restart()
+        stdout: SplitParser { onRead: line => root._outputs(line) }
+    }
+    Timer {
+        id: outputRetry
+        interval: 1500
+        onTriggered: outputProc.running = true
     }
 }

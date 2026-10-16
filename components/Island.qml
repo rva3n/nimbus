@@ -36,8 +36,18 @@ PanelWindow {
         ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
     mask: Region { item: pill; radius: pill.radius }
 
-    readonly property string mode: (Notif.visible && view === "idle") ? "notif"
-                                 : (Osd.visible && view === "idle") ? "osd" : view
+    readonly property bool isActiveOutput: !win.screen || Umbriel.activeOutput === ""
+        || win.screen.name === Umbriel.activeOutput
+    function transientHere(showOn) {
+        const output = String(showOn || "");
+        return output === "" ? (win.islandAllScreens || win.isActiveOutput)
+            : (win.islandAllScreens || (!!win.screen && win.screen.name === output));
+    }
+    readonly property bool osdHere: Osd.visible && win.transientHere(Osd.showOn)
+    readonly property bool notifHere: Notif.visible && win.transientHere(Notif.showOn)
+    readonly property bool transientHereNow: win.osdHere || win.notifHere
+    readonly property string mode: (win.notifHere && view === "idle") ? "notif"
+                                 : (win.osdHere && view === "idle") ? "osd" : view
     readonly property bool big: mode === "panel" || mode === "launcher" || mode === "taskman" || mode === "tray"
     readonly property string page: win.shell ? win.shell.panelPage : ""
     // ширина панели: лончер 620, настройки 620, диспетчер 920, трей 360, остальное 404
@@ -48,8 +58,10 @@ PanelWindow {
     // активное окно во весь экран на этом output → остров уступает игрушке
     readonly property bool fullscreenActive: win.screen
         ? Umbriel.fullscreenFor(win.screen.name) : false
-    // панель по запросу, OSD и тосты показываются всегда; idle прячется в fullscreen
-    visible: win.big || Osd.visible || Notif.visible || !win.fullscreenActive
+    // Панели живут на активном выводе; idle и transient-пилюля следуют islandAllScreens.
+    visible: win.big ? win.isActiveOutput
+        : (win.transientHereNow
+            || ((win.islandAllScreens || win.isActiveOutput) && !win.fullscreenActive))
     // Максимальная высота панели: 75% экрана, чтобы высокие страницы (обои,
     // звук) помещались целиком, а не обрезались прежними жёсткими 652px.
     readonly property real panelMax: Math.max(360, Math.round((win.screen ? win.screen.height : 1080) * 0.75))
@@ -226,7 +238,7 @@ PanelWindow {
                 }
                 Shortcut {
                     sequence: "Escape"
-                    enabled: win.mode === "panel"
+                    enabled: win.mode === "panel" && win.isActiveOutput
                     onActivated: if (win.shell) win.shell.closeOverlays()
                 }
 

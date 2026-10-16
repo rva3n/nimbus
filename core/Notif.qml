@@ -10,6 +10,7 @@ Singleton {
     property var history: []      // newest first
     property var current: null    // toast content
     property bool visible: false  // toast shown in the island
+    property string showOn: ""
     property bool dnd: Prefs.dnd  // персистится в prefs.json (пишется через Prefs.set)
 
     readonly property string statePath: Quickshell.stateDir + "/notifs.json"
@@ -75,13 +76,14 @@ Singleton {
         root.history = h.slice(0, 12);
         scheduleSave();
     }
-    function toast(n) {
+    function toast(n, output) {
         root.current = n;
+        root.showOn = String(output || "");
         root.visible = true;
         hideTimer.restart();
         playNotifSound();
     }
-    function push(n) { add(n); toast(n); }
+    function push(n, output) { add(n); toast(n, output || ""); }
     function dismissAt(i) {
         const h = root.history.slice();
         if (i >= 0 && i < h.length) {

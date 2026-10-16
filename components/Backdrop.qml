@@ -13,7 +13,8 @@ PanelWindow {
     property var shell: null
 
     screen: modelData
-    visible: active
+    visible: root.active && (!root.screen || Umbriel.activeOutput === ""
+        || root.screen.name === Umbriel.activeOutput)
     anchors { top: true; bottom: true; left: true; right: true }
     color: "transparent"
     exclusiveZone: 0

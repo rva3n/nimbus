@@ -86,7 +86,7 @@ ShellRoot {
         onNotification: (n) => {
             const snap = { appName: n.appName, summary: n.summary, body: n.body, appIcon: n.appIcon, ts: Date.now(), raw: n };
             Notif.add(snap);
-            if (!Notif.dnd && root.view === "idle" && !root.locked) Notif.toast(snap);
+            if (!Notif.dnd && root.view === "idle" && !root.locked) Notif.toast(snap, Umbriel.activeOutput);
         }
     }
 
@@ -97,7 +97,7 @@ ShellRoot {
         function onFinished() {
             const snap = { appName: "Oberon", summary: "Таймер завершён", body: "Время вышло" };
             Notif.add(snap);
-            if (root.view === "idle" && !root.locked) Notif.toast(snap);
+            if (root.view === "idle" && !root.locked) Notif.toast(snap, Umbriel.activeOutput);
         }
     }
 
@@ -220,18 +220,18 @@ ShellRoot {
         if (!s) return;
         const nv = Math.max(0, Math.min(1, s.audio.volume + d));
         s.audio.volume = nv;
-        if (root.view === "idle") Osd.show("volume", nv, s.audio.muted);
+        if (root.view === "idle") Osd.show("volume", nv, s.audio.muted, Umbriel.activeOutput);
     }
     function volumeMute() {
         const s = Pipewire.defaultAudioSink;
         if (!s) return;
         s.audio.muted = !s.audio.muted;
-        if (root.view === "idle") Osd.show("volume", s.audio.volume, s.audio.muted);
+        if (root.view === "idle") Osd.show("volume", s.audio.volume, s.audio.muted, Umbriel.activeOutput);
     }
     function brightnessStep(d) {
         const nv = Math.max(0, Math.min(1, Sys.brightnessFraction + d));
         Sys.setBrightnessPct(nv * 100);
-        if (root.view === "idle") Osd.show("brightness", nv, false);
+        if (root.view === "idle") Osd.show("brightness", nv, false, Umbriel.activeOutput);
     }
 
     // ── IPC (compositor keybinds) ────────────────────────────────────

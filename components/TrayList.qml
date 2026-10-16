@@ -29,6 +29,8 @@ Item {
     property real menuY: 0
     // клавиатурный курсор
     property int sel: 0
+    property var submenuEntry: null
+    property real submenuY: 0
 
     // размер берём у содержимого: Island/Loader кладут нас по implicitHeight
     implicitWidth: col.implicitWidth
@@ -52,12 +54,16 @@ Item {
         return Quickshell.iconPath(raw, true);
     }
 
-    function closeMenu() { trayList.menuItem = null; }
+    function closeMenu() {
+        trayList.menuItem = null;
+        trayList.submenuEntry = null;
+    }
 
     function openMenuFor(item, x, y) {
         if (!item || !item.menu)
             return;
         trayList.menuItem = item;
+        trayList.submenuEntry = null;
         trayList.menuX = x;
         trayList.menuY = y;
     }
@@ -161,12 +167,22 @@ Item {
                     anchors.left: parent.left
                     anchors.leftMargin: Theme.dp(12) + Theme.dp(22) + Theme.dp(12)
                     anchors.right: parent.right
-                    anchors.rightMargin: Theme.dp(12)
+                    anchors.rightMargin: row.modelData.hasChildren ? Theme.dp(34) : Theme.dp(12)
                     anchors.verticalCenter: parent.verticalCenter
                     role: "bodyMedium"
                     color: row.selected ? Theme.fgSecondaryContainer : Theme.text
                     text: (row.modelData.tooltipTitle || row.modelData.title || row.modelData.id || "?")
                     elide: Text.ElideRight
+                }
+
+                Icon {
+                    visible: row.modelData.hasChildren
+                    anchors.right: parent.right
+                    anchors.rightMargin: Theme.dp(10)
+                    anchors.verticalCenter: parent.verticalCenter
+                    name: "chevron_right"
+                    size: Theme.dp(16)
+                    color: row.selected ? Theme.fgSecondaryContainer : Theme.subtextDim
                 }
 
                 MouseArea {
@@ -223,6 +239,11 @@ Item {
         QsMenuOpener {
             id: menuOpener
             menu: trayList.menuItem ? trayList.menuItem.menu : null
+        }
+
+        QsMenuOpener {
+            id: submenuOpener
+            menu: trayList.submenuEntry
         }
 
         // клик мимо карточки закрывает меню
@@ -318,12 +339,22 @@ Item {
                                 anchors.left: parent.left
                                 anchors.leftMargin: entryRow.checked ? Theme.dp(34) : Theme.dp(12)
                                 anchors.right: parent.right
-                                anchors.rightMargin: Theme.dp(12)
+                                anchors.rightMargin: entryRow.entry.hasChildren ? Theme.dp(32) : Theme.dp(12)
                                 anchors.verticalCenter: parent.verticalCenter
                                 role: "bodyMedium"
                                 color: entryRow.entry.enabled ? Theme.text : Theme.subtextDim
                                 text: entryRow.entry.text
                                 elide: Text.ElideRight
+                            }
+
+                            Icon {
+                                visible: !entryRow.isSep && entryRow.entry.hasChildren
+                                anchors.right: parent.right
+                                anchors.rightMargin: Theme.dp(8)
+                                anchors.verticalCenter: parent.verticalCenter
+                                name: "chevron_right"
+                                size: Theme.dp(16)
+                                color: entryRow.entry.enabled ? Theme.subtextDim : Theme.outline
                             }
 
                             MouseArea {
@@ -333,7 +364,129 @@ Item {
                                 hoverEnabled: true
                                 cursorShape: Qt.PointingHandCursor
                                 onClicked: {
-                                    entryRow.entry.triggered();
+                                    if (entryRow.entry.hasChildren) {
+                                        if (trayList.submenuEntry === entryRow.entry) {
+                                            trayList.submenuEntry = null;
+                                        } else {
+                                            const p = entryArea.mapToItem(null, entryArea.width, entryArea.height / 2);
+                                            trayList.submenuEntry = entryRow.entry;
+                                            trayList.submenuY = p.y;
+                                        }
+                                    } else {
+                                        entryRow.entry.triggered();
+                                        trayList.closeMenu();
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Подменю: второй QsMenuOpener открывает дочерние пункты в соседней карточке.
+        Rectangle {
+            id: submenuCard
+
+            readonly property real wanted: submenuCol.implicitHeight + Theme.dp(12)
+            readonly property int cardW: Theme.dp(220)
+
+            visible: trayList.submenuEntry !== null
+            width: cardW
+            height: Math.min(submenuCard.wanted, trayMenu.height - Theme.dp(16))
+            x: menuCard.x + menuCard.width + cardW <= trayMenu.width - Theme.dp(8)
+                ? menuCard.x + menuCard.width - Theme.dp(4)
+                : Math.max(Theme.dp(8), menuCard.x - cardW + Theme.dp(4))
+            y: Math.max(Theme.dp(8), Math.min(trayList.submenuY - height / 2,
+                trayMenu.height - height - Theme.dp(8)))
+            radius: Theme.radiusMd
+            color: Theme.withBlur(Theme.mHigh)
+            clip: true
+
+            MouseArea {
+                anchors.fill: parent
+                acceptedButtons: Qt.LeftButton | Qt.MiddleButton | Qt.RightButton
+                onWheel: wheel.accepted = true
+            }
+
+            Flickable {
+                anchors.fill: parent
+                anchors.margins: Theme.dp(5)
+                contentWidth: width
+                contentHeight: submenuCol.implicitHeight
+                clip: true
+                boundsBehavior: Flickable.StopAtBounds
+                interactive: contentHeight > height
+
+                Column {
+                    id: submenuCol
+                    width: parent.width
+
+                    Repeater {
+                        model: submenuOpener.children
+
+                        delegate: Item {
+                            id: subEntryRow
+                            required property var modelData
+
+                            readonly property var entry: subEntryRow.modelData
+                            readonly property bool isSep: entry.isSeparator || entry.text === ""
+                            readonly property bool checked: entry.checkState !== Qt.Unchecked
+
+                            width: submenuCol.width
+                            height: subEntryRow.isSep ? Theme.dp(7) : Theme.dp(36)
+
+                            Rectangle {
+                                visible: subEntryRow.isSep
+                                anchors.verticalCenter: parent.verticalCenter
+                                anchors.left: parent.left
+                                anchors.right: parent.right
+                                anchors.margins: Theme.dp(6)
+                                height: 1
+                                color: Theme.outline
+                            }
+
+                            Rectangle {
+                                visible: !subEntryRow.isSep
+                                anchors.fill: parent
+                                anchors.margins: Theme.dp(1)
+                                radius: Theme.radiusXs
+                                color: (subEntryArea.containsMouse && subEntryRow.entry.enabled)
+                                    ? Theme.bgHover : "transparent"
+                                Behavior on color { ColorAnimation { duration: Theme.durFastEffects } }
+                            }
+
+                            Icon {
+                                visible: !subEntryRow.isSep && subEntryRow.checked
+                                anchors.left: parent.left
+                                anchors.leftMargin: Theme.dp(8)
+                                anchors.verticalCenter: parent.verticalCenter
+                                name: "check"
+                                size: Theme.dp(16)
+                                color: Theme.accent
+                            }
+
+                            LText {
+                                visible: !subEntryRow.isSep
+                                anchors.left: parent.left
+                                anchors.leftMargin: subEntryRow.checked ? Theme.dp(34) : Theme.dp(12)
+                                anchors.right: parent.right
+                                anchors.rightMargin: Theme.dp(12)
+                                anchors.verticalCenter: parent.verticalCenter
+                                role: "bodyMedium"
+                                color: subEntryRow.entry.enabled ? Theme.text : Theme.subtextDim
+                                text: subEntryRow.entry.text
+                                elide: Text.ElideRight
+                            }
+
+                            MouseArea {
+                                id: subEntryArea
+                                anchors.fill: parent
+                                enabled: !subEntryRow.isSep && subEntryRow.entry.enabled
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: {
+                                    subEntryRow.entry.triggered();
                                     trayList.closeMenu();
                                 }
                             }
@@ -343,14 +496,17 @@ Item {
             }
         }
 
-        // клавиатура: Escape закрывает меню
+        // клавиатура: Escape закрывает сперва подменю, затем всё меню
         Item {
             id: keyCatcher
             anchors.fill: parent
             focus: trayList.menuItem !== null
             Keys.onPressed: (event) => {
                 if (event.key === Qt.Key_Escape) {
-                    trayList.closeMenu();
+                    if (trayList.submenuEntry !== null)
+                        trayList.submenuEntry = null;
+                    else
+                        trayList.closeMenu();
                     event.accepted = true;
                 }
             }

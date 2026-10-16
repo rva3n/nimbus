@@ -40,14 +40,14 @@ ColumnLayout {
             Layout.fillWidth: true
             Layout.topMargin: Theme.dp(4)
             Layout.bottomMargin: Theme.dp(4)
-            visible: (win ? win.wifiList.length : 0) === 0
+            visible: Sys.wifiNetworks.length === 0
             role: "bodySmall"
             color: Theme.subtext
             text: Sys.wifiEnabled ? "Поиск сетей…" : "Wi-Fi выключен"
         }
 
         Repeater {
-            model: win ? win.wifiList : []
+            model: Sys.wifiNetworks
 
             delegate: ColumnLayout {
                 id: netWrap
@@ -57,7 +57,7 @@ ColumnLayout {
                 spacing: 0
 
                 readonly property bool sel: !!(win && win.wifiSel === modelData.ssid)
-                readonly property int count: win ? win.wifiList.length : 0
+                readonly property int count: Sys.wifiNetworks.length
                 readonly property string pos: netWrap.count <= 1 ? "single"
                     : (netWrap.index === 0 ? "top"
                     : (netWrap.index === netWrap.count - 1 ? "bottom" : "middle"))
@@ -68,7 +68,9 @@ ColumnLayout {
                     Layout.fillWidth: true
                     icon: "wifi"
                     devName: netWrap.modelData.ssid
-                    sub: netWrap.modelData.signal + "%"
+                    sub: netWrap.modelData.connected
+                        ? "Подключено · " + netWrap.modelData.signal + "%"
+                        : netWrap.modelData.signal + "%"
                     selected: netWrap.sel
                     position: netWrap.pos
                     onClicked: {

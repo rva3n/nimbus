@@ -4,7 +4,7 @@ import Quickshell
 import Quickshell.Io
 
 // Состояние desktop-виджетов: ~/.local/state/oberon/widgets.json —
-// { "enabled": { id: bool }, "pos": { id: { x, y } } }.
+// { "enabled": { id: bool }, "pos": { id: { rx, ry } } }.
 // Экран рисует layers: компоненты/WidgetLayer.qml читает и пишет через этот
 // синглтон (тумблеры виджетов — из страницы настроек или через toggle).
 // Файл — единственный источник правды: атомарная запись (tmp + mv), дебаунс,
@@ -35,18 +35,30 @@ Singleton {
         "media": { "file": "MediaWidget.qml", "col": "lb", "w": 296, "h": 96, "off": 72 + 104 + 28 }
     })
 
-    // дефолтная позиция на экране экрана scrW×scrH при интерфейсном масштабе k
-    function defPos(id, scrW, scrH, k) {
+    function clamp01(value) {
+        return Math.max(0, Math.min(1, Number(value)));
+    }
+
+    // Дефолтная позиция в долях доступной области для карточки.
+    function defPos(id, scrW, scrH, k, itemW, itemH) {
         const d = store.defs[id];
         if (!d)
-            return { "x": 0, "y": 0 };
+            return { "rx": 0, "ry": 0 };
         const w = Math.round(d.w * k);
         const h = Math.round(d.h * k);
         const m = Math.round(72 * k);
         const off = Math.round(d.off * k);
-        if (d.col === "tr")
-            return { "x": Math.round(scrW - m - w), "y": off };
-        return { "x": m, "y": Math.round(scrH - m - h - off) };
+        let x, y;
+        if (d.col === "tr") {
+            x = Math.round(scrW - m - w);
+            y = off;
+        } else {
+            x = m;
+            y = Math.round(scrH - m - h - off);
+        }
+        const maxX = Math.max(1, Number(scrW) - Number(itemW || w));
+        const maxY = Math.max(1, Number(scrH) - Number(itemH || h));
+        return { "rx": store.clamp01(x / maxX), "ry": store.clamp01(y / maxY) };
     }
 
     // ── публичный API ─────────────────────────────────────────────────
@@ -71,19 +83,45 @@ Singleton {
         return store.isEnabled(id);
     }
 
-    // позиция из store или дефолт (xy считается в WidgetLayer, у store нет экрана)
-    function posOf(id, defX, defY) {
+    // Позиция в долях из store или дефолт; абсолютные legacy-позиции мигрируют ниже.
+    function posOf(id, defRx, defRy) {
         const p = store.pos[id];
-        return p && isFinite(Number(p.x)) && isFinite(Number(p.y)) ? { "x": Number(p.x), "y": Number(p.y) } : { "x": defX, "y": defY };
+        return p && isFinite(Number(p.rx)) && isFinite(Number(p.ry))
+            ? { "rx": store.clamp01(p.rx), "ry": store.clamp01(p.ry) }
+            : { "rx": store.clamp01(defRx), "ry": store.clamp01(defRy) };
     }
 
-    function move(id, x, y) {
-        if (!isFinite(Number(x)) || !isFinite(Number(y)))
+    function moveRel(id, rx, ry) {
+        if (!store.defs[id] || !isFinite(Number(rx)) || !isFinite(Number(ry)))
             return ;
         const built = {};
         for (const k in store.pos)
-            built[k] = { "x": Number(store.pos[k].x), "y": Number(store.pos[k].y) };
-        built[id] = { "x": Math.round(Number(x)), "y": Math.round(Number(y)) };
+            built[k] = store.pos[k];
+        built[id] = { "rx": store.clamp01(rx), "ry": store.clamp01(ry) };
+        store.pos = built;
+        store.scheduleSave();
+    }
+
+    // Старые {x,y} превращаем в доли при первом доступном размере/геометрии.
+    function migrateLegacy(id, screenW, screenH, itemW, itemH) {
+        const p = store.pos[id];
+        if (!p || (isFinite(Number(p.rx)) && isFinite(Number(p.ry))))
+            return;
+        const sw = Number(screenW), sh = Number(screenH);
+        const iw = Number(itemW), ih = Number(itemH);
+        if (!isFinite(sw) || !isFinite(sh) || !isFinite(iw) || !isFinite(ih)
+            || sw <= 0 || sh <= 0 || iw <= 0 || ih <= 0
+            || !isFinite(Number(p.x)) || !isFinite(Number(p.y)))
+            return;
+        const maxX = Math.max(0, sw - iw);
+        const maxY = Math.max(0, sh - ih);
+        const built = {};
+        for (const k in store.pos)
+            built[k] = store.pos[k];
+        built[id] = {
+            "rx": maxX > 0 ? store.clamp01(Number(p.x) / maxX) : 0,
+            "ry": maxY > 0 ? store.clamp01(Number(p.y) / maxY) : 0
+        };
         store.pos = built;
         store.scheduleSave();
     }
@@ -102,8 +140,13 @@ Singleton {
         for (const id in store.defs) {
             if (en && en[id] !== undefined)
                 out.enabled[id] = Boolean(en[id]);
-            if (ps && ps[id] && isFinite(Number(ps[id].x)) && isFinite(Number(ps[id].y)))
-                out.pos[id] = { "x": Math.round(Number(ps[id].x)), "y": Math.round(Number(ps[id].y)) };
+            if (ps && ps[id]) {
+                const p = ps[id];
+                if (isFinite(Number(p.rx)) && isFinite(Number(p.ry)))
+                    out.pos[id] = { "rx": store.clamp01(p.rx), "ry": store.clamp01(p.ry) };
+                else if (isFinite(Number(p.x)) && isFinite(Number(p.y)))
+                    out.pos[id] = { "x": Math.round(Number(p.x)), "y": Math.round(Number(p.y)) };
+            }
         }
         return out;
     }

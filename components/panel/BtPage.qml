@@ -43,7 +43,8 @@ ColumnLayout {
             visible: Sys.btDevices.length === 0
             role: "bodySmall"
             color: Theme.subtext
-            text: Sys.btEnabled ? "Устройств не найдено" : "Bluetooth выключен"
+            text: !Sys.btEnabled ? "Bluetooth выключен"
+                : (Sys.btDiscovering ? "Поиск…" : "Устройств не найдено")
         }
 
         Repeater {
@@ -60,13 +61,27 @@ ColumnLayout {
                 readonly property string pos: btWrap.count <= 1 ? "single"
                     : (btWrap.index === 0 ? "top"
                     : (btWrap.index === btWrap.count - 1 ? "bottom" : "middle"))
+                readonly property string status: btWrap.modelData.connected ? "Подключено"
+                    : (btWrap.modelData.pairing ? "Сопряжение…"
+                    : (btWrap.modelData.paired ? "Сопряжено" : "Не сопряжено"))
 
                 DeviceRow {
                     Layout.fillWidth: true
                     icon: "bluetooth"
                     devName: btWrap.modelData.name
-                    sub: btWrap.modelData.mac
+                    sub: btWrap.status + (btWrap.modelData.mac ? " · " + btWrap.modelData.mac : "")
                     position: btWrap.pos
+                    onClicked: {
+                        const device = btWrap.modelData.device;
+                        if (!device || device.pairing)
+                            return;
+                        if (device.connected)
+                            device.disconnect();
+                        else if (device.paired)
+                            device.connect();
+                        else
+                            device.pair();
+                    }
                 }
             }
         }

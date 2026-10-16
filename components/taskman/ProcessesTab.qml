@@ -17,8 +17,7 @@ Item {
     // сортировка списка и раскрытые в дереве узлы (ключ — строка pid)
     property string sortBy: "cpu"
     property var expanded: ({})
-    // плоское дерево, построенное rebuild(): [{proc, depth, hasChildren, expanded}]
-    property var model: []
+    // плоское дерево синхронизируется в ListModel по PID, без сброса делегатов.
     // порядок строк между обновлениями: pid (строка) → индекс в прошлом out;
     // пока не сброшен setSort(), соседи не пересортировываются при refresh
     property var _order: ({})
@@ -29,6 +28,10 @@ Item {
     property real menuX: 0
     property real menuY: 0
     property bool menuOpen: false
+    property string armedAction: ""
+    property int armedPid: -1
+
+    ListModel { id: processModel }
 
     Layout.fillWidth: true
     implicitHeight: col.implicitHeight
@@ -49,6 +52,15 @@ Item {
 
     // меню не должно висеть после ухода с вкладки
     onVisibleChanged: if (!tab.visible) tab.closeMenu()
+
+    Timer {
+        id: disarmTimer
+        interval: 4000
+        onTriggered: {
+            tab.armedAction = "";
+            tab.armedPid = -1;
+        }
+    }
 
     // любые изменения фильтра или сортировки — сразу пересобрать дерево
     onQueryChanged: tab.rebuild()
@@ -73,6 +85,56 @@ Item {
         if (tab.sortBy === "pid")
             return a.pid - b.pid;
         return b.cpu - a.cpu;
+    }
+
+    function _rowData(row) {
+        const p = row.proc;
+        return {
+            pid: p.pid,
+            ppid: p.ppid,
+            ni: p.ni,
+            cpu: p.cpu,
+            mem: p.mem,
+            stat: p.stat,
+            args: p.args,
+            name: p.name,
+            user: p.user,
+            depth: row.depth,
+            hasChildren: row.hasChildren,
+            expanded: row.expanded
+        };
+    }
+
+    function _syncProcessModel(rows) {
+        const wanted = {};
+        for (const row of rows)
+            wanted[String(row.proc.pid)] = true;
+
+        for (let i = processModel.count - 1; i >= 0; i--) {
+            if (!wanted[String(processModel.get(i).pid)])
+                processModel.remove(i);
+        }
+
+        for (let i = 0; i < rows.length; i++) {
+            const data = tab._rowData(rows[i]);
+            let found = -1;
+            for (let j = i; j < processModel.count; j++) {
+                if (Number(processModel.get(j).pid) === Number(data.pid)) {
+                    found = j;
+                    break;
+                }
+            }
+            if (found === -1)
+                processModel.insert(i, data);
+            else if (found !== i)
+                processModel.move(found, i, 1);
+
+            const current = processModel.get(i);
+            for (const role in data) {
+                if (current[role] !== data[role])
+                    processModel.setProperty(i, role, data[role]);
+            }
+        }
     }
 
     // перестройка плоского дерева из ProcList.items: фильтр → children по ppid →
@@ -165,7 +227,7 @@ Item {
 
         // не теряем прокрутку при смене модели
         const savedY = listView.contentY;
-        tab.model = out;
+        tab._syncProcessModel(out);
         tab.rowCount = matched.length;
         // запоминаем раскладку для следующего refresh (стабильный порядок)
         const order = {};
@@ -213,6 +275,9 @@ Item {
 
     function openMenu(proc, px, py) {
         tab.menuProc = proc;
+        tab.armedAction = "";
+        tab.armedPid = -1;
+        disarmTimer.stop();
         // прижимаем попап к границам вкладки
         tab.menuX = Math.max(Theme.dp(6), Math.min(px, tab.width - menuRect.width - Theme.dp(6)));
         tab.menuY = Math.max(Theme.dp(6), Math.min(py, tab.height - menuRect.height - Theme.dp(6)));
@@ -222,14 +287,30 @@ Item {
     function closeMenu() {
         tab.menuOpen = false;
         tab.menuProc = null;
+        tab.armedAction = "";
+        tab.armedPid = -1;
+        disarmTimer.stop();
     }
 
     // действие меню над запомненным процессом
     function runAction(action) {
         const p = tab.menuProc;
-        tab.closeMenu();
-        if (!p)
+        if (!p) {
+            tab.closeMenu();
             return;
+        }
+        if (action === "term" || action === "kill9") {
+            if (tab.armedAction !== action || tab.armedPid !== p.pid) {
+                tab.armedAction = action;
+                tab.armedPid = p.pid;
+                disarmTimer.restart();
+                return;
+            }
+        }
+        tab.armedAction = "";
+        tab.armedPid = -1;
+        disarmTimer.stop();
+        tab.closeMenu();
         if (action === "term")
             ProcList.term(p.pid);
         else if (action === "kill9")
@@ -407,19 +488,37 @@ Item {
                 anchors.fill: parent
                 clip: true
                 boundsBehavior: Flickable.StopAtBounds
-                model: tab.model
+                model: processModel
 
                 delegate: Item {
                     id: rowItem
 
-                    required property var modelData
+                    required property var pid
+                    required property var ppid
+                    required property var ni
+                    required property var cpu
+                    required property var mem
+                    required property var stat
+                    required property var args
+                    required property var name
+                    required property var user
+                    required property var depth
+                    required property var hasChildren
+                    required property var expanded
                     required property int index
 
-                    readonly property var proc: rowItem.modelData.proc
-                    readonly property int depth: rowItem.modelData.depth
-                    readonly property bool hasChildren: rowItem.modelData.hasChildren
-                    readonly property bool expanded: rowItem.modelData.expanded
-                    readonly property bool selected: tab.selectedPid === rowItem.proc.pid
+                    readonly property var proc: ({
+                        pid: Number(rowItem.pid),
+                        ppid: Number(rowItem.ppid),
+                        ni: Number(rowItem.ni),
+                        cpu: Number(rowItem.cpu),
+                        mem: Number(rowItem.mem),
+                        stat: rowItem.stat,
+                        args: rowItem.args,
+                        name: rowItem.name,
+                        user: rowItem.user
+                    })
+                    readonly property bool selected: tab.selectedPid === Number(rowItem.pid)
 
                     width: listView.width
                     height: Theme.dp(42)
@@ -442,13 +541,11 @@ Item {
                             acceptedButtons: Qt.LeftButton | Qt.RightButton
 
                             onClicked: (mouse) => {
-                                tab.selectedPid = rowItem.proc.pid;
+                                tab.selectedPid = Number(rowItem.pid);
                                 if (mouse.button === Qt.RightButton) {
                                     // позиция меню — точка клика, переведённая во вкладку
                                     const p = rowArea.mapToItem(tab, mouse.x, mouse.y);
                                     tab.openMenu(rowItem.proc, p.x, p.y);
-                                } else if (rowItem.hasChildren) {
-                                    tab.toggleExpanded(rowItem.proc.pid);
                                 }
                             }
                         }
@@ -471,6 +568,18 @@ Item {
                                 name: rowItem.expanded ? "expand_more" : "chevron_right"
                                 size: Theme.dp(16)
                                 color: rowItem.selected ? Theme.fgSecondaryContainer : Theme.subtext
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                enabled: rowItem.hasChildren
+                                acceptedButtons: Qt.LeftButton
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: {
+                                    tab.selectedPid = Number(rowItem.pid);
+                                    tab.toggleExpanded(Number(rowItem.pid));
+                                }
                             }
                         }
 
@@ -596,13 +705,17 @@ Item {
 
                 MenuRow {
                     icon: "do_not_disturb_on"
-                    label: "Остановить (TERM)"
+                    confirmAction: "term"
+                    label: tab.armedAction === "term" && tab.menuProc
+                        && tab.armedPid === tab.menuProc.pid ? "Ещё раз: остановить" : "Остановить (TERM)"
                     danger: true
                     onActivated: tab.runAction("term")
                 }
                 MenuRow {
                     icon: "error"
-                    label: "Убить (KILL)"
+                    confirmAction: "kill9"
+                    label: tab.armedAction === "kill9" && tab.menuProc
+                        && tab.armedPid === tab.menuProc.pid ? "Ещё раз: убить" : "Убить (KILL)"
                     danger: true
                     onActivated: tab.runAction("kill9")
                 }
@@ -653,6 +766,7 @@ Item {
         property string icon: ""
         property string label: ""
         property bool danger: false
+        property string confirmAction: ""
 
         signal activated()
 
@@ -669,6 +783,14 @@ Item {
                 radius: Theme.rad(12)
                 tint: mi.danger ? Theme.error : Theme.text
                 onClicked: mi.activated()
+                onContainsMouseChanged: {
+                    if (!miArea.containsMouse && mi.confirmAction !== ""
+                            && tab.armedAction === mi.confirmAction) {
+                        tab.armedAction = "";
+                        tab.armedPid = -1;
+                        disarmTimer.stop();
+                    }
+                }
             }
         }
 

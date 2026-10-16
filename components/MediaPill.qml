@@ -41,6 +41,8 @@ PanelWindow {
     readonly property bool playing: mp.player && mp.player.isPlaying === true
     readonly property bool fullscreenActive: mp.screen
         ? Umbriel.fullscreenFor(mp.screen.name) : false
+    readonly property bool isActiveOutput: !mp.screen || Umbriel.activeOutput === ""
+        || mp.screen.name === Umbriel.activeOutput
     readonly property int vizBars: 7
     readonly property string cavaUid: "pill-" + (mp.screen ? mp.screen.name : "s")
 
@@ -55,7 +57,7 @@ PanelWindow {
     onCavaUidChanged: if (mp.visible) Cava.want(mp.cavaUid, mp.vizBars)
     Component.onDestruction: Cava.drop(mp.cavaUid)
 
-    visible: mp.playing && !mp.fullscreenActive
+    visible: mp.playing && !mp.fullscreenActive && mp.isActiveOutput
     mask: Region { item: pill; radius: pill.radius }
 
     // тень как у острова: обёртка с запасом + layer.effect (MultiEffect)

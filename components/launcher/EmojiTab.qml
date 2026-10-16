@@ -130,6 +130,8 @@ ColumnLayout {
         id: grid
 
         Layout.fillWidth: true
+        Layout.fillHeight: true
+        Layout.minimumHeight: 0
         Layout.preferredHeight: Theme.dp(360)
         clip: true
         cellWidth: tab.mode === "emoji" ? Theme.dp(40) : Theme.dp(112)

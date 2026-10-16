@@ -73,7 +73,13 @@ WlSessionLock {
             // 0 — витрина, 1 — поле в фокусе: фон уходит назад, поле вперёд
             property real focusK: pwField.activeFocus ? 1 : 0
             readonly property int pad: Math.round(Math.max(Theme.dp(36), Math.min(Theme.dp(76), lockSurface.height * 0.062)))
-            readonly property int clockUnit: Math.round(Math.max(Theme.dp(64), Math.min(Theme.dp(132), lockSurface.height * 0.14)))
+            readonly property real loginWidth: Math.min(Theme.dp(340), lockSurface.width * 0.42)
+            readonly property real clockLeft: lockSurface.pad + Theme.dp(14)
+            readonly property real clockMaxWidth: Math.max(0,
+                Math.round((lockSurface.width - lockSurface.loginWidth) / 2
+                           - lockSurface.clockLeft - Theme.dp(24)))
+            readonly property int clockUnit: Math.round(Math.max(Theme.dp(36),
+                Math.min(Theme.dp(132), lockSurface.height * 0.14, lockSurface.clockMaxWidth * 0.55)))
 
             function clamp01(x) { return Math.max(0, Math.min(1, x)) }
             // длинный хвост: блок «приземляется», а не останавливается
@@ -176,15 +182,19 @@ WlSessionLock {
                 anchors.top: parent.top
                 anchors.leftMargin: lockSurface.pad + Theme.dp(14)
                 anchors.topMargin: lockSurface.pad
+                width: lockSurface.clockMaxWidth
+                clip: true
                 spacing: Theme.dp(6)
                 opacity: lockSurface.rv(0.1)
                 transform: Translate { y: (1 - lockSurface.rv(0.1)) * -Theme.dp(24) }
 
                 // двухстрочные часы: час над минутой
                 Column {
+                    width: parent.width
                     spacing: -Math.round(lockSurface.clockUnit * 0.24)
 
                     LText {
+                        width: parent.width
                         text: Qt.formatDateTime(lockSurface.now, "HH")
                         size: lockSurface.clockUnit
                         weight: 560
@@ -192,8 +202,11 @@ WlSessionLock {
                         tabular: true
                         color: Theme.text
                         font.letterSpacing: -Math.round(lockSurface.clockUnit * 0.03)
+                        wrapMode: Text.NoWrap
+                        elide: Text.ElideRight
                     }
                     LText {
+                        width: parent.width
                         text: Qt.formatDateTime(lockSurface.now, "mm")
                         size: lockSurface.clockUnit
                         weight: 560
@@ -201,22 +214,32 @@ WlSessionLock {
                         tabular: true
                         color: Theme.primary
                         font.letterSpacing: -Math.round(lockSurface.clockUnit * 0.03)
+                        wrapMode: Text.NoWrap
+                        elide: Text.ElideRight
                     }
                 }
 
                 LText {
+                    width: parent.width
                     text: lockSurface.now.toLocaleDateString(Qt.locale("ru_RU"), "dddd, d MMMM")
                     role: "headlineSmall"
                     color: Theme.text
+                    wrapMode: Text.NoWrap
+                    elide: Text.ElideRight
                 }
 
                 LText {
+                    width: parent.width
                     text: lock.username
                     role: "bodyLarge"
                     color: Theme.text
+                    wrapMode: Text.NoWrap
+                    elide: Text.ElideRight
                 }
 
-                Row {
+                Flow {
+                    width: parent.width
+                    visible: parent.width >= Theme.dp(120)
                     spacing: Theme.dp(8)
                     topPadding: Theme.dp(6)
 
@@ -300,7 +323,7 @@ WlSessionLock {
             // ── медиа + карточка входа ────────────────────────────────
             ColumnLayout {
                 anchors.centerIn: parent
-                width: Theme.dp(340)
+                width: lockSurface.loginWidth
                 spacing: Theme.dp(14)
                 opacity: lockSurface.rv(0.24)
                 transform: Translate { y: (1 - lockSurface.rv(0.24)) * Theme.dp(20) }

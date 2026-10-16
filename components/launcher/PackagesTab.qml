@@ -24,6 +24,7 @@ ColumnLayout {
     property int sel: 0
     property var shell: null
     property bool active: false
+    property int workspaceHeight: Theme.dp(440)
 
     signal hovered(int index)
     signal selectionRequested(int index)
@@ -61,8 +62,15 @@ ColumnLayout {
 
     readonly property bool searchMode: tab.query.trim().length >= 2
     readonly property int totalUpdates: tab.repoUpdates + tab.aurUpdates
+    readonly property int detailsHeight: Math.min(Theme.dp(184), Math.max(Theme.dp(120), tab.workspaceHeight * 0.38))
     // показываем до 8 строк обновлений (репозитории, затем AUR)
     readonly property var detailLines: tab.updatesList.concat(tab.aurList).slice(0, 8)
+    // Подстраиваем строки обновлений под высоту рабочей области и карточку деталей.
+    readonly property int detailLineLimit: tab.detailsOpen
+        ? Math.max(0, Math.min(3, Math.floor((tab.workspaceHeight - tab.detailsHeight - Theme.dp(150)) / Theme.dp(18))))
+        : Math.max(0, Math.min(8, Math.floor((tab.workspaceHeight - Theme.dp(220)) / Theme.dp(18))))
+    readonly property var shownDetailLines: tab.detailLines.slice(0, tab.detailLineLimit)
+    readonly property int hiddenDetailLines: Math.max(0, tab.totalUpdates - tab.shownDetailLines.length)
     readonly property int count: tab.searchMode
         ? tab.results.length
         : tab.appsList.length
@@ -643,6 +651,8 @@ ColumnLayout {
     Item {
         visible: tab.searchMode
         Layout.fillWidth: true
+        Layout.fillHeight: true
+        Layout.minimumHeight: 0
         Layout.preferredHeight: tab.detailsOpen ? Theme.dp(150) : Theme.dp(300)
 
         ListView {
@@ -821,6 +831,8 @@ ColumnLayout {
 
         visible: !tab.searchMode
         Layout.fillWidth: true
+        Layout.fillHeight: true
+        Layout.minimumHeight: 0
         spacing: Theme.dp(6)
 
         // карточка обновлений — акцентный контейнер (Lucid card anatomy)
@@ -881,7 +893,7 @@ ColumnLayout {
                     spacing: Theme.dp(2)
 
                     Repeater {
-                        model: tab.detailLines
+                        model: tab.shownDetailLines
 
                         delegate: LText {
                             required property var modelData
@@ -891,6 +903,15 @@ ColumnLayout {
                             color: Theme.alpha(Theme.fgSecondaryContainer, 0.8)
                             elide: Text.ElideRight
                         }
+                    }
+
+                    LText {
+                        visible: tab.hiddenDetailLines > 0
+                        width: parent.width
+                        role: "bodySmall"
+                        text: "и ещё " + tab.hiddenDetailLines
+                        color: Theme.alpha(Theme.fgSecondaryContainer, 0.8)
+                        elide: Text.ElideRight
                     }
                 }
             }
@@ -925,6 +946,8 @@ ColumnLayout {
             visible: !tab.searchMode
             Layout.fillWidth: true
             Layout.preferredHeight: Theme.dp(260)
+            Layout.fillHeight: true
+            Layout.minimumHeight: 0
             model: tab.appsList
             clip: true
             spacing: Theme.dp(4)
@@ -1020,7 +1043,8 @@ ColumnLayout {
 
         visible: tab.detailsOpen && tab.detailTarget !== null
         Layout.fillWidth: true
-        Layout.preferredHeight: Theme.dp(184)
+        Layout.preferredHeight: tab.detailsHeight
+        Layout.minimumHeight: Math.min(Theme.dp(120), tab.workspaceHeight)
 
         Rectangle { // Lucid-карточка панели деталей
             anchors.fill: parent

@@ -360,7 +360,7 @@ ColumnLayout {
         LinearProgress {
             Layout.fillWidth: true
             Layout.alignment: Qt.AlignVCenter
-            wavy: true
+            wavy: ur.tone === "warn" || ur.tone === "error"
             value: ur.pct / 100
             color: ur.ink
         }

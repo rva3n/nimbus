@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
+import QtQuick.Window
 import "../core"
 import "../ui"
 import "launcher"
@@ -18,6 +19,15 @@ FocusScope {
     property string currentTab: "apps"
     property string query: ""
     property int sel: 0
+
+    readonly property real screenAvailHeight: Screen.desktopAvailableHeight > 0
+        ? Screen.desktopAvailableHeight : Screen.height
+    // Island caps its content view at 75% of the output; reserve room for the
+    // launcher header, search field, card padding, and a small safety margin.
+    readonly property int workspaceHeight: Math.max(Theme.dp(180),
+        Math.min(Theme.dp(440), launcher.screenAvailHeight * 0.75 - Theme.dp(152)))
+    // Переключение вкладок не меняет эту высоту; раскрытие/сворачивание острова
+    // уже плавно анимирует pill.height в Island.qml через motion-токены Theme.
 
     readonly property var activeTab: launcher.currentTab === "apps" ? appsTab
                                    : launcher.currentTab === "clipboard" ? clipTab
@@ -218,55 +228,67 @@ FocusScope {
     // Lucid-карточка: размытый surfaceHigh, крупный радиус shapeXl
     Card {
         Layout.fillWidth: true
+        Layout.preferredHeight: launcher.workspaceHeight + Theme.dp(20)
         radius: Theme.shapeXl
         pad: Theme.dp(10)
         color: Theme.withBlur(Theme.mHigh)
 
-        AppsTab {
-            id: appsTab
-            visible: launcher.currentTab === "apps"
-            Layout.fillWidth: true
-            shell: launcher.shell
-            query: launcher.query
-            sel: launcher.sel
-            onHovered: (i) => launcher.setSel(i)
-            onSelectionRequested: (i) => launcher.setSel(i)
-        }
+        Item {
+            id: tabWorkspace
 
-        ClipboardTab {
-            id: clipTab
-            visible: launcher.currentTab === "clipboard"
             Layout.fillWidth: true
-            shell: launcher.shell
-            active: launcher.active && launcher.currentTab === "clipboard"
-            query: launcher.query
-            sel: launcher.sel
-            onHovered: (i) => launcher.setSel(i)
-            onSelectionRequested: (i) => launcher.setSel(i)
-        }
+            Layout.preferredHeight: launcher.workspaceHeight
+            Layout.minimumHeight: launcher.workspaceHeight
+            Layout.maximumHeight: launcher.workspaceHeight
+            clip: true
 
-        EmojiTab {
-            id: emojiTab
-            visible: launcher.currentTab === "emoji"
-            Layout.fillWidth: true
-            shell: launcher.shell
-            query: launcher.query
-            sel: launcher.sel
-            onHovered: (i) => launcher.setSel(i)
-            onSearchReset: launcher.resetSearch()
-            onSelectionRequested: (i) => launcher.setSel(i)
-        }
+            AppsTab {
+                id: appsTab
+                anchors.fill: parent
+                visible: launcher.currentTab === "apps"
+                shell: launcher.shell
+                query: launcher.query
+                sel: launcher.sel
+                onHovered: (i) => launcher.setSel(i)
+                onSelectionRequested: (i) => launcher.setSel(i)
+            }
 
-        PackagesTab {
-            id: pkgTab
-            visible: launcher.currentTab === "packages"
-            Layout.fillWidth: true
-            shell: launcher.shell
-            active: launcher.active && launcher.currentTab === "packages"
-            query: launcher.query
-            sel: launcher.sel
-            onHovered: (i) => launcher.setSel(i)
-            onSelectionRequested: (i) => launcher.setSel(i)
+            ClipboardTab {
+                id: clipTab
+                anchors.fill: parent
+                visible: launcher.currentTab === "clipboard"
+                shell: launcher.shell
+                active: launcher.active && launcher.currentTab === "clipboard"
+                query: launcher.query
+                sel: launcher.sel
+                onHovered: (i) => launcher.setSel(i)
+                onSelectionRequested: (i) => launcher.setSel(i)
+            }
+
+            EmojiTab {
+                id: emojiTab
+                anchors.fill: parent
+                visible: launcher.currentTab === "emoji"
+                shell: launcher.shell
+                query: launcher.query
+                sel: launcher.sel
+                onHovered: (i) => launcher.setSel(i)
+                onSearchReset: launcher.resetSearch()
+                onSelectionRequested: (i) => launcher.setSel(i)
+            }
+
+            PackagesTab {
+                id: pkgTab
+                anchors.fill: parent
+                visible: launcher.currentTab === "packages"
+                shell: launcher.shell
+                active: launcher.active && launcher.currentTab === "packages"
+                workspaceHeight: launcher.workspaceHeight
+                query: launcher.query
+                sel: launcher.sel
+                onHovered: (i) => launcher.setSel(i)
+                onSelectionRequested: (i) => launcher.setSel(i)
+            }
         }
     }
     }

@@ -1,6 +1,7 @@
 pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Layouts
+import QtQuick.Window
 import "../../core"
 import "../../ui"
 
@@ -49,6 +50,9 @@ Item {
     readonly property int menuW: Theme.dp(216)
 
     property string query: ""
+
+    readonly property real screenAvailHeight: Screen.desktopAvailableHeight > 0
+        ? Screen.desktopAvailableHeight : Screen.height
 
     // меню не должно висеть после ухода с вкладки
     onVisibleChanged: if (!tab.visible) tab.closeMenu()
@@ -480,8 +484,10 @@ Item {
         // ── Список процессов (прокрутка колёсиком) ────────────────────
         Item {
             Layout.fillWidth: true
-            // фиксированная высота: панель диспетчера ~810, без внешней прокрутки
-            Layout.preferredHeight: Theme.dp(640)
+            // Оставляем место тулбару и вкладкам острова, чтобы на низком экране
+            // прокручивался только список процессов, а не вся панель целиком.
+            Layout.preferredHeight: Math.max(Theme.dp(180),
+                Math.min(Theme.dp(640), tab.screenAvailHeight * 0.6 - Theme.dp(96)))
 
             ListView {
                 id: listView

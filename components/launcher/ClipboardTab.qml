@@ -42,7 +42,9 @@ ColumnLayout {
 
     onActiveChanged: if (tab.active) Clip.refresh()
     onSelChanged: {
-        if (tab.sel >= tab.fPins.length && tab.sel < tab.count)
+        if (tab.sel < tab.fPins.length)
+            pinsView.positionViewAtIndex(tab.sel, ListView.Contain);
+        else if (tab.sel < tab.count)
             itemsView.positionViewAtIndex(tab.sel - tab.fPins.length, ListView.Contain);
     }
 
@@ -109,21 +111,25 @@ ColumnLayout {
         }
     }
 
-    Column { // пины: обычный позиционер надёжнее лэйаута с Repeater
+    ListView { // пины прокручиваются отдельно от истории в общей рабочей области
+        id: pinsView
+
         visible: tab.fPins.length > 0
         Layout.fillWidth: true
+        Layout.fillHeight: true
+        Layout.minimumHeight: 0
+        Layout.preferredHeight: Math.min(Theme.dp(220), contentHeight)
+        model: tab.fPins
+        clip: true
         spacing: Theme.dp(4)
+        boundsBehavior: Flickable.StopAtBounds
 
-        Repeater {
-            model: tab.fPins
-
-            delegate: ClipRow {
-                baseIndex: 0
-                pinned: true
-                selected: tab.sel === rowIndex
-                onHovered: (i) => tab.hovered(i)
-                onActivated: (i) => tab.activate(i)
-            }
+        delegate: ClipRow {
+            baseIndex: 0
+            pinned: true
+            selected: tab.sel === rowIndex
+            onHovered: (i) => tab.hovered(i)
+            onActivated: (i) => tab.activate(i)
         }
     }
 
@@ -133,8 +139,9 @@ ColumnLayout {
 
         visible: tab.fItems.length > 0
         Layout.fillWidth: true
-        // высота строго по содержимому (кап 340): нижняя граница в 96dp
-        // оставляла фантомную пустую полосу под короткой историей.
+        Layout.fillHeight: true
+        Layout.minimumHeight: 0
+        // История занимает оставшееся место и скроллится внутри рабочей области.
         Layout.preferredHeight: Math.min(Theme.dp(340), contentHeight)
         model: tab.fItems
         clip: true
@@ -171,6 +178,8 @@ ColumnLayout {
     Item { // пусто / нет результатов / загрузка
         visible: tab.count === 0
         Layout.fillWidth: true
+        Layout.fillHeight: true
+        Layout.minimumHeight: 0
         Layout.preferredHeight: Theme.dp(220)
 
         LText {

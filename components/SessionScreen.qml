@@ -221,8 +221,9 @@ PanelWindow {
                 }
             }
 
-            Row {
+            Flow {
                 anchors.horizontalCenter: parent.horizontalCenter
+                width: Math.max(0, Math.min(stage.width - Theme.dp(48), Theme.dp(792)))
                 spacing: Theme.dp(28)
 
                 Repeater {

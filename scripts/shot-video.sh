@@ -1,10 +1,10 @@
 #!/bin/sh
-# Nimbus: toggle-запись экрана через wf-recorder; pid-файл в /tmp/nimbus-
+# Oberon: toggle-запись экрана через wf-recorder; pid-файл в /tmp/oberon-
 # recorder.pid. Старт: уведомление и фоновый процесс, файл ~/Videos/ААА.mp4.
 # Стоп: SIGINT wf-recorder (корректно закрывает контейнер), уведомление.
 set -u
 
-PIDFILE=/tmp/nimbus-recorder.pid
+PIDFILE=/tmp/oberon-recorder.pid
 
 if [ -f "$PIDFILE" ] && kill -0 "$(cat "$PIDFILE")" 2>/dev/null; then
     PID=$(cat "$PIDFILE")
@@ -13,7 +13,7 @@ if [ -f "$PIDFILE" ] && kill -0 "$(cat "$PIDFILE")" 2>/dev/null; then
     i=0
     while kill -0 "$PID" 2>/dev/null && [ "$i" -lt 20 ]; do sleep 0.25; i=$((i+1)); done
     rm -f "$PIDFILE"
-    notify-send -a Nimbus 'Запись экрана' 'Запись остановлена, файл сохранён'
+    notify-send -a Oberon 'Запись экрана' 'Запись остановлена, файл сохранён'
     exit 0
 fi
 
@@ -27,8 +27,8 @@ echo $! > "$PIDFILE"
 sleep 0.3
 if ! kill -0 "$(cat "$PIDFILE")" 2>/dev/null; then
     rm -f "$PIDFILE"
-    notify-send -a Nimbus 'Запись экрана' 'Не удалось начать запись'
+    notify-send -a Oberon 'Запись экрана' 'Не удалось начать запись'
     exit 1
 fi
 
-notify-send -a Nimbus 'Запись экрана' "Запись началась: $OUT"
+notify-send -a Oberon 'Запись экрана' "Запись началась: $OUT"

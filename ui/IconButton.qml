@@ -1,7 +1,7 @@
 import QtQuick
 import "../core"
 
-// M3 Expressive-кнопка-иконка Nimbus (порт lucidui/IconButton.qml). У checkable
+// M3 Expressive-кнопка-иконка Oberon (порт lucidui/IconButton.qml). У checkable
 // глиф наполняется (fill) и кнопка квадратнеет; под нажатием углы стягиваются.
 // variant: standard | filled | tonal | outlined; size: xs=30 | s=36 | m=48;
 // widthKind: narrow | default | wide.

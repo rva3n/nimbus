@@ -5,11 +5,11 @@ import Quickshell.Wayland
 import "../core"
 import "../ui"
 
-// Оверлей-шпаргалка кейбиндов Umbriel (аналог KEYBINDS.qml Lucid, но в Nimbus он
+// Оверлей-шпаргалка кейбиндов Umbriel (аналог KEYBINDS.qml Lucid, но в Oberon он
 // fullscreen-оверлей по образцу Switcher). Источник — ~/.config/umbriel/src/
 // keybinds.toml простым парсером: комментарии-заголовки дают секции, строки
 // «"Keys" = "action"/{ action = ... }» — построчные записи. Плюс служебный блок
-// «Nimbus (IPC)» с основными вызовами IPC. Поиск не предусмотрен.
+// «Oberon (IPC)» с основными вызовами IPC. Поиск не предусмотрен.
 PanelWindow {
     id: sheet
 
@@ -74,13 +74,13 @@ PanelWindow {
         });
     }
 
-    // "spawn:ghostty" → "ghostty"; "spawn:... ipc call nimbus X" → по IPC-словарю
+    // "spawn:ghostty" → "ghostty"; "spawn:... ipc call oberon X" → по IPC-словарю
     function describe(action) {
         const a = String(action || "").trim();
         const orange = a.match(/action\s*=\s*"([^"]*)"/);   // { action = "...", repeat = true }
         const raw = orange ? orange[1] : a;
-        const ipc = raw.match(/ipc call nimbus ([a-zA-Z]+)/);
-        if (ipc) return "Nimbus: " + ipcTitle(ipc[1]);
+        const ipc = raw.match(/ipc call oberon ([a-zA-Z]+)/);
+        if (ipc) return "Oberon: " + ipcTitle(ipc[1]);
         if (raw.indexOf("session-quit") === 0)
             return raw === "session-quit:skip-confirmation"
                 ? sheet.actionNames["session-quit:skip-confirmation"]
@@ -140,18 +140,18 @@ PanelWindow {
         }
         const secs = sections.filter((s) => s.rows.length > 0);
         // служебный блок корабля поверх выписанного из TOML
-        const nimbus = {
-            "title": "Nimbus (IPC)",
+        const oberon = {
+            "title": "Oberon (IPC)",
             "rows": [
-                { "keys": "nimbus session", "action": "Экран сессии", "desc": "Nimbus: экран сессии" },
-                { "keys": "nimbus cheatsheet", "action": "Шпаргалка кейбиндов", "desc": "Nimbus: шпаргалка кейбиндов" },
-                { "keys": "nimbus closeAll", "action": "Закрыть все оверлеи", "desc": "Nimbus: закрыть все оверлеи" },
-                { "keys": "nimbus screenshotRegion", "action": "Скриншот-тулбар", "desc": "Nimbus: скриншот-тулбар" },
-                { "keys": "nimbus screenshotFull", "action": "Быстрый снимок экрана", "desc": "Nimbus: быстрый снимок всего экрана" },
-                { "keys": "nimbus lock", "action": "Заблокировать экран", "desc": "Nimbus: заблокировать экран" }
+                { "keys": "oberon session", "action": "Экран сессии", "desc": "Oberon: экран сессии" },
+                { "keys": "oberon cheatsheet", "action": "Шпаргалка кейбиндов", "desc": "Oberon: шпаргалка кейбиндов" },
+                { "keys": "oberon closeAll", "action": "Закрыть все оверлеи", "desc": "Oberon: закрыть все оверлеи" },
+                { "keys": "oberon screenshotRegion", "action": "Скриншот-тулбар", "desc": "Oberon: скриншот-тулбар" },
+                { "keys": "oberon screenshotFull", "action": "Быстрый снимок экрана", "desc": "Oberon: быстрый снимок всего экрана" },
+                { "keys": "oberon lock", "action": "Заблокировать экран", "desc": "Oberon: заблокировать экран" }
             ]
         };
-        secs.push(nimbus);
+        secs.push(oberon);
         return secs.map((s) => ({
             "title": s.title,
             "rows": s.rows.map((r) => ({
@@ -166,7 +166,7 @@ PanelWindow {
     anchors { top: true; bottom: true; left: true; right: true }
     exclusiveZone: 0
     WlrLayershell.layer: WlrLayer.Overlay
-    WlrLayershell.namespace: "nimbus-cheatsheet"
+    WlrLayershell.namespace: "oberon-cheatsheet"
     WlrLayershell.keyboardFocus: sheet.shown ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
 
     Behavior on reveal {

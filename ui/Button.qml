@@ -1,7 +1,7 @@
 import QtQuick
 import "../core"
 
-// M3 Expressive-кнопка Nimbus (порт lucidui/Button.qml). Пилюля в покое,
+// M3 Expressive-кнопка Oberon (порт lucidui/Button.qml). Пилюля в покое,
 // под нажатием углы стягиваются; checkable при выборе становится квадратнее.
 // variant: filled | tonal | outlined | text | elevated; size: xs=30 | s=36 | m=48.
 Item {

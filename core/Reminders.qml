@@ -3,7 +3,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 
-// Напоминания: ~/.local/state/nimbus/reminders.json — [{ id, ts, text, fired }].
+// Напоминания: ~/.local/state/oberon/reminders.json — [{ id, ts, text, fired }].
 // Раз в 30с проверяются наступившие: пришедшее время шлётся тостом через Notif
 // (как «Tаймер завершён» в shell.qml — не молчит под DND) и помечается fired.
 // Файл — единственный источник правды: пишем атомарно (tmp + mv), читаем на
@@ -14,7 +14,7 @@ Singleton {
 
     // по возрастанию ts; mutation — только через присвоение нового массива
     property var items: []
-    readonly property string path: Quickshell.env("HOME") + "/.local/state/nimbus/reminders.json"
+    readonly property string path: Quickshell.env("HOME") + "/.local/state/oberon/reminders.json"
     // отмеченные дни для ui/MonthView (marked): ключи "г-м-д", месяц 0-based
     readonly property var marks: {
         const out = {};
@@ -111,7 +111,7 @@ Singleton {
         }
         rem.saving = true;
         const j = JSON.stringify(rem.items);
-        const dir = Quickshell.env("HOME") + "/.local/state/nimbus";
+        const dir = Quickshell.env("HOME") + "/.local/state/oberon";
         writeProc.command = ["sh", "-c",
             "mkdir -p " + rem.shq(dir) + "; printf %s " + rem.shq(j) + " > " + rem.shq(rem.path + ".tmp") + "; mv -f " + rem.shq(rem.path + ".tmp") + " " + rem.shq(rem.path)];
         writeProc.running = false;

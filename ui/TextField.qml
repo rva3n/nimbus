@@ -8,8 +8,8 @@ import "../core"
 //   variant "search"   — m3 search bar, высота 48, пилюля
 // Плавающий label анимируется durFastEffects OutCubic; ведущая иконка 22.
 //
-// Nimbus: сохранён прежний API (placeholder/text/echoMode/accepted). echoMode
-// остаётся int (как в Nimbus), password — additive для совместимости с Lucid.
+// Oberon: сохранён прежний API (placeholder/text/echoMode/accepted). echoMode
+// остаётся int, password — additive для совместимости с Lucid.
 FocusScope {
     id: tf
 
@@ -24,7 +24,7 @@ FocusScope {
     property bool error: false
     property bool clearable: tf.variant === "search"
     property bool password: false
-    // прежний Nimbus-API: int-режим ввода (TextInput.Normal/Password/...)
+    // прежний API: int-режим ввода (TextInput.Normal/Password/...)
     property int echoMode: TextInput.Normal
     property color containerColor: tf.variant === "search" ? Theme.mHigh : Theme.mHighest
     property alias trailing: trailSlot.data

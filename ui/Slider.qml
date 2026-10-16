@@ -9,7 +9,7 @@ import "../core"
 // dp(2); пузырь значения inverseSurface, радиус dp(15), scale от 0.6
 // (curveFastSpatial); эластичный live curveStandard @ durFastSpatial.
 //
-// Nimbus: сохранён публичный API прежнего слайдера (value/live/dragging/icon,
+// Oberon: сохранён публичный API прежнего слайдера (value/live/dragging/icon,
 // moved/committed/iconClicked). Старый «yoru»-стиль (толстый трек, тонкая
 // риска, иконка внутри заливки) заменён. `icon` теперь рисуется ведущим
 // бейджем-глифом (как в lucidosd/Osd.qml), иначе на дефолтном размере xs
@@ -47,7 +47,7 @@ Item {
 
     signal moved(real value)
     signal released(real value)
-    // nimbus-имя прежнего сигнала (эмитится вместе с released на отпускании)
+    // публичное имя прежнего сигнала (эмитится вместе с released на отпускании)
     signal committed(real value)
     signal iconClicked()
 
@@ -69,7 +69,7 @@ Item {
     readonly property int gap: Theme.dp(5)
     readonly property real innerR: Theme.dp(2)
 
-    // ведущий бейдж под `icon` (nimbus): глиф dp(18) внутри фигуры dp(36)
+    // ведущий бейдж под `icon` (oberon): глиф dp(18) внутри фигуры dp(36)
     readonly property bool hasBadge: sl.icon !== ""
     readonly property int badgeSize: Theme.dp(36)
     readonly property int badgeGap: Theme.dp(12)

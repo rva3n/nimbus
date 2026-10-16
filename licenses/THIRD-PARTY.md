@@ -1,6 +1,6 @@
 # Third-Party Notices
 
-Nimbus bundles or derives from the following third-party works. Full license
+Oberon bundles or derives from the following third-party works. Full license
 texts are stored alongside this file where noted.
 
 ## Google Sans Flex
@@ -28,7 +28,7 @@ texts are stored alongside this file where noted.
 
 ## Lucid
 
-- Portions of the Nimbus UI are adapted from Lucid
+- Portions of the Oberon UI are adapted from Lucid
   (https://github.com/Sn3akyy1/lucid).
 - License: MIT, Copyright (c) 2026 Sn3akyy1
 - Full text: `licenses/Lucid-MIT.txt`

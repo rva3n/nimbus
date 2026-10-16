@@ -14,7 +14,7 @@ import "../ui"
 import "panel"
 import "taskman"
 
-// Nimbus island. The Wayland surface is a fixed-size transparent band; the pill
+// Oberon island. The Wayland surface is a fixed-size transparent band; the pill
 // inside it is animated in QML (smooth). Input is limited to the pill via mask.
 PanelWindow {
     id: win
@@ -31,7 +31,7 @@ PanelWindow {
     exclusiveZone: win.fullscreenActive ? 0 : Theme.topReserve
     implicitHeight: Math.max(664, win.panelMax + Theme.dp(16))
     WlrLayershell.layer: WlrLayer.Overlay
-    WlrLayershell.namespace: "nimbus-island"
+    WlrLayershell.namespace: "oberon-island"
     WlrLayershell.keyboardFocus: (view === "launcher" || view === "panel" || view === "taskman" || view === "tray")
         ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
     mask: Region { item: pill; radius: pill.radius }

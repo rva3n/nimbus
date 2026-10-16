@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 ID="$1"
-STATE="$HOME/.local/state/nimbus"
+STATE="$HOME/.local/state/oberon"
 PINS="$STATE/pins"
 LIST="$STATE/pins.json"
 mkdir -p "$PINS"

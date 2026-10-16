@@ -3,7 +3,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 
-// Звуковые события: синглтон на ~20 звуков из ~/nimbus/assets/sounds (*.oga).
+// Звуковые события: синглтон на ~20 звуков из ~/oberon/assets/sounds (*.oga).
 // Метод play(name) — безопасный: имя звука без расширения, тихо уходит, если
 // файла нет или звук выключен. Плеер: pw-play, иначе paplay (auto-detect).
 Singleton {
@@ -12,7 +12,7 @@ Singleton {
     function shq(s) { return "'" + String(s).replace(/'/g, "'\\''") + "'"; }
 
     readonly property bool enabled: Prefs.soundsEnabled
-    readonly property string dir: Quickshell.env("HOME") + "/nimbus/assets/sounds"
+    readonly property string dir: Quickshell.env("HOME") + "/oberon/assets/sounds"
 
     // Плеер выбирается один раз: pw-play → paplay; нет плеера — звука нет.
     property string player: ""   // "pw-play" | "paplay" | "" (нет плеера)

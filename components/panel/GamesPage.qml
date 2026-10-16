@@ -162,7 +162,7 @@ ColumnLayout {
 
     // Применить настройки MangoHud: записать конфиг в ~/.config/MangoHud/MangoHud.conf
     function applyMangoHud() {
-        Quickshell.execDetached(["sh", Quickshell.env("HOME") + "/nimbus/scripts/apply-mangohud.sh"]);
+        Quickshell.execDetached(["sh", Quickshell.env("HOME") + "/oberon/scripts/apply-mangohud.sh"]);
     }
 
     Component.onCompleted: {

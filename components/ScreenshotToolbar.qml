@@ -45,7 +45,7 @@ PanelWindow {
 
     // зависим только от системного каталога: файлы лежат рядом с корнем шелла
     readonly property string scriptsDir: Qt.resolvedUrl("../scripts/").toString().replace("file://", "")
-    readonly property string recPidFile: "/tmp/nimbus-recorder.pid"
+    readonly property string recPidFile: "/tmp/oberon-recorder.pid"
     property bool recording: false
 
     function open(mode) {
@@ -91,7 +91,7 @@ PanelWindow {
         Quickshell.execDetached(["sh", "-c",
             "sleep 0.25; mkdir -p \"$HOME/Pictures/Screenshots\"; f=\"$HOME/Pictures/Screenshots/$(date +%F_%H-%M-%S).png\"; " +
             "if grim" + (fullscreen ? "" : " -g \"$(slurp)\"") + " \"$f\" 2>/dev/null; then wl-copy < \"$f\"; " +
-            "notify-send -a Nimbus 'Скриншот' '" + (fullscreen ? "Весь экран сохранён и скопирован" : "Область сохранена и скопирована") + "'; fi"]);
+            "notify-send -a Oberon 'Скриншот' '" + (fullscreen ? "Весь экран сохранён и скопирован" : "Область сохранена и скопирована") + "'; fi"]);
     }
 
     onShownChanged: {
@@ -104,7 +104,7 @@ PanelWindow {
     anchors { top: true; bottom: true; left: true; right: true }
     exclusiveZone: -1
     WlrLayershell.layer: WlrLayer.Overlay
-    WlrLayershell.namespace: "nimbus-shottoolbar"
+    WlrLayershell.namespace: "oberon-shottoolbar"
     WlrLayershell.keyboardFocus: toolbar.shown ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
 
     Behavior on reveal {

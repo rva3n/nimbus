@@ -3,18 +3,18 @@ import QtQuick.Layouts
 import "../../core"
 import "../../ui"
 
-// Вкладка «Система» диспетчера задач: карточка-логотип Nimbus слева и
+// Вкладка «Система» диспетчера задач: карточка-логотип Oberon слева и
 // справочные данные о системе в Lucid-карточке справа (в духе fetch-скрипта).
 // Данные — из SysStats, константы сборки заданы здесь же.
 RowLayout {
     id: root
 
     // ── Константы шелла ────────────────────────────────────────────────
-    readonly property string appName: "Nimbus"
+    readonly property string appName: "Oberon"
     readonly property string appVersion: "2.0"
     readonly property string compositorName: "Umbriel"
     readonly property string engineName: "Quickshell"
-    readonly property string configPath: "~/nimbus"
+    readonly property string configPath: "~/oberon"
     readonly property string licenseName: "MIT"
 
     // максимальная температура среди датчиков hwmon

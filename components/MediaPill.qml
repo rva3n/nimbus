@@ -26,7 +26,7 @@ PanelWindow {
     margins { top: Theme.dp(6) - Theme.topReserve - Theme.dp(4); left: Theme.dp(7) - mp.padH }
     exclusiveZone: 0
     WlrLayershell.layer: WlrLayer.Overlay
-    WlrLayershell.namespace: "nimbus-media"
+    WlrLayershell.namespace: "oberon-media"
     WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
 
     readonly property var player: {
@@ -93,7 +93,7 @@ PanelWindow {
             border.color: Theme.a(Theme.outline, 0.25)
             clip: true
 
-            // фон-клик пилюли — play/pause (nimbus-логика)
+            // фон-клик пилюли — play/pause (oberon-логика)
             MouseArea {
                 anchors.fill: parent
                 hoverEnabled: true

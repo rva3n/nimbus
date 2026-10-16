@@ -3,7 +3,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 
-// Состояние desktop-виджетов: ~/.local/state/nimbus/widgets.json —
+// Состояние desktop-виджетов: ~/.local/state/oberon/widgets.json —
 // { "enabled": { id: bool }, "pos": { id: { x, y } } }.
 // Экран рисует layers: компоненты/WidgetLayer.qml читает и пишет через этот
 // синглтон (тумблеры виджетов — из страницы настроек или через toggle).
@@ -88,7 +88,7 @@ Singleton {
     // ── чтение: cat + разбор, перечитка по таймеру ─────────────────────
     function shq(s) { return "'" + String(s).replace(/'/g, "'\\''") + "'"; }
 
-    readonly property string path: Quickshell.env("HOME") + "/.local/state/nimbus/widgets.json"
+    readonly property string path: Quickshell.env("HOME") + "/.local/state/oberon/widgets.json"
 
     function sanitize(j) {
         const out = { "enabled": {}, "pos": {} };
@@ -170,7 +170,7 @@ Singleton {
         }
         store.saving = true;
         const j = JSON.stringify({ "enabled": store.enabledMap, "pos": store.pos });
-        const dir = Quickshell.env("HOME") + "/.local/state/nimbus";
+        const dir = Quickshell.env("HOME") + "/.local/state/oberon";
         writeProc.command = ["sh", "-c",
             "mkdir -p " + store.shq(dir) + "; printf %s " + store.shq(j) + " > " + store.shq(store.path + ".tmp") + "; mv -f " + store.shq(store.path + ".tmp") + " " + store.shq(store.path)];
         writeProc.running = false;

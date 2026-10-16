@@ -10,13 +10,13 @@ import "../core"
 import "../ui"
 import "./widgets"
 
-// Desktop-виджеты Nimbus: карточки прямо на рабочем столе (по образцу Lucid).
+// Desktop-виджеты Oberon: карточки прямо на рабочем столе (по образцу Lucid).
 // PanelWindow на WlrLayer.Bottom — под обычными окнами и под слоями Top/Overlay.
 // ExclusiveZone не резервирует ничего (ExclusionMode.Ignore), на весь экран.
 // Ввод: маска целиком пустая, пока НЕ идёт режим редактирования — клики проходят
 // насквозь; в редактировании маска открывает всё окно, карточки тащатся мышью,
 // правый клик (по пустому месту или по карточке) выключает редактор.
-// Позиции/включённость — core/WidgetsStore.qml (~/.local/state/nimbus/widgets.json).
+// Позиции/включённость — core/WidgetsStore.qml (~/.local/state/oberon/widgets.json).
 PanelWindow {
     id: win
 
@@ -34,7 +34,7 @@ PanelWindow {
     // резерва нет; setting exclusiveZone here would steal from windows
     exclusionMode: ExclusionMode.Ignore
     WlrLayershell.layer: WlrLayer.Bottom
-    WlrLayershell.namespace: "nimbus-widgets"
+    WlrLayershell.namespace: "oberon-widgets"
     WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
 
     visible: Prefs.widgetsEnabled && WidgetsStore.ready

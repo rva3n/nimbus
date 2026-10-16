@@ -9,7 +9,7 @@ import ".."
 // Страница «Настройки» — двухколоночный layout в духе Lucid: слева рейл
 // разделов (180), справа — содержимое выбранного пункта. Ширину панели (620)
 // задаёт Island, контент невелик, поэтому прокрутка не нужна.
-// Внешний вид и погода пишут в Prefs → ~/nimbus/prefs.json.
+// Внешний вид и погода пишут в Prefs → ~/oberon/prefs.json.
 //
 // Анатомия Lucid: рейл — иконка + подпись, выбранная запись залита
 // secondaryContainer-пилюлей и иконка наполнена; контент — заголовок секции
@@ -44,7 +44,7 @@ RowLayout {
     Process {
         id: umbRead
 
-        command: ["python3", Quickshell.env("HOME") + "/nimbus/scripts/umbriel-settings.py", "read"]
+        command: ["python3", Quickshell.env("HOME") + "/oberon/scripts/umbriel-settings.py", "read"]
         running: true
         stdout: SplitParser {
             onRead: (line) => {
@@ -75,7 +75,7 @@ RowLayout {
 
     // записать значение в конфиг Umbriel (file, section, key, tomlValue) и обновить
     function setUmb(file, section, key, tomlValue) {
-        Quickshell.execDetached(["python3", Quickshell.env("HOME") + "/nimbus/scripts/umbriel-settings.py",
+        Quickshell.execDetached(["python3", Quickshell.env("HOME") + "/oberon/scripts/umbriel-settings.py",
                                  "set", file, section, key, String(tomlValue)]);
         umbReloadTimer.restart();
     }
@@ -86,7 +86,7 @@ RowLayout {
 
     // Применить таймауты питания (hypridle) — сразу после смены настроек.
     function applyIdle() {
-        Quickshell.execDetached(["sh", Quickshell.env("HOME") + "/nimbus/scripts/set-idle.sh",
+        Quickshell.execDetached(["sh", Quickshell.env("HOME") + "/oberon/scripts/set-idle.sh",
                                  String(Prefs.idleScreenMin), String(Prefs.idleLockMin), String(Prefs.idleSuspendMin)]);
     }
 
@@ -619,7 +619,7 @@ RowLayout {
 
             SectionHeader {
                 title: "Шелл"
-                caption: "Оформление Nimbus: масштаб, форма, движение и цвет"
+                caption: "Оформление Oberon: масштаб, форма, движение и цвет"
             }
 
             Card { // масштаб
@@ -672,7 +672,7 @@ RowLayout {
                     onCommitted: (v) => {
                         const r = Math.round(v);
                         Prefs.set("blurAmount", r);
-                        Quickshell.execDetached(["sh", Quickshell.env("HOME") + "/nimbus/scripts/set-blur.sh", String(r)]);
+                        Quickshell.execDetached(["sh", Quickshell.env("HOME") + "/oberon/scripts/set-blur.sh", String(r)]);
                     }
                 }
 
@@ -994,7 +994,7 @@ RowLayout {
                 LText {
                     Layout.fillWidth: true
                     Layout.topMargin: Theme.dp(4)
-                    text: "Работает через hypridle (Umbriel): гашение — DPMS, блокировка — экран Nimbus, сон — systemd. Если монитор гаснет раньше выбранного — это его собственный таймер в прошивке."
+                    text: "Работает через hypridle (Umbriel): гашение — DPMS, блокировка — экран Oberon, сон — systemd. Если монитор гаснет раньше выбранного — это его собственный таймер в прошивке."
                     role: "bodySmall"
                     color: Theme.subtextDim
                     wrapMode: Text.WordWrap

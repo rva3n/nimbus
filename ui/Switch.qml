@@ -1,7 +1,7 @@
 import QtQuick
 import "../core"
 
-// M3-переключатель Nimbus (порт lucidui/Switch.qml): трек 48×28 pill,
+// M3-переключатель Oberon (порт lucidui/Switch.qml): трек 48×28 pill,
 // ручка растёт при включении и ещё раз под нажатием, несёт глиф check/close.
 // Клик сам инвертирует checked и эмитит toggled().
 Item {

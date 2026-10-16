@@ -57,9 +57,9 @@ Singleton {
 
     function shq(s) { return "'" + String(s).replace(/'/g, "'\\''") + "'"; }
 
-    // Nimbus' own matugen config lives inside this repository, so the shell
+    // Oberon' own matugen config lives inside this repository, so the shell
     // never depends on ~/.config/matugen or Lucid being installed.
-    readonly property string matugenConf: Quickshell.env("HOME") + "/nimbus/matugen/config.toml"
+    readonly property string matugenConf: Quickshell.env("HOME") + "/oberon/matugen/config.toml"
 
     // ── local scan ─────────────────────────────────────────────────────
     Process {
@@ -220,8 +220,8 @@ Singleton {
             "pkill -9 -x mpvpaper 2>/dev/null; pkill -9 -x awww-daemon 2>/dev/null; sleep 0.2; " +
             "setsid mpvpaper -f -o 'no-audio loop' '*' " + shq(url) + " >/dev/null 2>&1"]);
         Quickshell.execDetached(["sh", "-c",
-            "ffmpeg -y -ss 3 -i " + shq(url) + " -frames:v 1 -vf scale=640:-1 /tmp/nimbus-frame.png >/dev/null 2>&1; " +
-            "sh " + shq(Quickshell.env("HOME") + "/nimbus/scripts/set-theme.sh") + " /tmp/nimbus-frame.png"]);
+            "ffmpeg -y -ss 3 -i " + shq(url) + " -frames:v 1 -vf scale=640:-1 /tmp/oberon-frame.png >/dev/null 2>&1; " +
+            "sh " + shq(Quickshell.env("HOME") + "/oberon/scripts/set-theme.sh") + " /tmp/oberon-frame.png"]);
         saveState();
     }
 
@@ -229,10 +229,10 @@ Singleton {
     function runMatugen(path, isVideo) {
         if (isVideo) {
             Quickshell.execDetached(["sh", "-c",
-                "ffmpeg -y -ss 3 -i " + shq(path) + " -frames:v 1 -vf scale=640:-1 /tmp/nimbus-frame.png >/dev/null 2>&1; " +
-                "sh " + shq(Quickshell.env("HOME") + "/nimbus/scripts/set-theme.sh") + " /tmp/nimbus-frame.png"]);
+                "ffmpeg -y -ss 3 -i " + shq(path) + " -frames:v 1 -vf scale=640:-1 /tmp/oberon-frame.png >/dev/null 2>&1; " +
+                "sh " + shq(Quickshell.env("HOME") + "/oberon/scripts/set-theme.sh") + " /tmp/oberon-frame.png"]);
         } else {
-            Quickshell.execDetached(["sh", "-c", "sh " + shq(Quickshell.env("HOME") + "/nimbus/scripts/set-theme.sh") + " " + shq(path)]);
+            Quickshell.execDetached(["sh", "-c", "sh " + shq(Quickshell.env("HOME") + "/oberon/scripts/set-theme.sh") + " " + shq(path)]);
         }
     }
 

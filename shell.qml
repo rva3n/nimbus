@@ -47,8 +47,8 @@ ShellRoot {
         onFlowChanged: root.polkitFlow = polkit.flow
 
         onIsRegisteredChanged: {
-            if (polkit.isRegistered) console.log("Nimbus: polkit agent registered")
-            else console.warn("Nimbus: polkit agent not registered");
+            if (polkit.isRegistered) console.log("Oberon: polkit agent registered")
+            else console.warn("Oberon: polkit agent not registered");
         }
     }
 
@@ -58,7 +58,7 @@ ShellRoot {
         running: true
         onTriggered: {
             if (!polkit.isRegistered)
-                console.warn("Nimbus: polkit agent failed to register (isRegistered=false)");
+                console.warn("Oberon: polkit agent failed to register (isRegistered=false)");
         }
     }
 
@@ -71,7 +71,7 @@ ShellRoot {
         }
     }
 
-    // Палитра читается самим Theme (FileView → ~/.cache/nimbus/colors.json).
+    // Палитра читается самим Theme (FileView → ~/.cache/oberon/colors.json).
     // Прогреваем синглтоны, чтобы они поднялись вместе с шеллом (они ленивые).
     Component.onCompleted: {
         void Theme.paletteLoaded;
@@ -95,7 +95,7 @@ ShellRoot {
     Connections {
         target: Chrono
         function onFinished() {
-            const snap = { appName: "Nimbus", summary: "Таймер завершён", body: "Время вышло" };
+            const snap = { appName: "Oberon", summary: "Таймер завершён", body: "Время вышло" };
             Notif.add(snap);
             if (root.view === "idle" && !root.locked) Notif.toast(snap);
         }
@@ -155,7 +155,7 @@ ShellRoot {
 
     // Оверлеи финальной волны: экран сессии, шпаргалка, скриншот-тулбар.
     // LazyLoader — components/qmldir их не перечисляет (как Switcher/PolkitPrompt).
-    // SessionScreen'у шелл нужен для lock(): тот же путь, что `ipc call nimbus
+    // SessionScreen'у шелл нужен для lock(): тот же путь, что `ipc call oberon
     // lock` (root.lock поднимает Lockscreen), пробрасывается Binding-ом, как flow.
     LazyLoader {
         id: sessionLoader
@@ -236,7 +236,7 @@ ShellRoot {
 
     // ── IPC (compositor keybinds) ────────────────────────────────────
     IpcHandler {
-        target: "nimbus"
+        target: "oberon"
         // закрыть любой оверлей (панель/лончер/диспетчер/трей/сессию/шпаргалку/
         // тулбар) — для скриптов и агентов: безопаснее, чем слать Escape через wtype
         function closeAll() { root.closeAllOverlays(); }
@@ -296,7 +296,7 @@ ShellRoot {
             // прежнее поведение: быстрый полный снимок
             Quickshell.execDetached(["sh", "-c",
                 "mkdir -p \"$HOME/Pictures/Screenshots\"; f=\"$HOME/Pictures/Screenshots/$(date +%F_%H-%M-%S).png\"; " +
-                "if grim \"$f\" 2>/dev/null; then wl-copy < \"$f\"; notify-send -a Nimbus 'Скриншот' 'Весь экран сохранён и скопирован'; fi"]);
+                "if grim \"$f\" 2>/dev/null; then wl-copy < \"$f\"; notify-send -a Oberon 'Скриншот' 'Весь экран сохранён и скопирован'; fi"]);
         }
         function session() { if (sessionLoader.item) sessionLoader.item.open(); }
         function cheatsheet() { if (cheatsheetLoader.item) cheatsheetLoader.item.open(); }

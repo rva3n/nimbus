@@ -38,7 +38,7 @@ Singleton {
 
     // Тост об ошибке внешней команды (прямая реакция на действие пользователя,
     // поэтому не глушится DND — как и OSD).
-    function _fail(msg) { Notif.push({ appName: "Nimbus", summary: "Ошибка", body: msg }); }
+    function _fail(msg) { Notif.push({ appName: "Oberon", summary: "Ошибка", body: msg }); }
     // Мгновенно перечитать живой статус, не дожидаясь 5-секундного таймера.
     function _refreshLink() { linkProc.running = false; linkProc.running = true; }
 

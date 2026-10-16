@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""opencode-ctl — управление OpenCode для Nimbus (волна B4).
+"""opencode-ctl — управление OpenCode для Oberon (волна B4).
 
 Локально, без сети: БД ~/.local/share/opencode/opencode.db (usage),
 конфиг ~/.config/opencode/opencode.json (модель по умолчанию),
@@ -243,7 +243,7 @@ def frontmatter_set_model(text, ref):
 
 
 def cmd_usage(_args):
-    plan = os.environ.get("NIMBUS_GO_PLAN", "go")
+    plan = os.environ.get("OBERON_GO_PLAN", "go")
     mult = 2 if plan == "plus" else 1
     try:
         rows = usage_rows()

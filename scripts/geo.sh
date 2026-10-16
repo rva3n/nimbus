@@ -1,5 +1,5 @@
 #!/bin/sh
-# IP-геолокация для Nimbus: сначала ipwho.is, при неудаче — ipinfo.io.
+# IP-геолокация для Oberon: сначала ipwho.is, при неудаче — ipinfo.io.
 # Вывод — одна строка компактного JSON: {"city":"…","lat":…,"lon":…}
 j=$(curl -s --max-time 12 https://ipwho.is/)
 lat=$(printf %s "$j" | jq -r '.latitude // empty' 2>/dev/null)

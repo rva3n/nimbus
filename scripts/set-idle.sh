@@ -1,5 +1,5 @@
 #!/bin/sh
-# Настройки питания Nimbus: минуты бездействия до гашения экрана (DPMS),
+# Настройки питания Oberon: минуты бездействия до гашения экрана (DPMS),
 # блокировки и сна; 0 = никогда. Переписывает hypridle.conf Umbriel
 # и перезапускает hypridle (живого релоада у него нет).
 S=$(printf '%s' "${1:-}" | tr -dc 0-9); [ -n "$S" ] || S=10
@@ -8,7 +8,7 @@ U=$(printf '%s' "${3:-}" | tr -dc 0-9); [ -n "$U" ] || U=60
 CONF="$HOME/.config/umbriel/hypridle.conf"
 
 {
-    echo "# Сгенерировано Nimbus (Настройки → Питание); ручные правки будут перезаписаны."
+    echo "# Сгенерировано Oberon (Настройки → Питание); ручные правки будут перезаписаны."
     echo '$suspend_cmd = systemctl suspend || loginctl suspend'
     echo 'general {'
     echo '    before_sleep_cmd = $suspend_cmd'
@@ -24,7 +24,7 @@ CONF="$HOME/.config/umbriel/hypridle.conf"
     if [ "$L" -gt 0 ]; then
         echo 'listener { # блокировка'
         echo "    timeout = $((L * 60))"
-        echo "    on-timeout = /usr/bin/qs -p $HOME/nimbus ipc call nimbus lock"
+        echo "    on-timeout = /usr/bin/qs -p $HOME/oberon ipc call oberon lock"
         echo '}'
     fi
     if [ "$U" -gt 0 ]; then

@@ -3,19 +3,19 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 
-// Nimbus design tokens — Material 3 Expressive, без зависимостей от Hyprland.
+// Oberon design tokens — Material 3 Expressive, без зависимостей от Hyprland.
 //
-// Палитра приходит от matugen в ~/.cache/nimbus/colors.json (полный набор M3
+// Палитра приходит от matugen в ~/.cache/oberon/colors.json (полный набор M3
 // ролей) и читается FileView'ом. Всё остальное выводится здесь: тональные
 // рампы (atTone/tonal/tint), семантические роли, типографика, motion и формы —
-// адаптация дизайн-движка Lucid (MIT) под Nimbus.
+// адаптация дизайн-движка Lucid (MIT) под Oberon.
 Singleton {
     id: root
 
-    // ── Палитра (matugen → ~/.cache/nimbus/colors.json) ───────────────
+    // ── Палитра (matugen → ~/.cache/oberon/colors.json) ───────────────
     FileView {
         id: paletteFile
-        path: Quickshell.env("HOME") + "/.cache/nimbus/colors.json"
+        path: Quickshell.env("HOME") + "/.cache/oberon/colors.json"
         watchChanges: true
         onFileChanged: reload()
 
@@ -63,7 +63,7 @@ Singleton {
 
     readonly property bool paletteLoaded: paletteFile.loaded
 
-    // ── Настройки вида из ~/nimbus/prefs.json ─────────────────────────
+    // ── Настройки вида из ~/oberon/prefs.json ─────────────────────────
     readonly property real uiScale: Math.max(0.7, Math.min(1.3, Prefs.uiScale || 1))
     readonly property real cornerScale: Math.max(0, Math.min(1.5, Prefs.cornerScale === undefined ? 1 : Prefs.cornerScale))
     readonly property real motionScale: Math.max(0.5, Math.min(1.5, Prefs.motionScale || 1))
@@ -264,7 +264,7 @@ Singleton {
     // любой ошибке загрузки оно откатывается на Noto Sans.
     FontLoader {
         id: flexLoader
-        source: "file://" + Quickshell.env("HOME") + "/nimbus/assets/fonts/GoogleSansFlex.ttf"
+        source: "file://" + Quickshell.env("HOME") + "/oberon/assets/fonts/GoogleSansFlex.ttf"
     }
     readonly property string textFontFallback: "Noto Sans"
     readonly property string brandFamily: flexLoader.status === FontLoader.Ready ? flexLoader.name : "Google Sans"
@@ -548,7 +548,7 @@ Singleton {
         return Qt.rgba(c.r, c.g, c.b, a);
     }
 
-    // прозрачность по «стеклу»: в Nimbus blur-ползунок ведёт радиус Umbriel,
+    // прозрачность по «стеклу»: в Oberon blur-ползунок ведёт радиус Umbriel,
     // поэтому альфа выводится из root.glass, а не из Lucid-формулы blurAmount
     function withBlur(c) { return root.alpha(c, root.glass) }
 

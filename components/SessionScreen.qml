@@ -10,12 +10,12 @@ import "../ui"
 // ui/LoadingIndicator). У последних трёх двухшаговое подтверждение: первый
 // Enter/клик «армит» — красная форма с кольцом-таймером 4с, второй выполняет.
 // Сон выполняется сразу, без подтверждения. Проведение: shell.qml → IPC
-// `nimbus session`.
+// `oberon session`.
 PanelWindow {
     id: ses
 
     // шелл целиком (shell.qml root) — нужен для lock(): тот же путь, что у
-    // IPC-функции nimbus lock (root.lock устанавливает root.locked → Lockscreen)
+    // IPC-функции oberon lock (root.lock устанавливает root.locked → Lockscreen)
     property var shell: null
 
     property bool shown: false
@@ -109,7 +109,7 @@ PanelWindow {
     anchors { top: true; bottom: true; left: true; right: true }
     exclusiveZone: 0
     WlrLayershell.layer: WlrLayer.Overlay
-    WlrLayershell.namespace: "nimbus-session"
+    WlrLayershell.namespace: "oberon-session"
     WlrLayershell.keyboardFocus: ses.shown ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
 
     Behavior on reveal {

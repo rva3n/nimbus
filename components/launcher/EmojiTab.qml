@@ -152,17 +152,17 @@ ColumnLayout {
         }
     }
 
-    FileView { // ~/nimbus/assets/emoji.json
+    FileView { // ~/oberon/assets/emoji.json
         id: emojiFile
-        path: Quickshell.env("HOME") + "/nimbus/assets/emoji.json"
+        path: Quickshell.env("HOME") + "/oberon/assets/emoji.json"
         watchChanges: false
         onLoaded: tab.parseEmoji(emojiFile.text())
         onLoadFailed: tab.emojiReady = true
     }
 
-    FileView { // ~/nimbus/assets/kaomoji.json
+    FileView { // ~/oberon/assets/kaomoji.json
         id: kaomojiFile
-        path: Quickshell.env("HOME") + "/nimbus/assets/kaomoji.json"
+        path: Quickshell.env("HOME") + "/oberon/assets/kaomoji.json"
         watchChanges: false
         onLoaded: tab.parseKaomoji(kaomojiFile.text())
         onLoadFailed: tab.kaomojiReady = true

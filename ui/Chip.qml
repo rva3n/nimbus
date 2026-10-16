@@ -1,7 +1,7 @@
 import QtQuick
 import "../core"
 
-// M3-чип Nimbus (порт lucidui/Chip.qml). Высота 30, радиус — скруглённый
+// M3-чип Oberon (порт lucidui/Chip.qml). Высота 30, радиус — скруглённый
 // прямоугольник rad(8), не пилюля. Выбранный залит secondaryContainer, обычный —
 // прозрачный корпус с бордером. kind: filter (галочка при выборе) | assist | input | suggestion.
 Item {

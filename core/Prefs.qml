@@ -3,12 +3,12 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 
-// Пользовательские настройки Nimbus: ~/nimbus/prefs.json.
+// Пользовательские настройки Oberon: ~/oberon/prefs.json.
 // Читаются реактивно, пишутся страницей «Настройки» (или руками).
 Singleton {
     id: p
 
-    readonly property string path: Quickshell.env("HOME") + "/nimbus/prefs.json"
+    readonly property string path: Quickshell.env("HOME") + "/oberon/prefs.json"
     readonly property bool ready: file.loaded
 
     function shq(s) { return "'" + String(s).replace(/'/g, "'\\''") + "'" }

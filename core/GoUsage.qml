@@ -50,7 +50,7 @@ Singleton {
     // страница OpenCode подтверждает актуальный ref по этим данным.
 
     readonly property string ocConfigPath: Quickshell.env("HOME") + "/.config/opencode/opencode.json"
-    readonly property string ctlScript: Quickshell.env("HOME") + "/nimbus/scripts/opencode-ctl.py"
+    readonly property string ctlScript: Quickshell.env("HOME") + "/oberon/scripts/opencode-ctl.py"
     readonly property var agentList: ["general", "explore", "scout", "tester", "reviewer"]
 
     property string defaultModelRef: ""     // "provider/id[#variant]" из opencode.json

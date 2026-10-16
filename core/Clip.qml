@@ -28,7 +28,7 @@ Singleton {
     Process {
         id: scanProc
         command: ["sh", "-c",
-            "C=\"$HOME/.cache/nimbus/clip\"; mkdir -p \"$C\"; " +
+            "C=\"$HOME/.cache/oberon/clip\"; mkdir -p \"$C\"; " +
             "cliphist list 2>/dev/null | head -60 | sed 's/\\t/|/' | while IFS='|' read -r id rest; do " +
             "case \"$rest\" in *\"binary data\"*) cliphist decode \"$id\" > \"$C/$id.png\" 2>/dev/null; printf '%s|image|%s\\n' \"$id\" \"$rest\";; " +
             "*) printf '%s|text|%s\\n' \"$id\" \"$rest\";; esac; done"]
@@ -48,14 +48,14 @@ Singleton {
             id: id,
             type: line.slice(i + 1, j),
             preview: line.slice(j + 1),
-            thumb: Quickshell.env("HOME") + "/.cache/nimbus/clip/" + id + ".png"
+            thumb: Quickshell.env("HOME") + "/.cache/oberon/clip/" + id + ".png"
         });
     }
 
     Process {
         id: pinsProc
         // jq -c: файл пишется многострочным, а SplitParser читает по строкам
-        command: ["sh", "-c", "cat " + shq(Quickshell.env("HOME") + "/.local/state/nimbus/pins.json") + " 2>/dev/null | jq -c . 2>/dev/null"]
+        command: ["sh", "-c", "cat " + shq(Quickshell.env("HOME") + "/.local/state/oberon/pins.json") + " 2>/dev/null | jq -c . 2>/dev/null"]
         stdout: SplitParser { onRead: line => { try { c.pins = JSON.parse(line); } catch (e) { c.pins = []; } } }
     }
     function loadPins() { pinsProc.running = false; pinsProc.running = true; }
@@ -90,8 +90,8 @@ Singleton {
         refreshLater();
     }
     function wipe() { Quickshell.execDetached(["sh", "-c", "cliphist wipe"]); c.items = []; }
-    function pin(id) { Quickshell.execDetached(["sh", "-c", "bash " + shq(Quickshell.env("HOME") + "/nimbus/scripts/clip-pin.sh") + " " + shq(id)]); refreshLater(); }
-    function unpin(id) { Quickshell.execDetached(["sh", "-c", "bash " + shq(Quickshell.env("HOME") + "/nimbus/scripts/clip-unpin.sh") + " " + shq(id)]); refreshLater(); }
+    function pin(id) { Quickshell.execDetached(["sh", "-c", "bash " + shq(Quickshell.env("HOME") + "/oberon/scripts/clip-pin.sh") + " " + shq(id)]); refreshLater(); }
+    function unpin(id) { Quickshell.execDetached(["sh", "-c", "bash " + shq(Quickshell.env("HOME") + "/oberon/scripts/clip-unpin.sh") + " " + shq(id)]); refreshLater(); }
     function copyPin(p) {
         if (p.type === "image") Quickshell.execDetached(["sh", "-c", "wl-copy --type image/png < " + shq(p.file)]);
         else Quickshell.execDetached(["sh", "-c", "printf %s " + shq(p.text) + " | wl-copy"]);

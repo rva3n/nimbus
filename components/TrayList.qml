@@ -211,7 +211,7 @@ Item {
         anchors { top: true; bottom: true; left: true; right: true }
         exclusiveZone: 0
         WlrLayershell.layer: WlrLayer.Overlay
-        WlrLayershell.namespace: "nimbus-tray-menu"
+        WlrLayershell.namespace: "oberon-tray-menu"
         WlrLayershell.keyboardFocus: trayList.menuItem !== null
             ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
 

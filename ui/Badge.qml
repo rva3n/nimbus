@@ -1,7 +1,7 @@
 import QtQuick
 import "../core"
 
-// Маленький бейдж Nimbus (порт lucidui/Badge.qml): точка 6dp, счётчик-пилюля
+// Маленький бейдж Oberon (порт lucidui/Badge.qml): точка 6dp, счётчик-пилюля
 // 16dp (или произвольная текст-пилюля). Цифры стоят на базовой линии, поэтому
 // строку центрируем по чернилам цифр через метрики Theme.
 // tone: accent | error | neutral; count<0 и пустой text — точка.

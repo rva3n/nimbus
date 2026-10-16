@@ -1,7 +1,7 @@
 .pragma library
-// Nimbus → SymbolPaths aliases.
+// Oberon → SymbolPaths aliases.
 //
-// Names that nimbus used with the old icon font but that are absent from the
+// Names that oberon used with the old icon font but that are absent from the
 // copied Material Symbols path set (ui/SymbolPaths.js).
 // Each maps to the visually closest available glyph.
 var alias = {

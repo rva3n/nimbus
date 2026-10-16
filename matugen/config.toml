@@ -1,50 +1,50 @@
-# Nimbus' own matugen config — fully independent of ~/.config/matugen and Lucid.
-# Used via: matugen -c ~/nimbus/matugen/config.toml ...
+# Oberon' own matugen config — fully independent of ~/.config/matugen and Lucid.
+# Used via: matugen -c ~/oberon/matugen/config.toml ...
 
 [config]
 
-[templates.nimbus]
-input_path = '~/nimbus/matugen/templates/nimbus-colors.json'
-output_path = '~/.cache/nimbus/colors.json'
+[templates.oberon]
+input_path = '~/oberon/matugen/templates/oberon-colors.json'
+output_path = '~/.cache/oberon/colors.json'
 
 [templates.umbriel]
-input_path = '~/nimbus/matugen/templates/umbriel-colors.toml'
+input_path = '~/oberon/matugen/templates/umbriel-colors.toml'
 output_path = '~/.config/umbriel/src/colors.toml'
 
 [templates.vscode-raw]
-input_path = '~/nimbus/matugen/templates/vscode-colors'
+input_path = '~/oberon/matugen/templates/vscode-colors'
 output_path = '~/.cache/matugen/vscode-colors'
 
 [templates.vscode-json]
-input_path = '~/nimbus/matugen/templates/vscode-colors.json'
+input_path = '~/oberon/matugen/templates/vscode-colors.json'
 output_path = '~/.cache/matugen/vscode-colors.json'
 
 [templates.kitty]
-input_path = '~/nimbus/matugen/templates/kitty.conf'
+input_path = '~/oberon/matugen/templates/kitty.conf'
 output_path = '~/.config/kitty/matugen-colors.conf'
 post_hook = 'killall -SIGUSR1 kitty 2>/dev/null || true'
 
 [templates.gtk3]
-input_path = '~/nimbus/matugen/templates/gtk-colors.css'
+input_path = '~/oberon/matugen/templates/gtk-colors.css'
 output_path = '~/.config/gtk-3.0/colors.css'
 
 [templates.gtk4]
-input_path = '~/nimbus/matugen/templates/gtk-colors.css'
+input_path = '~/oberon/matugen/templates/gtk-colors.css'
 output_path = '~/.config/gtk-4.0/colors.css'
 
 [templates.rofi]
-input_path = '~/nimbus/matugen/templates/rofi-colors.rasi'
+input_path = '~/oberon/matugen/templates/rofi-colors.rasi'
 output_path = '~/.config/rofi/colors.rasi'
 
 [templates.steam-material]
-input_path = '~/nimbus/matugen/templates/steam-material.css'
+input_path = '~/oberon/matugen/templates/steam-material.css'
 output_path = '~/.local/share/Steam/millennium/themes/Material-Theme/css/main/colors/matugen.css'
 
 [templates.zen]
-input_path = '~/nimbus/matugen/templates/zen-userchrome.css'
+input_path = '~/oberon/matugen/templates/zen-userchrome.css'
 output_path = '~/.config/zen/bww22tjf.Default (release)/chrome/userChrome.css'
 
 [templates.starship]
-input_path = '~/nimbus/matugen/templates/starship-colors.toml'
+input_path = '~/oberon/matugen/templates/starship-colors.toml'
 output_path = '~/.config/starship.toml'
 post_hook = 'for sh in fish bash zsh; do pkill -WINCH -x "$sh" 2>/dev/null; done; true'

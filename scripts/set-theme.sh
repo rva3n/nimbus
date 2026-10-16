@@ -7,9 +7,9 @@
 # mode auto → флаг не передаётся (matugen сам выберет по яркости),
 # иначе --mode light|dark. contrast ≠ 0 → --contrast <v>.
 IMG="${1:?path to image}"
-CONF="${NIMBUS_MATUGEN_CONF:-$HOME/nimbus/matugen/config.toml}"
+CONF="${OBERON_MATUGEN_CONF:-$HOME/oberon/matugen/config.toml}"
 FB="#9a9a9a"
-PJ="$HOME/nimbus/prefs.json"
+PJ="$HOME/oberon/prefs.json"
 
 scheme=$(jq -r '.themeScheme // "auto"' "$PJ" 2>/dev/null)
 mode=$(jq -r '.themeMode // "auto"' "$PJ" 2>/dev/null)

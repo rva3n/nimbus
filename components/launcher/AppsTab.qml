@@ -20,7 +20,7 @@ Item {
 
     signal hovered(int index)
 
-    // ── m3-метрики строки (через масштаб Nimbus) ──────────────────────
+    // ── m3-метрики строки (через масштаб Oberon) ──────────────────────
     readonly property int rowH: Theme.dp(56)
     readonly property int calcH: Theme.dp(88)
     readonly property int leadSlot: Theme.dp(40)

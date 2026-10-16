@@ -70,7 +70,7 @@ Singleton {
     // ── локация по IP ──────────────────────────────────────────────────
     Process {
         id: geoProc
-        command: ["sh", Quickshell.env("HOME") + "/nimbus/scripts/geo.sh"]
+        command: ["sh", Quickshell.env("HOME") + "/oberon/scripts/geo.sh"]
         stdout: SplitParser {
             onRead: line => {
                 try {

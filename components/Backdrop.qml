@@ -18,7 +18,7 @@ PanelWindow {
     color: "transparent"
     exclusiveZone: 0
     WlrLayershell.layer: WlrLayer.Top
-    WlrLayershell.namespace: "nimbus-backdrop"
+    WlrLayershell.namespace: "oberon-backdrop"
     WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
 
     Rectangle {

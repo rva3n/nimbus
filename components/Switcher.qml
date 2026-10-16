@@ -129,7 +129,7 @@ PanelWindow {
     anchors { top: true; bottom: true; left: true; right: true }
     exclusiveZone: 0
     WlrLayershell.layer: WlrLayer.Overlay
-    WlrLayershell.namespace: "nimbus-switcher"
+    WlrLayershell.namespace: "oberon-switcher"
     WlrLayershell.keyboardFocus: switcher.open ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
 
     Timer { id: glideOn; interval: 60; onTriggered: switcher.glide = true }

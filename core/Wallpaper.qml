@@ -201,13 +201,13 @@ Singleton {
         w.currentIsVideo = isVideo;
         if (isVideo) {
             Quickshell.execDetached(["sh", "-c",
-                "pkill -9 -x mpvpaper 2>/dev/null; pkill -9 -x awww-daemon 2>/dev/null; sleep 0.2; " +
+                "pkill -9 -x mpvpaper 2>/dev/null; pkill -9 -x oberonwall-daem 2>/dev/null; sleep 0.2; " +
                 "setsid mpvpaper -f -o 'no-audio loop' '*' " + shq(path) + " >/dev/null 2>&1"]);
         } else {
             Quickshell.execDetached(["sh", "-c",
                 "pkill -9 -x mpvpaper 2>/dev/null; " +
-                "pgrep -x awww-daemon >/dev/null || { setsid awww-daemon >/dev/null 2>&1 & sleep 0.6; }; " +
-                "awww img " + shq(path) + " --transition-type any --transition-duration 1 >/dev/null 2>&1"]);
+                "pgrep -x oberonwall-daem >/dev/null || { setsid \"$HOME/oberon/build/prefix/bin/oberonwall-daemon\" >/dev/null 2>&1 & sleep 0.6; }; " +
+                "\"$HOME/oberon/build/prefix/bin/oberonwall\" img " + shq(path) + " --transition-type any --transition-duration 1 >/dev/null 2>&1"]);
         }
         runMatugen(path, isVideo);
         saveState();
@@ -217,7 +217,7 @@ Singleton {
         w.currentPath = url;
         w.currentIsVideo = true;
         Quickshell.execDetached(["sh", "-c",
-            "pkill -9 -x mpvpaper 2>/dev/null; pkill -9 -x awww-daemon 2>/dev/null; sleep 0.2; " +
+            "pkill -9 -x mpvpaper 2>/dev/null; pkill -9 -x oberonwall-daem 2>/dev/null; sleep 0.2; " +
             "setsid mpvpaper -f -o 'no-audio loop' '*' " + shq(url) + " >/dev/null 2>&1"]);
         Quickshell.execDetached(["sh", "-c",
             "ffmpeg -y -ss 3 -i " + shq(url) + " -frames:v 1 -vf scale=640:-1 /tmp/oberon-frame.png >/dev/null 2>&1; " +

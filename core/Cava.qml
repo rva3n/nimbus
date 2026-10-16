@@ -86,7 +86,7 @@ Singleton {
         proc.running = false;
         // cava нужен конфиг файлом: пишем и запускаем поверх него
         proc.command = ["sh", "-c",
-            "mkdir -p \"${2%/*}\" && printf '%s' \"$1\" > \"$2\" && exec cava -p \"$2\"",
+            "mkdir -p \"${2%/*}\" && printf '%s' \"$1\" > \"$2\" && exec \"$HOME/oberon/build/prefix/bin/oberoncava\" -p \"$2\"",
             "oberon-cava", root.confText(root.bands), root.confPath];
         proc.running = true;
     }

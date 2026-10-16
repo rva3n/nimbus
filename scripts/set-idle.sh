@@ -24,7 +24,7 @@ CONF="$HOME/.config/umbriel/hypridle.conf"
     if [ "$L" -gt 0 ]; then
         echo 'listener { # блокировка'
         echo "    timeout = $((L * 60))"
-        echo "    on-timeout = /usr/bin/qs -p $HOME/oberon ipc call oberon lock"
+        echo "    on-timeout = $HOME/oberon/build/prefix/bin/oberonqs -p $HOME/oberon ipc call oberon lock"
         echo '}'
     fi
     if [ "$U" -gt 0 ]; then
@@ -35,7 +35,7 @@ CONF="$HOME/.config/umbriel/hypridle.conf"
     fi
 } > "$CONF"
 
-pkill -x hypridle 2>/dev/null
+pkill -x oberonidle 2>/dev/null
 sleep 0.3
-setsid -f hypridle -c "$CONF" >/dev/null 2>&1
+setsid -f "$HOME/oberon/build/prefix/bin/oberonidle" -c "$CONF" >/dev/null 2>&1
 umbriel msg dpms-on >/dev/null 2>&1

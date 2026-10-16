@@ -7,6 +7,7 @@
 # mode auto → флаг не передаётся (matugen сам выберет по яркости),
 # иначе --mode light|dark. contrast ≠ 0 → --contrast <v>.
 IMG="${1:?path to image}"
+export PATH="$HOME/oberon/build/prefix/bin:$PATH"
 CONF="${OBERON_MATUGEN_CONF:-$HOME/oberon/matugen/config.toml}"
 FB="#9a9a9a"
 PJ="$HOME/oberon/prefs.json"
@@ -26,7 +27,7 @@ if [ "$scheme" != "auto" ] && [ -n "$scheme" ]; then
         *)          TYPE="scheme-$scheme" ;;
     esac
 else
-    SRC=$(matugen image -c "$CONF" --prefer saturation --fallback-color "$FB" -j hex --dry-run "$IMG" 2>/dev/null \
+    SRC=$(oberoncolor image -c "$CONF" --prefer saturation --fallback-color "$FB" -j hex --dry-run "$IMG" 2>/dev/null \
           | jq -r '.colors.source_color.default.color // empty' 2>/dev/null)
 
     if [ "$SRC" = "$FB" ] || [ -z "$SRC" ]; then
@@ -56,4 +57,4 @@ FLAGS="--prefer saturation --type $TYPE --fallback-color $FB"
 # contrast != 0 и число → передать
 [ "$(awk "BEGIN{print ($contrast + 0 != 0) ? 1 : 0}" 2>/dev/null)" = "1" ] && FLAGS="$FLAGS --contrast $contrast"
 
-matugen -c "$CONF" $FLAGS image "$IMG" >/dev/null 2>&1
+oberoncolor -c "$CONF" $FLAGS image "$IMG" >/dev/null 2>&1

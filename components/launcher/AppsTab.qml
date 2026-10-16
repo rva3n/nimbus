@@ -249,23 +249,93 @@ Item {
                 }
             }
 
-            // выбранная строка / ховер-фон
-            Rectangle {
-                anchors.fill: parent
-                radius: rowItem.isCalc ? Theme.shapeXl : root.selRadius
-                color: rowItem.selected ? Theme.secondaryContainer
-                     : (rowItem.isCalc && rowItem.index === root.sel ? Theme.secondaryContainer : "transparent")
-                visible: rowItem.selected || (rowItem.isCalc && rowItem.index === root.sel)
+            ListItem {
+                id: appSurface
 
-                Behavior on color {
-                    ColorAnimation { duration: Theme.durDefaultEffects }
+                anchors.fill: parent
+                visible: rowItem.app
+                headline: rowItem.modelData.name || ""
+                headlineRole: "bodyLarge"
+                headlineWeight: Theme.typeWeight("bodyLarge")
+                headlineTrailingVisible: rowItem.running
+                supporting: rowItem.modelData.comment || ""
+                supportingRole: "bodySmall"
+                textSpacing: 0
+                selected: rowItem.selected
+                clickable: true
+                containerColor: "transparent"
+                stateTint: rowItem.selected ? Theme.fgSecondaryContainer : Theme.text
+                outerRadius: root.selRadius
+                innerRadius: root.selRadius
+                leadingMargin: root.edge
+                leadingTextSpacing: root.between
+                textTrailingSpacing: rowItem.showActions ? root.between : 0
+                trailingMargin: root.edge
+                trailingSpacing: root.between
+                onClicked: root.activate(rowItem.index)
+
+                leading: Item {
+                    anchors.fill: parent
+
+                    Rectangle {
+                        anchors.fill: parent
+                        visible: !rowItem.hasIcon
+                        radius: parent.width / 2
+                        color: Theme.bgTile
+                    }
+
+                    AppIcon {
+                        anchors.centerIn: parent
+                        visible: rowItem.hasIcon
+                        source: rowItem.iconPath
+                        size: Theme.dp(36)
+                        radius: size / 2
+                    }
+
+                    Icon {
+                        anchors.centerIn: parent
+                        visible: !rowItem.hasIcon
+                        name: "apps"
+                        size: Theme.dp(22)
+                        color: rowItem.selected ? Theme.fgSecondaryContainer : Theme.subtext
+                    }
+                }
+
+                headlineTrailing: Rectangle {
+                    width: Theme.dp(6)
+                    height: Theme.dp(6)
+                    anchors.verticalCenter: parent.verticalCenter
+                    radius: width / 2
+                    color: rowItem.selected ? Theme.fgSecondaryContainer : Theme.primary
+                }
+
+                trailing: Row {
+                    visible: rowItem.showActions
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: root.between
+
+                    IconButton {
+                        icon: "push_pin"
+                        size: "s"
+                        variant: rowItem.pinned ? "filled" : "tonal"
+                        onClicked: Apps.togglePin(rowItem.modelData)
+                    }
+
+                    IconButton {
+                        icon: rowItem.hidden ? "visibility_off" : "visibility"
+                        size: "s"
+                        variant: rowItem.hidden ? "filled" : "tonal"
+                        onClicked: Apps.toggleHide(rowItem.modelData)
+                    }
                 }
             }
 
+            // Калькулятор остаётся отдельной карточкой; приложения используют
+            // state layer самой ListItem.
             StateLayer {
-                radius: rowItem.isCalc ? Theme.shapeXl : root.selRadius
-                tint: rowItem.selected || (rowItem.isCalc && rowItem.index === root.sel)
-                      ? Theme.fgSecondaryContainer : Theme.text
+                visible: rowItem.isCalc
+                radius: Theme.shapeXl
+                tint: rowItem.index === root.sel ? Theme.fgSecondaryContainer : Theme.text
                 onClicked: root.activate(rowItem.index)
             }
 
@@ -327,103 +397,6 @@ Item {
                 }
             }
 
-            // ── строка приложения ─────────────────────────────────────
-            RowLayout {
-                anchors.fill: parent
-                anchors.leftMargin: root.edge
-                anchors.rightMargin: root.edge
-                spacing: root.between
-                visible: rowItem.app
-
-                // ведущий слот 40: иконка приложения (без плитки) либо
-                // символьный фолбэк на M3-плитке
-                Item {
-                    Layout.alignment: Qt.AlignVCenter
-                    implicitWidth: root.leadSlot
-                    implicitHeight: root.leadSlot
-
-                    Rectangle {
-                        anchors.fill: parent
-                        visible: !rowItem.hasIcon
-                        radius: parent.width / 2
-                        color: Theme.bgTile
-                    }
-
-                    AppIcon {
-                        anchors.centerIn: parent
-                        visible: rowItem.hasIcon
-                        source: rowItem.iconPath
-                        size: Theme.dp(36)
-                        radius: size / 2
-                    }
-
-                    Icon {
-                        anchors.centerIn: parent
-                        visible: !rowItem.hasIcon
-                        name: "apps"
-                        size: Theme.dp(22)
-                        color: rowItem.selected ? Theme.fgSecondaryContainer : Theme.subtext
-                    }
-                }
-
-                ColumnLayout {
-                    Layout.fillWidth: true
-                    Layout.alignment: Qt.AlignVCenter
-                    spacing: 0
-
-                    RowLayout {
-                        Layout.fillWidth: true
-                        spacing: Theme.dp(7)
-
-                        LText {
-                            Layout.fillWidth: true
-                            text: rowItem.modelData.name || ""
-                            role: "bodyLarge"
-                            color: rowItem.selected ? Theme.fgSecondaryContainer : Theme.text
-                            elide: Text.ElideRight
-                        }
-
-                        // точка работающего окна — акцентом после имени
-                        Rectangle {
-                            Layout.alignment: Qt.AlignVCenter
-                            visible: rowItem.running
-                            implicitWidth: Theme.dp(6)
-                            implicitHeight: Theme.dp(6)
-                            radius: width / 2
-                            color: rowItem.selected ? Theme.fgSecondaryContainer : Theme.primary
-                        }
-                    }
-
-                    LText {
-                        Layout.fillWidth: true
-                        visible: text !== ""
-                        text: rowItem.modelData.comment || ""
-                        role: "bodySmall"
-                        color: rowItem.selected ? Theme.alpha(Theme.fgSecondaryContainer, 0.8) : Theme.subtext
-                        elide: Text.ElideRight
-                    }
-                }
-
-                // закрепить/открепить — на ховере (и когда активно)
-                IconButton {
-                    Layout.alignment: Qt.AlignVCenter
-                    visible: rowItem.showActions
-                    icon: "push_pin"
-                    size: "s"
-                    variant: rowItem.pinned ? "filled" : "tonal"
-                    onClicked: Apps.togglePin(rowItem.modelData)
-                }
-
-                // скрыть/показать — глаз на ховере (и когда скрыто)
-                IconButton {
-                    Layout.alignment: Qt.AlignVCenter
-                    visible: rowItem.showActions
-                    icon: rowItem.hidden ? "visibility_off" : "visibility"
-                    size: "s"
-                    variant: rowItem.hidden ? "filled" : "tonal"
-                    onClicked: Apps.toggleHide(rowItem.modelData)
-                }
-            }
         }
     }
 

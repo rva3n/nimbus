@@ -668,41 +668,34 @@ ColumnLayout {
                 width: resultView.width
                 height: Theme.dp(52)
 
-                Rectangle {
-                    id: searchRow
+                ListItem {
+                    id: resultSurface
 
                     anchors.fill: parent
-                    radius: Theme.rad(14)
-                    color: rowItem.index === tab.sel ? Theme.secondaryContainer : "transparent"
-                    border.width: rowItem.pendingRemove ? Theme.dp(1) : 0
-                    border.color: Theme.error
-
-                    Behavior on color {
-                        ColorAnimation { duration: Theme.durDefaultEffects }
-                    }
-                }
-
-                StateLayer {
-                    radius: Theme.rad(14)
-                    tint: rowItem.index === tab.sel ? Theme.fgSecondaryContainer : Theme.text
+                    headline: rowItem.modelData.name
+                    headlineRole: "bodyLarge"
+                    headlineWeight: Theme.typeWeight("bodyLarge")
+                    supporting: rowItem.modelData.repo + " · " + rowItem.modelData.version
+                        + (rowItem.modelData.desc ? " · " + rowItem.modelData.desc : "")
+                    supportingRole: "bodySmall"
+                    textSpacing: 0
+                    selected: rowItem.index === tab.sel
+                    clickable: true
+                    containerColor: "transparent"
+                    stateTint: rowItem.index === tab.sel ? Theme.fgSecondaryContainer : Theme.text
+                    outerRadius: Theme.rad(14)
+                    innerRadius: Theme.rad(14)
+                    leadingMargin: Theme.dp(16)
+                    leadingTextSpacing: Theme.dp(12)
+                    textTrailingSpacing: rowItem.modelData.installed ? Theme.dp(12) : 0
+                    trailingMargin: Theme.dp(16)
+                    trailingSpacing: 0
+                    borderWidth: rowItem.pendingRemove ? Theme.dp(1) : 0
+                    borderColor: Theme.error
                     onClicked: tab.activate(rowItem.index)
-                }
 
-                HoverHandler {
-                    onHoveredChanged: if (hovered) tab.hovered(rowItem.index)
-                }
-
-                RowLayout {
-                    anchors.fill: parent
-                    anchors.leftMargin: Theme.dp(16)
-                    anchors.rightMargin: Theme.dp(16)
-                    spacing: Theme.dp(12)
-
-                    // иконка приложения (установленные) или глиф пакета
-                    Item {
-                        Layout.alignment: Qt.AlignVCenter
-                        implicitWidth: Theme.dp(40)
-                        implicitHeight: Theme.dp(40)
+                    leading: Item {
+                        anchors.fill: parent
 
                         Rectangle {
                             anchors.fill: parent
@@ -727,35 +720,11 @@ ColumnLayout {
                         }
                     }
 
-                    ColumnLayout {
-                        Layout.fillWidth: true
-                        Layout.alignment: Qt.AlignVCenter
-                        spacing: 0
-
-                        LText {
-                            Layout.fillWidth: true
-                            text: rowItem.modelData.name
-                            role: "bodyLarge"
-                            color: rowItem.index === tab.sel ? Theme.fgSecondaryContainer : Theme.text
-                            elide: Text.ElideRight
-                        }
-                        LText {
-                            Layout.fillWidth: true
-                            text: rowItem.modelData.repo + " · " + rowItem.modelData.version
-                                  + (rowItem.modelData.desc ? " · " + rowItem.modelData.desc : "")
-                            role: "bodySmall"
-                            color: rowItem.index === tab.sel
-                                ? Theme.alpha(Theme.fgSecondaryContainer, 0.8) : Theme.subtext
-                            elide: Text.ElideRight
-                        }
-                    }
-
-                    // бейдж «Установлено» / подтверждение удаления
-                    Rectangle {
+                    trailing: Rectangle {
                         visible: rowItem.modelData.installed
-                        Layout.alignment: Qt.AlignVCenter
-                        implicitWidth: badgeText.implicitWidth + Theme.dp(14)
-                        implicitHeight: Theme.dp(20)
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: badgeText.implicitWidth + Theme.dp(14)
+                        height: Theme.dp(20)
                         radius: Theme.pill(height)
                         color: rowItem.pendingRemove ? Theme.errorContainer : Theme.bgTrack
                         border.width: rowItem.pendingRemove ? Theme.dp(1) : 0
@@ -771,6 +740,11 @@ ColumnLayout {
                         }
                     }
                 }
+
+                HoverHandler {
+                    onHoveredChanged: if (hovered) tab.hovered(rowItem.index)
+                }
+
             }
         }
 
@@ -967,36 +941,31 @@ ColumnLayout {
                 width: appView.width
                 height: Theme.dp(56)
 
-                Rectangle { // выбранная строка — secondaryContainer
+                ListItem {
+                    id: installedSurface
+
                     anchors.fill: parent
-                    radius: Theme.rad(14)
-                    color: appRow.index === tab.sel ? Theme.secondaryContainer : "transparent"
-
-                    Behavior on color {
-                        ColorAnimation { duration: Theme.durDefaultEffects }
-                    }
-                }
-
-                StateLayer { // ховер/нажатие
-                    radius: Theme.rad(14)
-                    tint: appRow.index === tab.sel ? Theme.fgSecondaryContainer : Theme.text
+                    headline: appRow.modelData.name
+                    headlineRole: "bodyLarge"
+                    headlineWeight: Theme.typeWeight("bodyLarge")
+                    supporting: tab.appSub(appRow.modelData)
+                    supportingRole: "bodySmall"
+                    textSpacing: 0
+                    selected: appRow.index === tab.sel
+                    clickable: true
+                    containerColor: "transparent"
+                    stateTint: appRow.index === tab.sel ? Theme.fgSecondaryContainer : Theme.text
+                    outerRadius: Theme.rad(14)
+                    innerRadius: Theme.rad(14)
+                    leadingMargin: Theme.dp(16)
+                    leadingTextSpacing: Theme.dp(12)
+                    textTrailingSpacing: Theme.dp(12)
+                    trailingMargin: Theme.dp(16)
+                    trailingSpacing: 0
                     onClicked: tab.activate(appRow.index)
-                }
 
-                HoverHandler {
-                    onHoveredChanged: if (hovered) tab.hovered(appRow.index)
-                }
-
-                RowLayout {
-                    anchors.fill: parent
-                    anchors.leftMargin: Theme.dp(16)
-                    anchors.rightMargin: Theme.dp(16)
-                    spacing: Theme.dp(12)
-
-                    Item { // ведущий слот 40: иконка без плитки / фолбэк на плитке
-                        Layout.alignment: Qt.AlignVCenter
-                        implicitWidth: Theme.dp(40)
-                        implicitHeight: Theme.dp(40)
+                    leading: Item {
+                        anchors.fill: parent
 
                         Rectangle {
                             anchors.fill: parent
@@ -1012,7 +981,7 @@ ColumnLayout {
                             size: Theme.dp(36)
                         }
 
-                        Icon { // фолбэк-глиф для неразрешённых иконок
+                        Icon {
                             anchors.centerIn: parent
                             visible: !appRow.hasIcon
                             name: "inventory_2"
@@ -1021,35 +990,18 @@ ColumnLayout {
                         }
                     }
 
-                    ColumnLayout {
-                        Layout.fillWidth: true
-                        Layout.alignment: Qt.AlignVCenter
-                        spacing: 0
-
-                        LText {
-                            Layout.fillWidth: true
-                            text: appRow.modelData.name
-                            role: "bodyLarge"
-                            color: appRow.index === tab.sel ? Theme.fgSecondaryContainer : Theme.text
-                            elide: Text.ElideRight
-                        }
-                        LText {
-                            Layout.fillWidth: true
-                            text: tab.appSub(appRow.modelData)
-                            role: "bodySmall"
-                            color: appRow.index === tab.sel
-                                ? Theme.alpha(Theme.fgSecondaryContainer, 0.8) : Theme.subtext
-                            elide: Text.ElideRight
-                        }
-                    }
-
-                    Icon { // подсказка «подробнее»
-                        Layout.alignment: Qt.AlignVCenter
+                    trailing: Icon {
+                        anchors.verticalCenter: parent.verticalCenter
                         name: "chevron_right"
                         size: Theme.dp(20)
                         color: appRow.index === tab.sel ? Theme.fgSecondaryContainer : Theme.subtextDim
                     }
                 }
+
+                HoverHandler {
+                    onHoveredChanged: if (hovered) tab.hovered(appRow.index)
+                }
+
             }
 
             LText { // пусто / ещё грузится

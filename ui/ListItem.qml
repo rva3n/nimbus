@@ -10,6 +10,11 @@ Item {
     id: li
 
     property string headline: ""
+    property string headlineRole: "bodyLarge"
+    property real headlineWeight: 480
+    property color headlineColor: Theme.text
+    property int headlineLines: 1
+    property int headlineWrapMode: Text.NoWrap
     property string supporting: ""
     property string supportingRole: "bodyMedium"
     property string overline: ""
@@ -40,10 +45,21 @@ Item {
     property real textTrailingSpacing: Theme.dp(12)
     property real trailingMargin: Theme.dp(16)
     property real trailingSpacing: Theme.dp(8)
+    property real headlineTrailingSpacing: Theme.dp(7)
+    property bool headlineTrailingVisible: true
+    property real stateHoverOpacity: Theme.stateHover
+    property real statePressOpacity: Theme.statePressed
+    property int colorTransitionDuration: Theme.durDefaultEffects
+    property real borderWidth: 0
+    property color borderColor: Theme.outline
     property color stateTint: Theme.text
     property alias leading: leadSlot.data
     property alias trailing: trailSlot.data
+    property alias headlineTrailing: headlineTail.data
     readonly property bool hasLeading: li.icon !== "" || (li.leadingVisible && leadSlot.children.length > 0)
+    readonly property bool hasHeadlineTrailing: li.headlineTrailingVisible && headlineTail.children.length > 0
+    readonly property bool hovered: li.clickable && stateLayer.active
+    readonly property bool pressed: li.clickable && stateLayer.pressed
     readonly property bool _first: li.position === "" ? li.first : (li.position === "top" || li.position === "single")
     readonly property bool _last: li.position === "" ? li.last : (li.position === "bottom" || li.position === "single")
 
@@ -63,10 +79,12 @@ Item {
         topRightRadius: li._first ? li.outerRadius : li.innerRadius
         bottomLeftRadius: li._last ? li.outerRadius : li.innerRadius
         bottomRightRadius: li._last ? li.outerRadius : li.innerRadius
+        border.width: li.borderWidth
+        border.color: li.borderColor
 
         Behavior on color {
             ColorAnimation {
-                duration: Theme.durDefaultEffects
+                duration: li.colorTransitionDuration
             }
 
         }
@@ -74,10 +92,14 @@ Item {
     }
 
     StateLayer {
+        id: stateLayer
+
         visible: li.clickable
         enabled: li.clickable && !li.disabled
         radius: li.innerRadius
         tint: li.stateTint
+        hoverOpacity: li.stateHoverOpacity
+        pressOpacity: li.statePressOpacity
         onClicked: li.clicked()
     }
 
@@ -128,12 +150,46 @@ Item {
         }
 
         LText {
+            id: headlineLabel
             width: parent.width
             text: li.headline
-            role: "bodyLarge"
-            weight: 480
-            color: li.selected ? Theme.fgSecondaryContainer : Theme.text
+            role: li.headlineRole
+            weight: li.headlineWeight
+            color: li.selected ? Theme.fgSecondaryContainer : li.headlineColor
+            wrapMode: li.headlineWrapMode
+            maximumLineCount: li.headlineLines
             elide: Text.ElideRight
+            visible: !li.hasHeadlineTrailing
+        }
+
+        Row {
+            id: headlineRow
+
+            visible: li.hasHeadlineTrailing
+            width: parent.width
+            height: Math.max(headlineWithTrailing.implicitHeight, headlineTail.implicitHeight)
+            spacing: li.headlineTrailingSpacing
+
+            LText {
+                id: headlineWithTrailing
+
+                width: Math.max(0, headlineRow.width - headlineTail.implicitWidth - headlineRow.spacing)
+                text: li.headline
+                role: li.headlineRole
+                weight: li.headlineWeight
+                color: li.selected ? Theme.fgSecondaryContainer : li.headlineColor
+                wrapMode: li.headlineWrapMode
+                maximumLineCount: li.headlineLines
+                elide: Text.ElideRight
+            }
+
+            Row {
+                id: headlineTail
+
+                width: implicitWidth
+                height: implicitHeight
+                anchors.verticalCenter: parent.verticalCenter
+            }
         }
 
         LText {

@@ -139,50 +139,70 @@ Item {
                 Layout.fillWidth: true
                 Layout.preferredHeight: Theme.dp(48)
 
-                Rectangle { // подложка: выбранная — secondaryContainer, ховер — bgHover
+                // Оставляем кликабельным и внешний 1dp край старой подложки.
+                MouseArea {
+                    anchors.fill: parent
+                    acceptedButtons: Qt.LeftButton
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: trayList.activateItem(row.modelData)
+                }
+
+                ListItem {
+                    id: rowSurface
+
                     anchors.fill: parent
                     anchors.margins: Theme.dp(1)
-                    radius: Theme.radiusMd
-                    color: row.selected ? Theme.secondaryContainer
-                         : (rowArea.containsMouse ? Theme.bgHover : "transparent")
+                    headline: row.modelData.tooltipTitle || row.modelData.title || row.modelData.id || "?"
+                    headlineRole: "bodyMedium"
+                    headlineWeight: Theme.typeWeight("bodyMedium")
+                    selected: row.selected
+                    clickable: true
+                    containerColor: rowArea.containsMouse ? Theme.bgHover : "transparent"
+                    stateTint: row.selected ? Theme.fgSecondaryContainer : Theme.text
+                    stateHoverOpacity: 0
+                    colorTransitionDuration: Theme.durFastEffects
+                    outerRadius: Theme.radiusMd
+                    innerRadius: Theme.radiusMd
+                    leadingMargin: Theme.dp(12) - Theme.dp(1) - Theme.dp(6)
+                    leadingTextSpacing: Theme.dp(12) + Theme.dp(22) + Theme.dp(6) - Theme.dp(40)
+                    textTrailingSpacing: row.modelData.hasChildren
+                        ? Theme.dp(34) - Theme.dp(10) - Theme.dp(16)
+                        : Theme.dp(12) - Theme.dp(10)
+                    trailingMargin: Theme.dp(10) - Theme.dp(1)
+                    trailingSpacing: 0
+                    onClicked: trayList.activateItem(row.modelData)
 
-                    Behavior on color { ColorAnimation { duration: Theme.durFastEffects } }
-                }
+                    leading: Item {
+                        anchors.fill: parent
 
-                Image {
-                    anchors.left: parent.left
-                    anchors.leftMargin: Theme.dp(12)
-                    anchors.verticalCenter: parent.verticalCenter
-                    width: Theme.dp(22)
-                    height: Theme.dp(22)
-                    source: trayList.resolveIconSource(row.modelData.icon)
-                    sourceSize.width: Theme.dp(44)
-                    sourceSize.height: Theme.dp(44)
-                    smooth: true
-                    asynchronous: true
-                    fillMode: Image.PreserveAspectFit
-                }
+                        Image {
+                            anchors.left: parent.left
+                            anchors.leftMargin: Theme.dp(6)
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: Theme.dp(22)
+                            height: Theme.dp(22)
+                            source: trayList.resolveIconSource(row.modelData.icon)
+                            sourceSize.width: Theme.dp(44)
+                            sourceSize.height: Theme.dp(44)
+                            smooth: true
+                            asynchronous: true
+                            fillMode: Image.PreserveAspectFit
+                        }
+                    }
 
-                LText {
-                    anchors.left: parent.left
-                    anchors.leftMargin: Theme.dp(12) + Theme.dp(22) + Theme.dp(12)
-                    anchors.right: parent.right
-                    anchors.rightMargin: row.modelData.hasChildren ? Theme.dp(34) : Theme.dp(12)
-                    anchors.verticalCenter: parent.verticalCenter
-                    role: "bodyMedium"
-                    color: row.selected ? Theme.fgSecondaryContainer : Theme.text
-                    text: (row.modelData.tooltipTitle || row.modelData.title || row.modelData.id || "?")
-                    elide: Text.ElideRight
-                }
+                    trailing: Item {
+                        width: row.modelData.hasChildren ? Theme.dp(16) : 0
+                        height: Theme.dp(16)
+                        anchors.verticalCenter: parent.verticalCenter
 
-                Icon {
-                    visible: row.modelData.hasChildren
-                    anchors.right: parent.right
-                    anchors.rightMargin: Theme.dp(10)
-                    anchors.verticalCenter: parent.verticalCenter
-                    name: "chevron_right"
-                    size: Theme.dp(16)
-                    color: row.selected ? Theme.fgSecondaryContainer : Theme.subtextDim
+                        Icon {
+                            anchors.centerIn: parent
+                            visible: row.modelData.hasChildren
+                            name: "chevron_right"
+                            size: Theme.dp(16)
+                            color: row.selected ? Theme.fgSecondaryContainer : Theme.subtextDim
+                        }
+                    }
                 }
 
                 MouseArea {
@@ -190,7 +210,7 @@ Item {
                     anchors.fill: parent
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
-                    acceptedButtons: Qt.LeftButton | Qt.MiddleButton | Qt.RightButton
+                    acceptedButtons: Qt.MiddleButton | Qt.RightButton
 
                     onContainsMouseChanged: {
                         if (containsMouse)
@@ -204,8 +224,6 @@ Item {
                             trayList.openMenuFor(item, p.x, p.y);
                         } else if (mouse.button === Qt.MiddleButton) {
                             item.secondaryActivate();
-                        } else {
-                            trayList.activateItem(item);
                         }
                     }
 
@@ -303,6 +321,29 @@ Item {
                             width: entryCol.width
                             height: entryRow.isSep ? Theme.dp(7) : Theme.dp(36)
 
+                            function activateEntry() {
+                                if (entryRow.entry.hasChildren) {
+                                    if (trayList.submenuEntry === entryRow.entry) {
+                                        trayList.submenuEntry = null;
+                                    } else {
+                                        const p = entryRow.mapToItem(null, entryRow.width, entryRow.height / 2);
+                                        trayList.submenuEntry = entryRow.entry;
+                                        trayList.submenuY = p.y;
+                                    }
+                                } else {
+                                    entryRow.entry.triggered();
+                                    trayList.closeMenu();
+                                }
+                            }
+
+                            MouseArea { // preserves the old 1dp outer hit strip
+                                anchors.fill: parent
+                                enabled: !entryRow.isSep && entryRow.entry.enabled
+                                acceptedButtons: Qt.LeftButton
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: entryRow.activateEntry()
+                            }
+
                             Rectangle { // разделитель
                                 visible: entryRow.isSep
                                 anchors.verticalCenter: parent.verticalCenter
@@ -313,15 +354,45 @@ Item {
                                 color: Theme.outline
                             }
 
-                            Rectangle { // подложка hover
-                                visible: !entryRow.isSep
+                            ListItem {
+                                id: entrySurface
+
                                 anchors.fill: parent
                                 anchors.margins: Theme.dp(1)
-                                radius: Theme.radiusXs
-                                color: (entryArea.containsMouse && entryRow.entry.enabled)
-                                    ? Theme.bgHover : "transparent"
+                                visible: !entryRow.isSep
+                                headline: entryRow.entry.text
+                                headlineRole: "bodyMedium"
+                                headlineWeight: Theme.typeWeight("bodyMedium")
+                                headlineColor: entryRow.entry.enabled ? Theme.text : Theme.subtextDim
+                                textStartMargin: Theme.dp(entryRow.checked ? 34 : 12) - Theme.dp(1)
+                                textTrailingSpacing: entryRow.entry.hasChildren
+                                    ? Theme.dp(32) - Theme.dp(8) - Theme.dp(16)
+                                    : Theme.dp(12) - Theme.dp(8)
+                                trailingMargin: Theme.dp(8) - Theme.dp(1)
+                                trailingSpacing: 0
+                                leadingVisible: false
+                                clickable: entryRow.entry.enabled
+                                containerColor: entrySurface.hovered ? Theme.bgHover : "transparent"
+                                stateTint: Theme.text
+                                stateHoverOpacity: 0
+                                colorTransitionDuration: Theme.durFastEffects
+                                outerRadius: Theme.radiusXs
+                                innerRadius: Theme.radiusXs
+                                onClicked: entryRow.activateEntry()
 
-                                Behavior on color { ColorAnimation { duration: Theme.durFastEffects } }
+                                trailing: Item {
+                                    width: entryRow.entry.hasChildren ? Theme.dp(16) : 0
+                                    height: Theme.dp(16)
+                                    anchors.verticalCenter: parent.verticalCenter
+
+                                    Icon {
+                                        anchors.centerIn: parent
+                                        visible: entryRow.entry.hasChildren
+                                        name: "chevron_right"
+                                        size: Theme.dp(16)
+                                        color: entryRow.entry.enabled ? Theme.subtextDim : Theme.outline
+                                    }
+                                }
                             }
 
                             Icon { // галочка отмеченного пункта
@@ -334,50 +405,6 @@ Item {
                                 color: Theme.accent
                             }
 
-                            LText {
-                                visible: !entryRow.isSep
-                                anchors.left: parent.left
-                                anchors.leftMargin: entryRow.checked ? Theme.dp(34) : Theme.dp(12)
-                                anchors.right: parent.right
-                                anchors.rightMargin: entryRow.entry.hasChildren ? Theme.dp(32) : Theme.dp(12)
-                                anchors.verticalCenter: parent.verticalCenter
-                                role: "bodyMedium"
-                                color: entryRow.entry.enabled ? Theme.text : Theme.subtextDim
-                                text: entryRow.entry.text
-                                elide: Text.ElideRight
-                            }
-
-                            Icon {
-                                visible: !entryRow.isSep && entryRow.entry.hasChildren
-                                anchors.right: parent.right
-                                anchors.rightMargin: Theme.dp(8)
-                                anchors.verticalCenter: parent.verticalCenter
-                                name: "chevron_right"
-                                size: Theme.dp(16)
-                                color: entryRow.entry.enabled ? Theme.subtextDim : Theme.outline
-                            }
-
-                            MouseArea {
-                                id: entryArea
-                                anchors.fill: parent
-                                enabled: !entryRow.isSep && entryRow.entry.enabled
-                                hoverEnabled: true
-                                cursorShape: Qt.PointingHandCursor
-                                onClicked: {
-                                    if (entryRow.entry.hasChildren) {
-                                        if (trayList.submenuEntry === entryRow.entry) {
-                                            trayList.submenuEntry = null;
-                                        } else {
-                                            const p = entryArea.mapToItem(null, entryArea.width, entryArea.height / 2);
-                                            trayList.submenuEntry = entryRow.entry;
-                                            trayList.submenuY = p.y;
-                                        }
-                                    } else {
-                                        entryRow.entry.triggered();
-                                        trayList.closeMenu();
-                                    }
-                                }
-                            }
                         }
                     }
                 }
@@ -436,6 +463,17 @@ Item {
                             width: submenuCol.width
                             height: subEntryRow.isSep ? Theme.dp(7) : Theme.dp(36)
 
+                            MouseArea {
+                                anchors.fill: parent
+                                enabled: !subEntryRow.isSep && subEntryRow.entry.enabled
+                                acceptedButtons: Qt.LeftButton
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: {
+                                    subEntryRow.entry.triggered();
+                                    trayList.closeMenu();
+                                }
+                            }
+
                             Rectangle {
                                 visible: subEntryRow.isSep
                                 anchors.verticalCenter: parent.verticalCenter
@@ -446,14 +484,31 @@ Item {
                                 color: Theme.outline
                             }
 
-                            Rectangle {
-                                visible: !subEntryRow.isSep
+                            ListItem {
+                                id: subEntrySurface
+
                                 anchors.fill: parent
                                 anchors.margins: Theme.dp(1)
-                                radius: Theme.radiusXs
-                                color: (subEntryArea.containsMouse && subEntryRow.entry.enabled)
-                                    ? Theme.bgHover : "transparent"
-                                Behavior on color { ColorAnimation { duration: Theme.durFastEffects } }
+                                visible: !subEntryRow.isSep
+                                headline: subEntryRow.entry.text
+                                headlineRole: "bodyMedium"
+                                headlineWeight: Theme.typeWeight("bodyMedium")
+                                headlineColor: subEntryRow.entry.enabled ? Theme.text : Theme.subtextDim
+                                textStartMargin: Theme.dp(subEntryRow.checked ? 34 : 12) - Theme.dp(1)
+                                textTrailingSpacing: Theme.dp(12) - Theme.dp(8)
+                                trailingMargin: Theme.dp(8) - Theme.dp(1)
+                                leadingVisible: false
+                                clickable: subEntryRow.entry.enabled
+                                containerColor: subEntrySurface.hovered ? Theme.bgHover : "transparent"
+                                stateTint: Theme.text
+                                stateHoverOpacity: 0
+                                colorTransitionDuration: Theme.durFastEffects
+                                outerRadius: Theme.radiusXs
+                                innerRadius: Theme.radiusXs
+                                onClicked: {
+                                    subEntryRow.entry.triggered();
+                                    trayList.closeMenu();
+                                }
                             }
 
                             Icon {
@@ -464,31 +519,6 @@ Item {
                                 name: "check"
                                 size: Theme.dp(16)
                                 color: Theme.accent
-                            }
-
-                            LText {
-                                visible: !subEntryRow.isSep
-                                anchors.left: parent.left
-                                anchors.leftMargin: subEntryRow.checked ? Theme.dp(34) : Theme.dp(12)
-                                anchors.right: parent.right
-                                anchors.rightMargin: Theme.dp(12)
-                                anchors.verticalCenter: parent.verticalCenter
-                                role: "bodyMedium"
-                                color: subEntryRow.entry.enabled ? Theme.text : Theme.subtextDim
-                                text: subEntryRow.entry.text
-                                elide: Text.ElideRight
-                            }
-
-                            MouseArea {
-                                id: subEntryArea
-                                anchors.fill: parent
-                                enabled: !subEntryRow.isSep && subEntryRow.entry.enabled
-                                hoverEnabled: true
-                                cursorShape: Qt.PointingHandCursor
-                                onClicked: {
-                                    subEntryRow.entry.triggered();
-                                    trayList.closeMenu();
-                                }
                             }
                         }
                     }

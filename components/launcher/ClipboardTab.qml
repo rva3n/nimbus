@@ -271,42 +271,36 @@ ColumnLayout {
         Layout.fillWidth: true
         spacing: 0
 
-        Item {
+        ListItem {
             id: rowItem
 
             Layout.fillWidth: true
             implicitHeight: Theme.dp(52)
+            headline: ci.label
+            headlineRole: "bodySmall"
+            headlineWeight: Theme.typeWeight("bodySmall")
+            headlineLines: ci.pinned ? 1 : 2
+            headlineWrapMode: ci.pinned ? Text.NoWrap : Text.Wrap
+            selected: ci.selected
+            clickable: true
+            containerColor: "transparent"
+            stateTint: ci.selected ? Theme.fgSecondaryContainer : Theme.text
+            outerRadius: Theme.radiusMd
+            innerRadius: Theme.radiusMd
+            leadingMargin: Theme.dp(4)
+            leadingTextSpacing: Theme.dp(8)
+            textTrailingSpacing: Theme.dp(4)
+            trailingMargin: Theme.dp(4)
+            trailingSpacing: Theme.dp(4)
+            onClicked: ci.activated(ci.rowIndex)
 
-            Rectangle {
+            leading: Item {
                 anchors.fill: parent
-                radius: Theme.radiusMd
-                color: ci.selected ? Theme.secondaryContainer : "transparent"
 
-                Behavior on color {
-                    ColorAnimation { duration: Theme.durDefaultEffects }
-                }
-            }
-
-            StateLayer { // ховер/нажатие — state layer, клик по строке — активация
-                radius: Theme.radiusMd
-                tint: ci.selected ? Theme.fgSecondaryContainer : Theme.text
-                onClicked: ci.activated(ci.rowIndex)
-            }
-
-            HoverHandler {
-                onHoveredChanged: if (hovered) ci.hovered(ci.rowIndex)
-            }
-
-            RowLayout {
-                anchors.fill: parent
-                anchors.leftMargin: Theme.dp(4)
-                anchors.rightMargin: Theme.dp(4)
-                spacing: Theme.dp(4)
-
-                Item { // превью: картинка 44×32 либо просто иконка текста 16
-                    Layout.alignment: Qt.AlignVCenter
-                    implicitWidth: Theme.dp(44)
-                    implicitHeight: Theme.dp(32)
+                Item { // превью: картинка 44×32 либо иконка текста
+                    width: Theme.dp(44)
+                    height: Theme.dp(32)
+                    anchors.verticalCenter: parent.verticalCenter
 
                     Rectangle {
                         anchors.fill: parent
@@ -338,22 +332,17 @@ ColumnLayout {
                         }
                     }
                 }
+            }
 
-                LText {
-                    Layout.fillWidth: true
-                    Layout.alignment: Qt.AlignVCenter
-                    text: ci.label
-                    role: "bodySmall"
-                    color: ci.selected ? Theme.fgSecondaryContainer : Theme.text
-                    // pins и короткие — одна строка, длинные — максимум две
-                    elide: Text.ElideRight
-                    wrapMode: ci.pinned ? Text.NoWrap : Text.Wrap
-                    maximumLineCount: ci.pinned ? 1 : 2
-                }
+            HoverHandler {
+                onHoveredChanged: if (hovered) ci.hovered(ci.rowIndex)
+            }
+
+            trailing: Row {
+                anchors.verticalCenter: parent.verticalCenter
+                spacing: Theme.dp(4)
 
                 IconButton { // pin: закреплённая строка — filled
-                    z: 1
-                    Layout.alignment: Qt.AlignVCenter
                     icon: "push_pin"
                     size: "xs"
                     variant: ci.pinned ? "filled" : "standard"
@@ -361,8 +350,6 @@ ColumnLayout {
                 }
 
                 IconButton { // удалить: ghost-кнопка в error-тоне
-                    z: 1
-                    Layout.alignment: Qt.AlignVCenter
                     visible: !ci.pinned
                     icon: "delete"
                     size: "xs"

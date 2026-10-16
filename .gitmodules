@@ -24,3 +24,9 @@
 [submodule "third_party/vulkan-headers"]
 	path = third_party/vulkan-headers
 	url = https://github.com/rva3n/Vulkan-Headers.git
+[submodule "third_party/hyprwayland-scanner"]
+	path = third_party/hyprwayland-scanner
+	url = https://github.com/rva3n/hyprwayland-scanner.git
+[submodule "third_party/hyprland-protocols"]
+	path = third_party/hyprland-protocols
+	url = https://github.com/rva3n/hyprland-protocols.git

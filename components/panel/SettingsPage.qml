@@ -334,9 +334,7 @@ RowLayout {
     }
 
     // строка-переключатель Lucid: заголовок bodyLarge + supporting bodySmall,
-    // справа Switch; клик по всей строке переключает. Switch при клике ломает
-    // декларативную привязку — возвращаем её, чтобы внешние изменения
-    // (Prefs/опрос Umbriel) продолжали отражаться.
+    // справа Switch; клик по всей строке отправляет предполагаемое новое значение.
     component ToggleRow: Rectangle {
         id: tr
 
@@ -349,7 +347,6 @@ RowLayout {
 
         function _emit(v) {
             tr.toggled(v);
-            sw.checked = Qt.binding(function () { return tr.checked; });
         }
 
         Layout.fillWidth: true
@@ -426,7 +423,7 @@ RowLayout {
 
                 Layout.alignment: Qt.AlignVCenter
                 checked: tr.checked
-                onToggled: tr._emit(sw.checked)
+                onToggled: (v) => tr._emit(v)
             }
         }
     }

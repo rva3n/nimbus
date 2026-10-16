@@ -19,6 +19,7 @@ Item {
     property var shell: null
 
     signal hovered(int index)
+    signal selectionRequested(int index)
 
     // ── m3-метрики строки (через масштаб Oberon) ──────────────────────
     readonly property int rowH: Theme.dp(56)
@@ -113,6 +114,10 @@ Item {
         if (typeof cmd === "string") cmd = ["sh", "-c", cmd];
         Quickshell.execDetached(cmd);
         if (root.shell) root.shell.closeOverlays();
+    }
+
+    function moveSel(delta) {
+        if (root.count > 0) root.selectionRequested(root.sel + delta);
     }
 
     // ── упрощённый вычислитель (порт luciddocks/DockCalc.qml) ─────────

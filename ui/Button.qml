@@ -7,6 +7,8 @@ import "../core"
 Item {
     id: btn
 
+    activeFocusOnTab: !btn.disabled
+
     property string variant: "filled"
     property string size: "s"
     property string text: ""
@@ -20,6 +22,20 @@ Item {
 
     signal clicked()
     signal toggled(bool value)
+
+    function activate() {
+        if (btn.disabled) return;
+        if (btn.checkable) btn.toggled(!btn.checked);
+        btn.clicked();
+    }
+
+    Keys.onPressed: (event) => {
+        if (btn.disabled || event.isAutoRepeat) return;
+        if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter || event.key === Qt.Key_Space) {
+            btn.activate();
+            event.accepted = true;
+        }
+    }
 
     readonly property int h: btn.size === "xs" ? Theme.dp(30) : (btn.size === "m" ? Theme.dp(48) : Theme.dp(36))
     readonly property int pad: btn.size === "xs" ? Theme.dp(12) : (btn.size === "m" ? Theme.dp(24) : Theme.dp(16))
@@ -128,13 +144,7 @@ Item {
             radius: box.radius
             tint: btn.content
             disabled: btn.disabled
-            onClicked: {
-                if (btn.checkable) {
-                    btn.checked = !btn.checked;
-                    btn.toggled(btn.checked);
-                }
-                btn.clicked();
-            }
+            onClicked: btn.activate()
         }
 
     }
@@ -163,6 +173,16 @@ Item {
             color: btn.content
         }
 
+    }
+
+    Rectangle {
+        anchors.fill: parent
+        z: 10
+        visible: btn.activeFocus
+        radius: box.radius
+        color: "transparent"
+        border.width: Theme.focusRingWidth
+        border.color: Theme.focusRingColor
     }
 
 }

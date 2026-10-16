@@ -17,6 +17,7 @@ ColumnLayout {
     property var shell: null
 
     signal hovered(int index)
+    signal selectionRequested(int index)
     // смена под-вкладки: лончер очищает общий поиск
     signal searchReset()
 
@@ -30,6 +31,7 @@ ColumnLayout {
     readonly property var results: tab.filterList(tab.mode === "emoji" ? tab.emojiAll : tab.kaomojiAll)
     readonly property bool ready: tab.mode === "emoji" ? tab.emojiReady : tab.kaomojiReady
     readonly property int count: tab.results.length
+    readonly property int columns: Math.max(1, Math.floor(grid.width / grid.cellWidth))
 
     spacing: Theme.dp(4)
 
@@ -86,6 +88,13 @@ ColumnLayout {
     function activate(index) {
         const it = tab.results[index];
         if (it) tab.pick(it.e);
+    }
+
+    function moveSel(delta) {
+        if (tab.count > 0) tab.selectionRequested(tab.sel + delta);
+    }
+    function moveSelCols(cols, delta) {
+        if (tab.count > 0) tab.selectionRequested(tab.sel + Math.max(1, cols) * delta);
     }
 
     onSelChanged: if (grid.count > 0) grid.positionViewAtIndex(Math.max(0, Math.min(grid.count - 1, tab.sel)), GridView.Contain)

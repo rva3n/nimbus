@@ -7,7 +7,7 @@ import "../../ui"
 // содержимое выбранной вкладки. Закрытие — кнопка справа (shell.closeOverlays).
 // Анатомия шапки — Lucid: заголовок, чипы-табы (selected = secondaryContainer),
 // дивайдер и тональная кнопка закрытия.
-ColumnLayout {
+FocusScope {
     id: tm
 
     property var shell: null
@@ -16,6 +16,7 @@ ColumnLayout {
 
     // при открытии — на вкладку, запрошенную извне (IPC/кейбинд)
     onVisibleChanged: if (visible) {
+        tm.forceActiveFocus();
         tab = initialTab;
         if (tm.shell)
             tm.shell.taskmanTab = tab;
@@ -38,7 +39,15 @@ ColumnLayout {
     Component.onCompleted: tm.syncPollers()
 
     Layout.fillWidth: true
-    spacing: Theme.dp(12)
+    focus: visible
+    implicitWidth: contentLayout.implicitWidth
+    implicitHeight: contentLayout.implicitHeight
+
+    ColumnLayout {
+        id: contentLayout
+
+        anchors.fill: parent
+        spacing: Theme.dp(12)
 
     // ── Шапка: заголовок и вкладки слева, закрытие справа ─────────────
     ColumnLayout {
@@ -102,8 +111,11 @@ ColumnLayout {
     MonitorTab { visible: tm.tab === 1 }
 
     AboutTab { visible: tm.tab === 2 }
+    }
 
     // ESC закрывает диспетчер
-    focus: visible
-    Keys.onEscapePressed: if (tm.shell) tm.shell.closeOverlays()
+    Keys.onEscapePressed: (event) => {
+        if (tm.shell) tm.shell.closeOverlays();
+        event.accepted = true;
+    }
 }

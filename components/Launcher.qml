@@ -6,7 +6,7 @@ import "launcher"
 
 // Единая поверхность лончера: вкладки «Приложения / Буфер / Эмодзи / Пакеты»,
 // общий поиск и карточка с содержимым активной вкладки. Клавиатура: ↑/↓, Enter, Esc.
-ColumnLayout {
+FocusScope {
     id: launcher
 
     property bool active: false
@@ -25,9 +25,10 @@ ColumnLayout {
     readonly property int count: launcher.activeTab ? launcher.activeTab.count : 0
 
     visible: active
+    focus: active
     Layout.fillWidth: true
-    // ритм Lucid: head → content gap, полный блок внутри капсулы
-    spacing: Theme.dp(12)
+    implicitWidth: contentLayout.implicitWidth
+    implicitHeight: contentLayout.implicitHeight
 
     // сброс поиска и выделения
     function resetSearch() {
@@ -45,19 +46,95 @@ ColumnLayout {
     function switchTab(t) {
         launcher.applyTab(t);
         if (launcher.shell) launcher.shell.launcherTab = t;
+        if (launcher.active) searchField.forceActiveFocus();
     }
     function setSel(i) {
         launcher.sel = Math.max(0, Math.min(i, launcher.count - 1));
+    }
+    function moveSelection(delta) {
+        const target = launcher.activeTab;
+        if (!target || launcher.count <= 0) return;
+        if (target.moveSelCols) target.moveSelCols(target.columns, delta);
+        else if (target.moveSel) target.moveSel(delta);
+    }
+    function moveHorizontalSelection(delta) {
+        if (launcher.currentTab === "emoji" && emojiTab.count > 0)
+            emojiTab.moveSel(delta);
+    }
+    function handleEscape() {
+        if (launcher.currentTab === "packages" && pkgTab.detailsOpen) {
+            pkgTab.closeDetails();
+            return;
+        }
+        if (launcher.shell) launcher.shell.closeOverlays();
     }
     function activateSel() {
         if (launcher.activeTab && launcher.count > 0) launcher.activeTab.activate(launcher.sel);
     }
 
     // при открытии — вкладка из shell.launcherTab (IPC: launcher/clipboard/emoji/packages)
-    onActiveChanged: if (launcher.active) launcher.applyTab(launcher.tab)
+    onActiveChanged: if (launcher.active) {
+        launcher.applyTab(launcher.tab);
+        launcher.forceActiveFocus();
+        searchField.forceActiveFocus();
+    }
     onTabChanged: if (launcher.active) launcher.applyTab(launcher.tab)
     onCountChanged: launcher.setSel(launcher.sel) // clamp после смены вкладки/фильтра
     onQueryChanged: launcher.sel = 0
+
+    Keys.onEscapePressed: (event) => {
+        launcher.handleEscape();
+        event.accepted = true;
+    }
+    Keys.onPressed: (event) => {
+        if (event.key === Qt.Key_Up || event.key === Qt.Key_Down) {
+            launcher.moveSelection(event.key === Qt.Key_Down ? 1 : -1);
+            event.accepted = true;
+        } else if (!searchField.active && launcher.currentTab === "emoji"
+                   && (event.key === Qt.Key_Left || event.key === Qt.Key_Right)) {
+            launcher.moveHorizontalSelection(event.key === Qt.Key_Right ? 1 : -1);
+            event.accepted = true;
+        }
+    }
+
+    Shortcut {
+        sequence: "Ctrl+1"
+        enabled: launcher.active
+        onActivated: launcher.switchTab("apps")
+    }
+    Shortcut {
+        sequence: "Ctrl+2"
+        enabled: launcher.active
+        onActivated: launcher.switchTab("clipboard")
+    }
+    Shortcut {
+        sequence: "Ctrl+3"
+        enabled: launcher.active
+        onActivated: launcher.switchTab("emoji")
+    }
+    Shortcut {
+        sequence: "Ctrl+4"
+        enabled: launcher.active
+        onActivated: launcher.switchTab("packages")
+    }
+    Shortcut {
+        sequence: "Left"
+        enabled: launcher.active && launcher.currentTab === "emoji"
+                 && searchField.active && searchField.text === ""
+        onActivated: launcher.moveHorizontalSelection(-1)
+    }
+    Shortcut {
+        sequence: "Right"
+        enabled: launcher.active && launcher.currentTab === "emoji"
+                 && searchField.active && searchField.text === ""
+        onActivated: launcher.moveHorizontalSelection(1)
+    }
+
+    ColumnLayout {
+        id: contentLayout
+
+        anchors.fill: parent
+        spacing: Theme.dp(12)
 
     // ── вкладки; справа — фильтр скрытых (только в приложениях) ───────
     RowLayout {
@@ -65,22 +142,34 @@ ColumnLayout {
         spacing: Theme.dp(6)
 
         Chip {
+            id: appsTabChip
             label: "Приложения"; icon: "apps"
+            KeyNavigation.tab: clipboardTabChip
+            KeyNavigation.backtab: searchField
             selected: launcher.currentTab === "apps"
             onClicked: launcher.switchTab("apps")
         }
         Chip {
+            id: clipboardTabChip
             label: "Буфер"; icon: "content_paste"
+            KeyNavigation.tab: emojiTabChip
+            KeyNavigation.backtab: appsTabChip
             selected: launcher.currentTab === "clipboard"
             onClicked: launcher.switchTab("clipboard")
         }
         Chip {
+            id: emojiTabChip
             label: "Эмодзи"; icon: "mood"
+            KeyNavigation.tab: packagesTabChip
+            KeyNavigation.backtab: clipboardTabChip
             selected: launcher.currentTab === "emoji"
             onClicked: launcher.switchTab("emoji")
         }
         Chip {
+            id: packagesTabChip
             label: "Пакеты"; icon: "inventory_2"
+            KeyNavigation.tab: hiddenFilterChip.visible ? hiddenFilterChip : searchField
+            KeyNavigation.backtab: emojiTabChip
             selected: launcher.currentTab === "packages"
             onClicked: launcher.switchTab("packages")
         }
@@ -88,9 +177,12 @@ ColumnLayout {
         Item { Layout.fillWidth: true }
 
         Chip {
+            id: hiddenFilterChip
             visible: launcher.currentTab === "apps"
             label: "Скрытые (" + Apps.hidden.length + ")"
             icon: "visibility"
+            KeyNavigation.tab: searchField
+            KeyNavigation.backtab: packagesTabChip
             selected: Apps.showHidden
             onClicked: Apps.showHidden = !Apps.showHidden
         }
@@ -101,16 +193,25 @@ ColumnLayout {
         id: searchField
 
         Layout.fillWidth: true
+        activeFocusOnTab: true
         focus: launcher.active
+        KeyNavigation.tab: appsTabChip
+        KeyNavigation.backtab: hiddenFilterChip.visible ? hiddenFilterChip : packagesTabChip
         placeholder: launcher.currentTab === "apps" ? "Поиск приложений…"
                    : launcher.currentTab === "clipboard" ? "Поиск в буфере…"
                    : launcher.currentTab === "packages" ? "Поиск пакетов…"
                    : "Поиск эмодзи…"
         onTextChanged: launcher.query = searchField.text
         onAccepted: launcher.activateSel()
-        Keys.onEscapePressed: if (launcher.shell) launcher.shell.closeOverlays()
-        Keys.onDownPressed: launcher.setSel(launcher.sel + 1)
-        Keys.onUpPressed: launcher.setSel(launcher.sel - 1)
+        onEscaped: launcher.handleEscape()
+        Keys.onDownPressed: (event) => {
+            launcher.moveSelection(1);
+            event.accepted = true;
+        }
+        Keys.onUpPressed: (event) => {
+            launcher.moveSelection(-1);
+            event.accepted = true;
+        }
     }
 
     // ── содержимое активной вкладки ───────────────────────────────────
@@ -128,6 +229,7 @@ ColumnLayout {
             query: launcher.query
             sel: launcher.sel
             onHovered: (i) => launcher.setSel(i)
+            onSelectionRequested: (i) => launcher.setSel(i)
         }
 
         ClipboardTab {
@@ -139,6 +241,7 @@ ColumnLayout {
             query: launcher.query
             sel: launcher.sel
             onHovered: (i) => launcher.setSel(i)
+            onSelectionRequested: (i) => launcher.setSel(i)
         }
 
         EmojiTab {
@@ -150,6 +253,7 @@ ColumnLayout {
             sel: launcher.sel
             onHovered: (i) => launcher.setSel(i)
             onSearchReset: launcher.resetSearch()
+            onSelectionRequested: (i) => launcher.setSel(i)
         }
 
         PackagesTab {
@@ -161,6 +265,8 @@ ColumnLayout {
             query: launcher.query
             sel: launcher.sel
             onHovered: (i) => launcher.setSel(i)
+            onSelectionRequested: (i) => launcher.setSel(i)
         }
+    }
     }
 }

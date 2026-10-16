@@ -3,9 +3,11 @@ import "../core"
 
 // M3-переключатель Oberon (порт lucidui/Switch.qml): трек 48×28 pill,
 // ручка растёт при включении и ещё раз под нажатием, несёт глиф check/close.
-// Клик сам инвертирует checked и эмитит toggled().
+// Клик сообщает предполагаемое новое значение; checked принадлежит вызывающему коду.
 Item {
     id: root
+
+    activeFocusOnTab: !root.disabled
 
     property bool checked: false
     property bool disabled: false
@@ -13,7 +15,20 @@ Item {
     readonly property bool hovered: area.containsMouse
     readonly property bool pressed: area.pressed
 
-    signal toggled()
+    signal toggled(bool value)
+
+    function activate() {
+        if (root.disabled) return;
+        root.toggled(!root.checked);
+    }
+
+    Keys.onPressed: (event) => {
+        if (root.disabled || event.isAutoRepeat) return;
+        if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter || event.key === Qt.Key_Space) {
+            root.activate();
+            event.accepted = true;
+        }
+    }
 
     implicitWidth: Theme.dp(48)
     implicitHeight: Theme.dp(28)
@@ -107,11 +122,18 @@ Item {
         hoverEnabled: true
         enabled: !root.disabled
         cursorShape: Qt.PointingHandCursor
-        // клик сам переключает checked; toggled() — для внешней реакции
-        onClicked: {
-            root.checked = !root.checked;
-            root.toggled();
-        }
+        // checked принадлежит владельцу; toggled сообщает следующее значение
+        onClicked: root.activate()
+    }
+
+    Rectangle {
+        anchors.fill: track
+        z: 10
+        visible: root.activeFocus
+        radius: track.radius
+        color: "transparent"
+        border.width: Theme.focusRingWidth
+        border.color: Theme.focusRingColor
     }
 
 }

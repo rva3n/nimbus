@@ -212,6 +212,8 @@ Singleton {
     readonly property real stateFocus: 0.1
     readonly property real statePressed: 0.1
     readonly property real stateDragged: 0.16
+    readonly property int focusRingWidth: root.dp(2)
+    readonly property color focusRingColor: root.primary
     readonly property real disabledContent: 0.38
     readonly property real disabledContainer: 0.12
 

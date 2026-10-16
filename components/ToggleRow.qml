@@ -9,11 +9,8 @@ import "../ui"
 // нажатие рисует StateLayer.
 //
 // Контракт: checked — источник правды, Switch к нему привязан.
-// signal toggled(bool value) сообщает новое значение наружу
-// (onToggled: (v) => ...). После переключения привязка Switch
-// переустанавливается, поэтому внешние изменения checked (опрос
-// nmcli/bluetoothctl, Prefs) продолжают отражаться на переключателе —
-// клик по Switch не «отвязывает» его.
+// signal toggled(bool value) сообщает предполагаемое новое значение наружу;
+// вызывающий код обновляет checked, не теряя декларативную привязку.
 Rectangle {
     id: tr
 
@@ -28,9 +25,6 @@ Rectangle {
 
     function _emit(v) {
         tr.toggled(v);
-        // Switch сам инвертирует checked и убивает декларативную привязку —
-        // возвращаем её, чтобы строка оставалась управляемой извне
-        sw.checked = Qt.binding(function () { return tr.checked; });
     }
 
     implicitHeight: Math.max(Theme.dp(tr.sub !== "" ? 64 : 56), row.implicitHeight + Theme.dp(16))
@@ -113,7 +107,7 @@ Rectangle {
 
             Layout.alignment: Qt.AlignVCenter
             checked: tr.checked
-            onToggled: tr._emit(sw.checked)
+            onToggled: (v) => tr._emit(v)
         }
     }
 }

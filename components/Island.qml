@@ -213,12 +213,22 @@ PanelWindow {
 
             // ── PANEL ────────────────────────────────────────────────────
             // панельное лицо: гаснет при закрытии, входящее — 1.04 → 1
-            Item {
+            FocusScope {
                 id: panelFace
                 anchors.fill: parent
                 visible: opacity > 0.01
                 opacity: win.big ? 1 : 0
                 scale: win.big ? 1 : 1.04
+                focus: win.big
+                Keys.onEscapePressed: (event) => {
+                    if (win.shell) win.shell.closeOverlays();
+                    event.accepted = true;
+                }
+                Shortcut {
+                    sequence: "Escape"
+                    enabled: win.mode === "panel"
+                    onActivated: if (win.shell) win.shell.closeOverlays()
+                }
 
                 Behavior on opacity { NumberAnimation { duration: win.big ? Theme.durEnter : Theme.durExit; easing.type: Easing.OutCubic } }
                 Behavior on scale { NumberAnimation { duration: Theme.ms(220); easing.type: Easing.OutCubic } }

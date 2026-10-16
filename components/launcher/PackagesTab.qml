@@ -26,6 +26,7 @@ ColumnLayout {
     property bool active: false
 
     signal hovered(int index)
+    signal selectionRequested(int index)
 
     // ── данные ────────────────────────────────────────────────────────
     property var results: []       // [{name, repo, version, desc, installed, aur, installedVer, votes, popularity}]
@@ -260,13 +261,6 @@ ColumnLayout {
 
     onSelectedResultChanged: tab._maybeFetchInstalled()
     onDetailTargetChanged: tab._ensureDetails()
-
-    // Esc закрывает панель деталей и возвращает к списку (не закрывая лончер).
-    Shortcut {
-        sequence: "Escape"
-        enabled: tab.active && tab.detailsOpen
-        onActivated: tab.closeDetails()
-    }
 
     // ── действия ──────────────────────────────────────────────────────
     function runInTerminal(args) {
@@ -503,6 +497,10 @@ ColumnLayout {
             return;
         }
         tab.openDetails();
+    }
+
+    function moveSel(delta) {
+        if (tab.count > 0) tab.selectionRequested(tab.sel + delta);
     }
 
     // ── разбор вывода paru -Ss ────────────────────────────────────────

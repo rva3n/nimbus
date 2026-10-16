@@ -116,7 +116,10 @@ FocusScope {
             echoMode: tf.password ? TextInput.Password : tf.echoMode
             onAccepted: tf.accepted()
             onTextEdited: tf.textEdited()
-            Keys.onEscapePressed: tf.escaped()
+            Keys.onEscapePressed: (event) => {
+                tf.escaped();
+                event.accepted = true;
+            }
 
             LText {
                 visible: input.text === "" && (tf.label === "" || tf.variant === "search" || tf.active)

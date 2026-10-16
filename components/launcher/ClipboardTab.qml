@@ -22,6 +22,7 @@ ColumnLayout {
     property bool haveWtype: false
 
     signal hovered(int index)
+    signal selectionRequested(int index)
 
     // экранирование одинарных кавычек для sh
     function shq(s) { return "'" + String(s).replace(/'/g, "'\\''") + "'" }
@@ -63,6 +64,10 @@ ColumnLayout {
         }
         if (tab.shell) tab.shell.closeOverlays();
         tab.pasteInto();
+    }
+
+    function moveSel(delta) {
+        if (tab.count > 0) tab.selectionRequested(tab.sel + delta);
     }
 
     // есть ли wtype в PATH (проба как в EmojiTab)

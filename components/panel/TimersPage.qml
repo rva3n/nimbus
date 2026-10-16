@@ -499,7 +499,7 @@ ColumnLayout {
                 id: psw
 
                 checked: page.pAuto
-                onToggled: page.pAuto = psw.checked
+                onToggled: (v) => page.pAuto = v
             }
 
             LText {

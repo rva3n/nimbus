@@ -7,6 +7,8 @@ import "../core"
 Item {
     id: chip
 
+    activeFocusOnTab: !chip.disabled
+
     property string kind: "filter"
     property string label: ""
     // синоним label (Lucid-имя)
@@ -23,6 +25,19 @@ Item {
 
     signal clicked()
     signal closeClicked()
+
+    function activate() {
+        if (chip.disabled) return;
+        chip.clicked();
+    }
+
+    Keys.onPressed: (event) => {
+        if (chip.disabled || event.isAutoRepeat) return;
+        if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter || event.key === Qt.Key_Space) {
+            chip.activate();
+            event.accepted = true;
+        }
+    }
 
     readonly property bool showLead: (chip.kind === "filter" && chip.selected) || chip.icon !== ""
     readonly property color content: chip.selected ? Theme.fgSecondaryContainer : (chip.kind === "assist" ? Theme.text : Theme.subtext)
@@ -62,7 +77,7 @@ Item {
             radius: Theme.rad(8)
             tint: chip.content
             disabled: chip.disabled
-            onClicked: chip.clicked()
+            onClicked: chip.activate()
         }
 
     }
@@ -105,6 +120,16 @@ Item {
 
         }
 
+    }
+
+    Rectangle {
+        anchors.fill: parent
+        z: 10
+        visible: chip.activeFocus
+        radius: bg.radius
+        color: "transparent"
+        border.width: Theme.focusRingWidth
+        border.color: Theme.focusRingColor
     }
 
 }

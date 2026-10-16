@@ -9,6 +9,8 @@ import "../core"
 Item {
     id: ib
 
+    activeFocusOnTab: !ib.disabled
+
     property string variant: "standard"
     property string size: "s"
     property string widthKind: "default"
@@ -25,6 +27,20 @@ Item {
     signal clicked()
     signal rightClicked()
     signal toggled(bool value)
+
+    function activate() {
+        if (ib.disabled) return;
+        if (ib.checkable) ib.toggled(!ib.checked);
+        ib.clicked();
+    }
+
+    Keys.onPressed: (event) => {
+        if (ib.disabled || event.isAutoRepeat) return;
+        if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter || event.key === Qt.Key_Space) {
+            ib.activate();
+            event.accepted = true;
+        }
+    }
 
     readonly property int btnH: ib.size === "xs" ? Theme.dp(30) : (ib.size === "m" ? Theme.dp(48) : Theme.dp(36))
     readonly property int iconPx: ib.size === "xs" ? Theme.dp(18) : (ib.size === "m" ? Theme.dp(24) : Theme.dp(20))
@@ -109,10 +125,7 @@ Item {
                     ib.rightClicked();
                     return ;
                 }
-                if (ib.checkable)
-                    ib.toggled(!ib.checked);
-
-                ib.clicked();
+                ib.activate();
             }
         }
 
@@ -142,6 +155,16 @@ Item {
 
         parent: Window.window ? Window.window.contentItem : ib
         z: 1000
+    }
+
+    Rectangle {
+        anchors.fill: parent
+        z: 10
+        visible: ib.activeFocus
+        radius: box.radius
+        color: "transparent"
+        border.width: Theme.focusRingWidth
+        border.color: Theme.focusRingColor
     }
 
 }

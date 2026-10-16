@@ -43,9 +43,6 @@ die() { printf '!! %s\n' "$*" >&2; exit 1; }
 
 [ "$(id -u)" = 0 ] && die "запускай от обычного пользователя (sudo спросится сам)"
 
-# при `curl | sh` stdin — это ещё не дочитанный скрипт; детям он не нужен
-exec </dev/null
-
 if ! grep -qiE '^(ID=arch|ID_LIKE=.*arch)' /etc/os-release 2>/dev/null; then
 	echo "!! Замечено не-Arch окружение — зависимости pacman'ом не ставлю."
 	NO_DEPS=1
@@ -87,7 +84,7 @@ fi
 # ── сборка ────────────────────────────────────────────────────────────
 if [ "$NO_BUILD" = 0 ]; then
 	say "Сборка вендорного стека (первый раз ~10–20 минут)"
-	sh "$DIR/scripts/build-deps.sh"
+	sh "$DIR/scripts/build-deps.sh" </dev/null
 fi
 
 # ── конфиги Umbriel ───────────────────────────────────────────────────

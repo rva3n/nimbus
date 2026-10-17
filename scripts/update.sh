@@ -47,15 +47,26 @@ case "$MODE" in
 	fi
 	OUT=$(check)
 	printf '%s\n' "$OUT"
-	if [ "$(printf '%s\n' "$OUT" | awk '{s+=($1=="MAIN"?$2:$3)} END{print s+0}')" = 0 ]; then
+	TOTAL=$(printf '%s\n' "$OUT" | awk '{s+=($1=="MAIN"?$2:$3)} END{print s+0}')
+	SUBBEFORE=$(git -C "$ROOT" submodule status | md5sum)
+	if [ "$TOTAL" = 0 ]; then
 		echo "==> Обновлений нет — всё актуально"
 	else
 		echo "==> Основной репозиторий"
 		git -C "$ROOT" pull --ff-only
-		echo "==> Сабмодули"
-		git -C "$ROOT" submodule update --init --remote
+	fi
+	echo "==> Сабмодули"
+	git -C "$ROOT" submodule update --init
+	sub_list | while read -r key branch; do
+		path=${key#submodule.}; path=${path%.branch}
+		git -C "$ROOT" submodule update --remote -- "$path" || { echo "!! не удалось обновить $path"; exit 1; }
+	done
+	SUBAFTER=$(git -C "$ROOT" submodule status | md5sum)
+	if [ "$TOTAL" != 0 ] || [ "$SUBBEFORE" != "$SUBAFTER" ]; then
 		echo "==> Пересборка (инкрементально, обычно до пары минут)"
 		sh "$ROOT/scripts/build-deps.sh" </dev/null
+	else
+		echo "==> Изменений в компонентах нет — пересборка не нужна"
 	fi
 	mkdir -p "$STATE"
 	{

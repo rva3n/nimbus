@@ -31,17 +31,15 @@ ColumnLayout {
     }
 
     // ── плитки: каталог + порядок/скрытые ──────────────────────────────
-    readonly property var tileIds: ["wifi", "bluetooth", "dnd", "nightlight", "wallpapers", "timers", "screenshot", "darkmode"]
+    readonly property var tileIds: ["wifi", "bluetooth", "dnd", "nightlight", "darkmode", "timers"]
 
     readonly property var tileCatalog: [
         { "id": "wifi", "icon": "wifi", "label": "Интернет" },
         { "id": "bluetooth", "icon": "bluetooth", "label": "Bluetooth" },
         { "id": "dnd", "icon": "do_not_disturb_on", "label": "Не беспокоить" },
         { "id": "nightlight", "icon": "bedtime", "label": "Ночной свет" },
-        { "id": "wallpapers", "icon": "wallpaper", "label": "Обои" },
-        { "id": "timers", "icon": "timer", "label": "Таймер" },
-        { "id": "screenshot", "icon": "screenshot_region", "label": "Скриншот / Запись" },
-        { "id": "darkmode", "icon": "dark_mode", "label": "Тёмная тема" }
+        { "id": "darkmode", "icon": "dark_mode", "label": "Тёмная тема" },
+        { "id": "timers", "icon": "timer", "label": "Таймер" }
     ]
 
     property var _tilesOrderOv: null
@@ -144,14 +142,10 @@ ColumnLayout {
             return Notif.dnd;
         case "nightlight":
             return Boolean(NightLight.enabled !== undefined ? NightLight.enabled : Prefs.nightLightEnabled);
-        case "wallpapers":
-            return Boolean(Wallpaper.autoRotate !== undefined ? Wallpaper.autoRotate : Wallpaper.autoEnabled);
-        case "timers":
-            return Chrono.running;
-        case "screenshot":
-            return false;
         case "darkmode":
             return Prefs.themeMode !== "light";
+        case "timers":
+            return Chrono.running;
         }
         return false;
     }
@@ -168,15 +162,10 @@ ColumnLayout {
             return Notif.dnd ? "Включён" : "Выключен";
         case "nightlight":
             return NightLight.temp + " K";
-        case "wallpapers":
-            return (Wallpaper.autoRotate !== undefined ? Wallpaper.autoRotate : Wallpaper.autoEnabled)
-                ? "Автосмена" : "Галерея";
-        case "timers":
-            return Chrono.running ? rootPage.fmtTimer(Chrono.remaining) : "Помодоро";
-        case "screenshot":
-            return "Экран и область";
         case "darkmode":
             return Prefs.themeMode === "light" ? "Светлая" : (Prefs.themeMode === "dark" ? "Тёмная" : "Авто");
+        case "timers":
+            return Chrono.running ? rootPage.fmtTimer(Chrono.remaining) : "Помодоро";
         }
         return "";
     }
@@ -187,8 +176,7 @@ ColumnLayout {
 
     function tileExpandable(id) {
         return id === "wifi" || id === "bluetooth" || id === "dnd"
-            || id === "nightlight" || id === "wallpapers" || id === "timers"
-            || id === "darkmode";
+            || id === "nightlight" || id === "darkmode" || id === "timers";
     }
 
     function tileTap(id) {
@@ -208,24 +196,16 @@ ColumnLayout {
         case "nightlight":
             Prefs.set("nightLightEnabled", !Prefs.nightLightEnabled);
             return;
-        case "wallpapers":
-            if (rootPage.win && rootPage.win.shell)
-                rootPage.win.shell.setPage("wallpapers");
-            return;
-        case "timers":
-            if (rootPage.win && rootPage.win.shell)
-                rootPage.win.shell.setPage("timers");
-            return;
-        case "screenshot":
-            if (rootPage.win && rootPage.win.shell)
-                rootPage.win.shell.openShotToolbar();
-            return;
         case "darkmode": {
             const next = Prefs.themeMode === "light" ? "dark" : "light";
             Prefs.set("themeMode", next);
             Wallpaper.applyThemeOnly();
             return;
         }
+        case "timers":
+            if (rootPage.win && rootPage.win.shell)
+                rootPage.win.shell.setPage("timers");
+            return;
         }
     }
 
@@ -248,14 +228,11 @@ ColumnLayout {
         case "nightlight":
             rootPage.win.shell.setPage("settings", 9);
             break;
-        case "wallpapers":
-            rootPage.win.shell.setPage("wallpapers");
+        case "darkmode":
+            rootPage.win.shell.setPage("settings", 8);
             break;
         case "timers":
             rootPage.win.shell.setPage("timers");
-            break;
-        case "darkmode":
-            rootPage.win.shell.setPage("settings", 8);
             break;
         }
     }

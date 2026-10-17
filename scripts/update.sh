@@ -38,8 +38,11 @@ case "$MODE" in
 --apply)
 	# убираем «дрейф» gitlink-ов от прошлых обновлений
 	git -C "$ROOT" checkout -- third_party 2>/dev/null || true
-	if [ -n "$(git -C "$ROOT" status --porcelain | head -n1)" ]; then
-		echo "!! в ~/oberon есть локальные изменения — обновление отменено"
+	# блокируем только реальные правки отслеживаемых файлов; грязные сабмодули
+	# (артефакты сборки) и untracked-файлы обновлению не мешают
+	CHANGES=$(git -C "$ROOT" status --porcelain --untracked-files=no --ignore-submodules=dirty | grep -vE '^ M third_party/' | head -n1)
+	if [ -n "$CHANGES" ]; then
+		echo "!! есть незакоммиченные изменения: $CHANGES — обновление отменено"
 		exit 1
 	fi
 	OUT=$(check)

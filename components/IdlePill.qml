@@ -281,11 +281,11 @@ Item {
                 StateLayer {
                     id: goArea
                     radius: parent.radius
-                    onEntered: holder.tip(goArea, goOuter.chipInfo && goOuter.chipInfo.name !== ""
-                        ? ("OpenCode: " + goOuter.chipInfo.name + " (" + goOuter.chipInfo.pctText + ")")
+                    onEntered: holder.tip(goArea, goOuter.chipInfo && goOuter.chipInfo.tip
+                        ? goOuter.chipInfo.tip
                         : "OpenCode — клик, чтобы открыть лимиты")
                     onExited: holder.untip(goArea)
-                    onClicked: if (holder.shell) holder.shell.setTab("opencode")
+                    onClicked: if (holder.shell) holder.shell.setPage("opencode")
                 }
             }
 

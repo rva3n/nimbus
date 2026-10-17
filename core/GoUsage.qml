@@ -29,15 +29,24 @@ Singleton {
     property var freeModels: []         // unlimited с тратами
     property var unusedModels: []       // есть в таблице GoLimit — трат нет
 
-    // Агрегат по окнам: {spent5, spent7, spent30, req5, req7, req30, pct…}
-    property var aggregate: ({ "spent5": 0, "spent7": 0, "spent30": 0,
-                               "req5": 0, "req7": 0, "req30": 0 })
+    // Агрегат подписки по окнам (общий счётчик по всем моделям opencode-go):
+    // {spent5, spent7, spent30, cap5, cap7, cap30, limit, pct5, pct7, pct30,
+    //  req5, req7, req30, worstPct, worstKey}
+    property var aggregate: ({
+        "spent5": 0, "spent7": 0, "spent30": 0,
+        "cap5": 12, "cap7": 30, "cap30": 60, "limit": 60,
+        "pct5": 0, "pct7": 0, "pct30": 0,
+        "req5": 0, "req7": 0, "req30": 0,
+        "worstPct": 0, "worstKey": "5h"
+    })
+    readonly property var totals: usage.aggregate
 
-        // Самый нагруженный (лимитированный) model: {name/id, pct5, pct7, pct30,
-        // worstPct, worstKey} — для чипа/страницы; null, пока нет данных.
+    // Самый нагруженный (лимитированный) model: {name/id, pct5, pct7, pct30,
+    // worstPct, worstKey} — для разбивки на странице; null, пока нет данных.
     property var worst: null
 
     readonly property string planLabel: Limits.planLabel(Prefs.goPlan)
+    readonly property real planLimit: Limits.planLimit(Prefs.goPlan)
     // Дней до сброса месячного счётчика — до day-of-month Prefs.goRenewDom.
     readonly property int renewDays: usage._renewDays(Prefs.goRenewDom)
 
@@ -252,7 +261,18 @@ Singleton {
         const free = [];
         const usedIds = {};
 
-        let agg = { "spent5": 0, "spent7": 0, "spent30": 0, "req5": 0, "req7": 0, "req30": 0 };
+        const cap5 = Limits.planWindowCap(plan, "5h");
+        const cap7 = Limits.planWindowCap(plan, "7d");
+        const cap30 = Limits.planWindowCap(plan, "30d");
+
+        let agg = {
+            "spent5": 0, "spent7": 0, "spent30": 0,
+            "cap5": cap5, "cap7": cap7, "cap30": cap30, "limit": cap30,
+            "pct5": 0, "pct7": 0, "pct30": 0,
+            "req5": 0, "req7": 0, "req30": 0,
+            "worstPct": 0, "worstKey": "5h"
+        };
+        let norm5 = 0, norm7 = 0, norm30 = 0;
         let worstPct = -1;
         let worstItem = null;
 
@@ -263,17 +283,36 @@ Singleton {
             const limit = Limits.limitFor(id, plan);
             if (limit === 0) {
                 free.push(usage._fmt(id, r, limit));
+                agg.req5 += r.req5; agg.req7 += r.req7; agg.req30 += r.req30;
                 continue;
             }
             const item = usage._fmt(id, r, limit);
             metered.push(item);
             agg.spent5 += r.spent5; agg.spent7 += r.spent7; agg.spent30 += r.spent30;
             agg.req5 += r.req5; agg.req7 += r.req7; agg.req30 += r.req30;
+            norm5 += item.pct5;
+            norm7 += item.pct7;
+            norm30 += item.pct30;
             if (item.worstPct > worstPct || (item.worstPct === worstPct && worstItem && r.spent30 > worstItem.raw.spent30)) {
                 worstPct = item.worstPct;
                 worstItem = item;
             }
         }
+
+        // Общий процент подписки: сумма нормализованных долей по всем моделям
+        // (или фоллбэк от базового лимита плана $12 / $30 / $60).
+        const rawPct5 = cap5 > 0 ? usage._pct(agg.spent5, cap5) : 0;
+        const rawPct7 = cap7 > 0 ? usage._pct(agg.spent7, cap7) : 0;
+        const rawPct30 = cap30 > 0 ? usage._pct(agg.spent30, cap30) : 0;
+        agg.pct5 = Math.min(999, norm5 > 0 ? norm5 : rawPct5);
+        agg.pct7 = Math.min(999, norm7 > 0 ? norm7 : rawPct7);
+        agg.pct30 = Math.min(999, norm30 > 0 ? norm30 : rawPct30);
+
+        let awp = agg.pct5, awk = "5h";
+        if (agg.pct7 > awp) { awp = agg.pct7; awk = "7d"; }
+        if (agg.pct30 > awp) { awp = agg.pct30; awk = "30d"; }
+        agg.worstPct = awp;
+        agg.worstKey = awk;
 
         metered.sort((a, b) => b.worstPct - a.worstPct || b.spent30 - a.spent30);
         free.sort((a, b) => b.lastMs - a.lastMs);
@@ -359,70 +398,76 @@ Singleton {
         return "ok";
     }
 
-    // Позиция чипа: auto — худшее окно самой нагруженной модели;
-    // 5h/7d/30d — худшая модель этого окна.
+    // Позиция чипа: общий расход по подписке OpenCode Go (а не одной модели).
+    // auto — окно с максимальным % расхода подписки (по умолчанию 5ч);
+    // 5h/7d/30d — соответствующее окно общей подписки.
     function chipOut(mode) {
+        const plan = Prefs.goPlan;
+        const cap5 = Limits.planWindowCap(plan, "5h");
+        const cap7 = Limits.planWindowCap(plan, "7d");
+        const cap30 = Limits.planWindowCap(plan, "30d");
         const empty = {
-            "id": "",
-            "name": "",
+            "id": "subscription",
+            "name": "OpenCode " + usage.planLabel,
+            "windowKey": "5h",
+            "windowLabel": "5ч",
             "pct": 0,
-            "pctText": "",
+            "pctText": "0%",
             "text": "GO",
+            "tip": "OpenCode " + usage.planLabel + " — клик, чтобы открыть лимиты",
             "warn": false,
             "tone": "ok",
             "p5": 0,
             "p7": 0,
-            "p30": 0
+            "p30": 0,
+            "spent5": 0, "spent7": 0, "spent30": 0,
+            "cap5": cap5, "cap7": cap7, "cap30": cap30
         };
-        if (!usage.ready || usage.raw.length === 0)
+        if (!usage.ready || !usage.aggregate)
             return empty;
-        let key = mode;
-        if (key !== "5h" && key !== "7d" && key !== "30d")
-            key = "worst";
-        if (key === "worst") {
-            const w = usage.worst;
-            if (!w)
-                return empty;
-            const pct = w.worstPct || 0;
-            const pctText = Math.round(pct) + "%";
-            const tone = usage.toneKey(pct);
-            return {
-                "id": w.id,
-                "name": w.name,
-                "pct": pct,
-                "pctText": pctText,
-                "text": "GO " + pctText,
-                "warn": tone !== "ok",
-                "tone": tone,
-                "p5": w.pct5,
-                "p7": w.pct7,
-                "p30": w.pct30
-            };
+
+        const a = usage.aggregate;
+        const p5 = a.pct5 || 0;
+        const p7 = a.pct7 || 0;
+        const p30 = a.pct30 || 0;
+
+        let winKey = mode;
+        if (winKey !== "5h" && winKey !== "7d" && winKey !== "30d") {
+            winKey = a.worstKey || "5h";
         }
-        const pctKey = key === "5h" ? "pct5" : (key === "7d" ? "pct7" : "pct30");
-        let best = null;
-        for (let i = 0; i < usage.models.length; i++) {
-            const m = usage.models[i];
-            if (best === null || m[pctKey] > best[pctKey])
-                best = m;
-        }
-        if (!best)
-            return empty;
-        const pct = best[pctKey] || 0;
+        const pct = winKey === "5h" ? p5 : (winKey === "7d" ? p7 : p30);
         const pctText = Math.round(pct) + "%";
+        const winLabel = Limits.WINDOWS[winKey] ? Limits.WINDOWS[winKey].label : "5ч";
         const tone = usage.toneKey(pct);
+        const tipText = "OpenCode " + usage.planLabel + " · "
+            + "5ч: " + Math.round(p5) + "% (" + usage.money(a.spent5) + "/" + usage.money(a.cap5) + ") · "
+            + "7д: " + Math.round(p7) + "% (" + usage.money(a.spent7) + "/" + usage.money(a.cap7) + ") · "
+            + "30д: " + Math.round(p30) + "% (" + usage.money(a.spent30) + "/" + usage.money(a.cap30) + ")";
+
         return {
-            "id": best.id,
-            "name": best.name,
+            "id": "subscription",
+            "name": "OpenCode " + usage.planLabel,
+            "windowKey": winKey,
+            "windowLabel": winLabel,
             "pct": pct,
             "pctText": pctText,
-            "text": "GO " + pctText,
+            "text": (mode === "5h" || mode === "7d" || mode === "30d")
+                ? (winLabel + " " + pctText)
+                : ("GO " + pctText),
+            "tip": tipText,
             "warn": tone !== "ok",
             "tone": tone,
-            "p5": best.pct5,
-            "p7": best.pct7,
-            "p30": best.pct30
+            "p5": p5,
+            "p7": p7,
+            "p30": p30,
+            "spent5": a.spent5, "spent7": a.spent7, "spent30": a.spent30,
+            "cap5": a.cap5, "cap7": a.cap7, "cap30": a.cap30
         };
+    }
+
+    // Лимит окна всей подписки в $ (подписи «из $…»).
+    function planWindowCap(key) {
+        return Limits.planWindowCap(Prefs.goPlan, key);
     }
 
     // Лимит окна в $ (подписи «из $…»).
@@ -433,4 +478,5 @@ Singleton {
     }
 
     function windowLabel(key) { return Limits.WINDOWS[key].label; }
+    function windowTitle(key) { return Limits.WINDOWS[key].title || Limits.WINDOWS[key].label; }
 }

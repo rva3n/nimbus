@@ -65,7 +65,7 @@ Singleton {
     // ── MotionBGs state & filters ──────────────────────────────────────
     property var motionResults: []
     property var _motionBuf: []
-    property string motionCategory: ""        // "" | anime | games | cyberpunk | nature | space | cars | fantasy | minimalism
+    property string motionCategory: ""        // "" | anime | games | cyberpunk | nature | space | car | fantasy | dark
     property string motionQuery: ""
     property int motionPage: 1
     property bool motionHasMore: true
@@ -277,11 +277,20 @@ Singleton {
     function buildMotionUrl() {
         const p = Math.max(1, w.motionPage);
         const q = w.motionQuery.trim();
-        if (q.length > 0)
-            return "https://motionbgs.com/search?q=" + encodeURIComponent(q) + "&page=" + p;
-        if (w.motionCategory.length > 0)
-            return "https://motionbgs.com/tag/" + encodeURIComponent(w.motionCategory) + "/" + p + "/";
-        return p === 1 ? "https://motionbgs.com/" : ("https://motionbgs.com/popular/" + p + "/");
+        if (q.length > 0) {
+            const tagSlug = q.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
+            if (p > 1 && tagSlug.length > 0)
+                return "https://motionbgs.com/tag:" + tagSlug + "/" + p + "/";
+            return "https://motionbgs.com/search?q=" + encodeURIComponent(q);
+        }
+        const cat = w.motionCategory.trim();
+        if (cat.length > 0) {
+            const catSlug = cat === "cars" ? "car" : (cat === "minimalism" ? "dark" : cat);
+            return p === 1
+                ? ("https://motionbgs.com/tag:" + encodeURIComponent(catSlug) + "/")
+                : ("https://motionbgs.com/tag:" + encodeURIComponent(catSlug) + "/" + p + "/");
+        }
+        return p === 1 ? "https://motionbgs.com/" : ("https://motionbgs.com/" + p + "/");
     }
 
     function _fetchMotion() {
@@ -294,17 +303,21 @@ Singleton {
         let fallbackUrl = "";
         if (q.length > 0) {
             const tagSlug = q.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
-            fallbackUrl = tagSlug.length > 0 ? ("https://motionbgs.com/tag/" + tagSlug + "/" + p + "/") : "";
-        } else if (cat.length > 0 && p === 1) {
-            fallbackUrl = "https://motionbgs.com/tag/" + encodeURIComponent(cat) + "/";
+            if (tagSlug.length > 0)
+                fallbackUrl = p === 1
+                    ? ("https://motionbgs.com/tag:" + tagSlug + "/")
+                    : ("https://motionbgs.com/search?q=" + encodeURIComponent(q));
+        } else if (cat.length > 0 && p > 1) {
+            const catSlug = cat === "cars" ? "car" : (cat === "minimalism" ? "dark" : cat);
+            fallbackUrl = "https://motionbgs.com/tag:" + encodeURIComponent(catSlug) + "/";
         } else if (p > 1) {
-            fallbackUrl = "https://motionbgs.com/" + p + "/";
+            fallbackUrl = "https://motionbgs.com/";
         }
         const ua = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0 Safari/537.36";
         motionProc.command = ["sh", "-c",
-            "out=$(curl -fsSL -A " + shq(ua) + " --max-time 25 \"$1\" 2>/dev/null | grep -oE '/media/[0-9]+/[A-Za-z0-9._-]+' | awk '!seen[$0]++' | head -200); " +
+            "out=$(curl -fsSL -A " + shq(ua) + " --max-time 25 \"$1\" 2>/dev/null | grep -oE '/i/c/364x205/media/[0-9]+/[A-Za-z0-9._-]+' | grep -v '\\.webp$' | awk '!seen[$0]++' | head -200); " +
             "if [ -z \"$out\" ] && [ -n \"$2\" ]; then " +
-            "  out=$(curl -fsSL -A " + shq(ua) + " --max-time 25 \"$2\" 2>/dev/null | grep -oE '/media/[0-9]+/[A-Za-z0-9._-]+' | awk '!seen[$0]++' | head -200); " +
+            "  out=$(curl -fsSL -A " + shq(ua) + " --max-time 25 \"$2\" 2>/dev/null | grep -oE '/i/c/364x205/media/[0-9]+/[A-Za-z0-9._-]+' | grep -v '\\.webp$' | awk '!seen[$0]++' | head -200); " +
             "fi; " +
             "printf '%s\\n' \"$out\"",
             "oberon-motion", primaryUrl, fallbackUrl
@@ -352,23 +365,25 @@ Singleton {
 
     function parseMotion(path) {
         const s = path.trim();
-        const m = s.match(/^\/media\/([0-9]+)\/(.+)$/);
+        const m = s.match(/\/media\/([0-9]+)\/([A-Za-z0-9._-]+)$/);
         if (!m) return;
         const id = m[1];
-        let slug = m[2];
+        const file = m[2].replace(/\.webp$/i, "");
+        let slug = file;
         const dot = slug.lastIndexOf(".");
         if (dot > 0) slug = slug.slice(0, dot);
         slug = slug.replace(/\.\d+x\d+$/, "");
         for (const it of w._motionBuf) {
             if (it.id === id) return;
         }
+        const thumbPath = s.indexOf("/i/c/") === 0 ? s.replace(/\.webp$/i, "") : ("/i/c/364x205/media/" + id + "/" + file);
         const videoUrl = "https://motionbgs.com/media/" + id + "/" + slug + ".1920x1080.mp4";
         w._motionBuf.push({
             id: id,
             slug: slug,
             name: slug.replace(/-/g, " "),
             resolution: "LIVE",
-            thumb: "https://motionbgs.com" + s,
+            thumb: "https://motionbgs.com" + thumbPath,
             video: videoUrl,
             path: videoUrl
         });
@@ -469,12 +484,14 @@ Singleton {
         w.currentIsVideo = !!isVideo;
         if (isVideo) {
             Quickshell.execDetached(["sh", "-c",
-                "pkill -x mpvpaper 2>/dev/null; pkill -f oberonwall-daemon 2>/dev/null; sleep 0.2; " +
+                "export PATH=\"$HOME/oberon/build/prefix/bin:$HOME/.local/bin:$PATH\"; " +
+                "pkill -9 -x mpvpaper 2>/dev/null; pkill -9 -x oberonwall-daem 2>/dev/null; sleep 0.2; " +
                 "setsid mpvpaper -f -o 'no-audio loop' '*' " + shq(path) + " >/dev/null 2>&1"]);
         } else {
             Quickshell.execDetached(["sh", "-c",
-                "pkill -x mpvpaper 2>/dev/null; " +
-                "pgrep -f oberonwall-daemon >/dev/null || { setsid \"$HOME/oberon/build/prefix/bin/oberonwall-daemon\" >/dev/null 2>&1 & sleep 0.6; }; " +
+                "export PATH=\"$HOME/oberon/build/prefix/bin:$HOME/.local/bin:$PATH\"; " +
+                "pkill -9 -x mpvpaper 2>/dev/null; " +
+                "pgrep -x oberonwall-daem >/dev/null || { setsid \"$HOME/oberon/build/prefix/bin/oberonwall-daemon\" >/dev/null 2>&1 & sleep 0.6; }; " +
                 "\"$HOME/oberon/build/prefix/bin/oberonwall\" img " + shq(path) + " --transition-type any --transition-duration 1 >/dev/null 2>&1"]);
         }
         runMatugen(path, !!isVideo);
@@ -528,8 +545,9 @@ Singleton {
         const colorsFile = Quickshell.env("HOME") + "/.cache/oberon/colors.json";
         if (isVideo) {
             Quickshell.execDetached(["sh", "-c",
+                "export PATH=\"$HOME/oberon/build/prefix/bin:$HOME/.local/bin:$PATH\"; " +
                 "if ! pgrep -x mpvpaper >/dev/null 2>&1; then " +
-                "  pkill -f oberonwall-daemon 2>/dev/null; sleep 0.2; " +
+                "  pkill -9 -x oberonwall-daem 2>/dev/null; sleep 0.2; " +
                 "  setsid mpvpaper -f -o 'no-audio loop' '*' " + shq(path) + " >/dev/null 2>&1; " +
                 "fi; " +
                 "if [ ! -s " + shq(colorsFile) + " ]; then " +
@@ -538,8 +556,9 @@ Singleton {
                 "fi"]);
         } else {
             Quickshell.execDetached(["sh", "-c",
-                "if ! pgrep -f oberonwall-daemon >/dev/null 2>&1; then " +
-                "  pkill -x mpvpaper 2>/dev/null; " +
+                "export PATH=\"$HOME/oberon/build/prefix/bin:$HOME/.local/bin:$PATH\"; " +
+                "if ! pgrep -x oberonwall-daem >/dev/null 2>&1; then " +
+                "  pkill -9 -x mpvpaper 2>/dev/null; " +
                 "  setsid \"$HOME/oberon/build/prefix/bin/oberonwall-daemon\" >/dev/null 2>&1 & sleep 0.6; " +
                 "  \"$HOME/oberon/build/prefix/bin/oberonwall\" img " + shq(path) + " --transition-type none >/dev/null 2>&1; " +
                 "fi; " +

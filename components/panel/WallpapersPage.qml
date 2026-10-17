@@ -434,9 +434,9 @@ ColumnLayout {
                 { key: "cyberpunk", label: "Киберпанк" },
                 { key: "nature", label: "Природа" },
                 { key: "space", label: "Космос" },
-                { key: "cars", label: "Авто" },
+                { key: "car", label: "Авто" },
                 { key: "fantasy", label: "Фэнтези" },
-                { key: "minimalism", label: "Минимализм" }
+                { key: "dark", label: "Тёмные" }
             ]
             delegate: Ui.Chip {
                 required property var modelData

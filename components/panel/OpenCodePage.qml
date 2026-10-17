@@ -118,7 +118,6 @@ ColumnLayout {
                             role: "labelMedium"
                             color: Theme.fgAccentContainer
                             text: "OpenCode " + GoUsage.planLabel
-                                  + (GoUsage.planLabel === "Go" ? "" : " (×2)")
                         }
                     }
                 }
@@ -159,6 +158,102 @@ ColumnLayout {
                 text: GoUsage.errorText
             }
 
+            // ── Общий расход по подписке OpenCode Go ──────────────────────
+            Card {
+                id: subCard
+
+                visible: GoUsage.ready && !GoUsage.error
+                Layout.fillWidth: true
+
+                readonly property var agg: GoUsage.aggregate
+                readonly property string tone: GoUsage.toneKey(subCard.agg ? subCard.agg.worstPct : 0)
+                readonly property color ink: subCard.tone === "error" ? Theme.error
+                    : subCard.tone === "warn" ? Theme.warning : Theme.primary
+
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    spacing: Theme.dp(6)
+
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: Theme.dp(8)
+
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: 0
+
+                            LText {
+                                Layout.fillWidth: true
+                                role: "titleSmall"
+                                weight: 620
+                                color: Theme.text
+                                elide: Text.ElideRight
+                                text: "Подписка OpenCode " + GoUsage.planLabel
+                            }
+
+                            LText {
+                                Layout.fillWidth: true
+                                role: "labelSmall"
+                                color: Theme.subtextDim
+                                elide: Text.ElideRight
+                                text: "общий расход по всем моделям opencode-go"
+                            }
+                        }
+
+                        LText {
+                            Layout.alignment: Qt.AlignVCenter
+                            role: "titleMedium"
+                            tabular: true
+                            color: subCard.ink
+                            text: Math.round(subCard.agg ? subCard.agg.worstPct : 0) + "%"
+                        }
+                    }
+
+                    UsageRow {
+                        label: GoUsage.windowTitle("5h")
+                        spent: subCard.agg ? subCard.agg.spent5 : 0
+                        cap: subCard.agg ? subCard.agg.cap5 : GoUsage.planWindowCap("5h")
+                        pct: subCard.agg ? subCard.agg.pct5 : 0
+                        Layout.fillWidth: true
+                    }
+                    UsageRow {
+                        label: GoUsage.windowTitle("7d")
+                        spent: subCard.agg ? subCard.agg.spent7 : 0
+                        cap: subCard.agg ? subCard.agg.cap7 : GoUsage.planWindowCap("7d")
+                        pct: subCard.agg ? subCard.agg.pct7 : 0
+                        Layout.fillWidth: true
+                    }
+                    UsageRow {
+                        label: GoUsage.windowTitle("30d")
+                        spent: subCard.agg ? subCard.agg.spent30 : 0
+                        cap: subCard.agg ? subCard.agg.cap30 : GoUsage.planWindowCap("30d")
+                        pct: subCard.agg ? subCard.agg.pct30 : 0
+                        Layout.fillWidth: true
+                    }
+
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: Theme.dp(8)
+
+                        LText {
+                            role: "labelSmall"
+                            color: Theme.subtext
+                            text: "запросов 5ч " + (subCard.agg ? subCard.agg.req5 : 0)
+                                  + " · 7д " + (subCard.agg ? subCard.agg.req7 : 0)
+                                  + " · 30д " + (subCard.agg ? subCard.agg.req30 : 0)
+                        }
+
+                        Item { Layout.fillWidth: true }
+
+                        LText {
+                            role: "labelSmall"
+                            color: Theme.subtextDim
+                            text: "моделей: " + GoUsage.models.length
+                        }
+                    }
+                }
+            }
+
             // пустой месяц: трат нет вовсе
             LText {
                 visible: GoUsage.ready && !GoUsage.error
@@ -167,6 +262,15 @@ ColumnLayout {
                 role: "bodySmall"
                 color: Theme.subtext
                 text: "За 30 дней трат opencode-go не было."
+            }
+
+            // Заголовок разбивки по моделям
+            LText {
+                visible: GoUsage.models.length > 0
+                Layout.fillWidth: true
+                role: "labelMedium"
+                color: Theme.subtext
+                text: "Разбивка по моделям"
             }
 
             // Максимум информации по каждой лимитированной модели, худшие сверху
@@ -343,7 +447,7 @@ ColumnLayout {
 
         LText {
             Layout.alignment: Qt.AlignVCenter
-            Layout.preferredWidth: Theme.dp(26)
+            Layout.minimumWidth: Theme.dp(26)
             role: "labelMedium"
             color: Theme.subtext
             text: ur.label
@@ -611,7 +715,7 @@ ColumnLayout {
                         role: "bodySmall"
                         color: Theme.subtextDim
                         wrapMode: Text.WordWrap
-                        text: "Лимит — месячные $ на каждую модель (не общий счётчик). Окна: 5ч = 20% месяца, неделя = 50%, месяц = 100%. Go Plus — тот же список ×2."
+                        text: "Все платные модели подписки делят единый нормализованный счётчик. Окна: 5ч = 20% месяца, неделя = 50%, месяц = 100%. Go Plus увеличивает квоту до $240/мес."
                     }
                 }
             }
@@ -671,7 +775,7 @@ ColumnLayout {
                         role: "bodySmall"
                         color: Theme.subtextDim
                         wrapMode: Text.WordWrap
-                        text: "«Авто» = худшее окно самой нагруженной модели. С порога «предупреждение» чип желтеет (по нему же — жёлтая/красная шкала в лимитах)."
+                        text: "Отображает общий расход подписки OpenCode Go («Авто» — окно с наибольшим % использования). С порога «предупреждение» чип желтеет (по нему же — жёлтая/красная шкала в лимитах)."
                     }
                 }
             }

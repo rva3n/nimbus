@@ -116,32 +116,6 @@ PanelWindow {
         return out.slice(0, 8);
     }
 
-    function shq(s) { return "'" + String(s).replace(/'/g, "'\\''") + "'"; }
-    // Copy the (short-lived) player art into a stable cache file with extension.
-    property string artSrc: ""
-    property string artFile: ""
-    Process {
-        id: artProc
-        command: ["sh", "-c",
-            "src=" + shq(win.artUrl) + "; " +
-            "case \"$src\" in file://*) p=\"${src#file://}\";; *) p=\"$src\";; esac; " +
-            "if [ -f \"$p\" ]; then t=$(file -b --mime-type \"$p\" 2>/dev/null | sed 's#image/##'); [ \"$t\" = jpeg ] && t=jpg; " +
-            "d=" + shq(Quickshell.cacheDir) + "/art.$t; cp -f \"$p\" \"$d\" && printf %s \"$d\"; fi"]
-        stdout: SplitParser { onRead: line => win.artFile = line.trim() }
-    }
-    Timer {
-        interval: 1500; running: true; repeat: true
-        onTriggered: if (win.artUrl !== win.artSrc) { win.artSrc = win.artUrl; artProc.running = false; artProc.running = true; }
-    }
-    readonly property string artUrl: {
-        const p = win.player;
-        if (!p) return "";
-        let u = p.trackArtUrl || "";
-        if ((u === "" || u === undefined) && p.metadata) u = p.metadata["mpris:artUrl"] || "";
-        if (u && u.indexOf("://") === -1) u = "file://" + u;
-        return u;
-    }
-
     // ── Тултип чипов островка (ui/Tooltip) ─────────────────────────────
     // Живёт прямо в окне: окно прозрачное ниже капсулы, тултип рисуем в
     // свободной зоне; input ограничен маской капсулы — тултип не ловит клики.

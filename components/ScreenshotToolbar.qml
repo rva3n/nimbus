@@ -15,6 +15,8 @@ import "../ui"
 PanelWindow {
     id: toolbar
 
+    signal closed()
+
     property bool shown: false
 
     property real reveal: toolbar.shown ? 1 : 0

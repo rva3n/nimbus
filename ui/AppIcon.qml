@@ -1,6 +1,6 @@
 import QtQuick
-import QtQuick.Shapes
 import Quickshell
+import Quickshell.Widgets
 import "../core"
 
 // Иконка приложения: резолвится системной темой иконок (см. прагму
@@ -8,7 +8,7 @@ import "../core"
 //   AppIcon { source: path; size: Theme.dp(24) }
 // radius > 0 — обрезка по кругу (radius = size/2).
 Item {
-    id: root
+    id: icon
 
     property string source: ""
     property real size: Theme.dp(24) // отображаемая сторона, px
@@ -17,41 +17,28 @@ Item {
     // Голые имена (например, хинты уведомлений) резолвим системной темой
     // иконок; пути и URL проходят как есть.
     readonly property string _resolved: {
-        if (root.source === "")
+        if (icon.source === "")
             return "";
 
-        if (root.source.indexOf("/") !== -1 || root.source.indexOf(":") !== -1)
-            return root.source;
+        if (icon.source.indexOf("/") !== -1 || icon.source.indexOf(":") !== -1)
+            return icon.source;
 
-        return Quickshell.iconPath(root.source, true) || "";
+        return Quickshell.iconPath(icon.source, true) || "";
     }
 
     implicitWidth: size
     implicitHeight: size
 
-    // Обрезка по кругу через Shape с clip
-    Shape {
+    // Обрезка по кругу через ClippingRectangle
+    ClippingRectangle {
         anchors.fill: parent
-        visible: root.radius > 0
-        clip: true
-        preferredRendererType: Shape.CurveRenderer
-
-        ShapePath {
-            fillColor: "transparent"
-            strokeWidth: 0
-            PathAngleArc {
-                centerX: root.width / 2
-                centerY: root.height / 2
-                radiusX: root.radius
-                radiusY: root.radius
-                startAngle: 0
-                sweepAngle: 360
-            }
-        }
+        visible: icon.radius > 0
+        color: "transparent"
+        radius: icon.radius
 
         Image {
             anchors.fill: parent
-            source: root._resolved
+            source: icon._resolved
             sourceSize.width: Math.max(8, Math.round(width * 2))
             sourceSize.height: Math.max(8, Math.round(height * 2))
             fillMode: Image.PreserveAspectFit
@@ -62,11 +49,11 @@ Item {
     // Без обрезки
     Image {
         anchors.fill: parent
-        source: root._resolved
+        source: icon._resolved
         sourceSize.width: Math.max(8, Math.round(width * 2))
         sourceSize.height: Math.max(8, Math.round(height * 2))
         fillMode: Image.PreserveAspectFit
         smooth: true
-        visible: root.radius <= 0
+        visible: icon.radius <= 0
     }
 }

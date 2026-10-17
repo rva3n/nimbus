@@ -27,10 +27,10 @@ Item {
                   : mode === "osd" ? Theme.dp(34)
                   : Theme.dp(28)
 
-    // ── порядок чипов: islandOrder (id: kb/weather/ws/clock/tray) ─────────
+    // ── порядок чипов: islandOrder (id: kb/weather/ws/clock/go/tray) ──────
     // ВАЖНО: JsonAdapter отдаёт QVariantList, а не JS-Array — Array.isArray
     // для него false, поэтому копируем по length и фильтруем по типу.
-    readonly property var defaultOrder: ["kb", "weather", "ws", "clock", "tray"]
+    readonly property var defaultOrder: ["kb", "weather", "ws", "clock", "go", "tray"]
     readonly property var orderRaw: holder.orderProp
     readonly property var order: {
         const allowed = holder.defaultOrder;
@@ -242,6 +242,76 @@ Item {
         }
     }
 
+    Component { id: goChip
+        Item {
+            id: goOuter
+            visible: Prefs.islandGo
+            implicitWidth: goRow.implicitWidth + Theme.dp(18)
+            implicitHeight: Theme.dp(24)
+            scale: goArea.pressed ? 0.96 : 1
+
+            readonly property var chipInfo: GoUsage.chipOut(Prefs.goChipMode)
+            readonly property bool warn: Boolean(goOuter.chipInfo && goOuter.chipInfo.warn)
+            readonly property bool isErr: Boolean(goOuter.chipInfo && goOuter.chipInfo.tone === "error")
+
+            Behavior on scale {
+                NumberAnimation {
+                    duration: Theme.durFastEffects
+                    easing.type: Easing.Bezier
+                    easing.bezierCurve: Theme.curveFastSpatial
+                }
+            }
+
+            property real grow: goArea.containsMouse ? Theme.dp(4) : 0
+            Behavior on grow {
+                NumberAnimation {
+                    duration: Theme.durFastEffects
+                    easing.type: Easing.Bezier
+                    easing.bezierCurve: Theme.curveFastSpatial
+                }
+            }
+
+            Rectangle {
+                x: -goOuter.grow / 2
+                y: -goOuter.grow / 2
+                width: parent.width + goOuter.grow
+                height: parent.height + goOuter.grow
+                radius: Theme.radiusPill
+                color: Theme.bgTile
+                StateLayer {
+                    id: goArea
+                    radius: parent.radius
+                    onEntered: holder.tip(goArea, goOuter.chipInfo && goOuter.chipInfo.name !== ""
+                        ? ("OpenCode: " + goOuter.chipInfo.name + " (" + goOuter.chipInfo.pctText + ")")
+                        : "OpenCode — клик, чтобы открыть лимиты")
+                    onExited: holder.untip(goArea)
+                    onClicked: if (holder.shell) holder.shell.setTab("opencode")
+                }
+            }
+
+            Row {
+                id: goRow
+                anchors.centerIn: parent
+                spacing: Theme.dp(4)
+
+                Icon {
+                    anchors.verticalCenter: parent.verticalCenter
+                    name: "bolt"
+                    size: Theme.dp(14)
+                    color: goOuter.isErr ? Theme.error : (goOuter.warn ? Theme.warning : Theme.primary)
+                }
+
+                LText {
+                    anchors.verticalCenter: parent.verticalCenter
+                    role: "labelLarge"
+                    tabular: true
+                    color: goOuter.isErr ? Theme.error : (goOuter.warn ? Theme.warning : Theme.text)
+                    text: goOuter.chipInfo ? goOuter.chipInfo.text : "GO"
+                }
+            }
+        }
+    }
+
     Component { id: trayChip
         // Системный трей — правый край idle-ряда (как чип). Ширину берём с
         // содержимого: на пустом трее она 0 и капсула не занимает места.
@@ -275,12 +345,14 @@ Item {
                        : chipLoader.modelData === "weather" ? Prefs.islandWeather
                        : chipLoader.modelData === "ws" ? Prefs.islandWorkspaces
                        : chipLoader.modelData === "clock" ? Prefs.islandClock
+                       : chipLoader.modelData === "go" ? Prefs.islandGo
                        : Prefs.islandTray
                 // id Component'ов не свойства — ссылаемся напрямую по id
                 sourceComponent: chipLoader.modelData === "kb" ? kbChip
                                : chipLoader.modelData === "weather" ? weatherChip
                                : chipLoader.modelData === "ws" ? wsChip
                                : chipLoader.modelData === "clock" ? clockChip
+                               : chipLoader.modelData === "go" ? goChip
                                : trayChip
             }
         }

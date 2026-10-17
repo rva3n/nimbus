@@ -66,6 +66,12 @@ Item {
             if (btn.variant === "outlined")
                 return btn.checked ? Theme.inverseSurface : "transparent";
 
+            if (btn.variant === "elevated")
+                return btn.checked ? Theme.secondaryContainer : Theme.bgTile;
+
+            if (btn.variant === "text")
+                return btn.checked ? Theme.secondaryContainer : "transparent";
+
         }
         switch (btn.variant) {
         case "filled":
@@ -97,6 +103,12 @@ Item {
 
             if (btn.variant === "outlined")
                 return btn.checked ? Theme.fgInverseSurface : Theme.subtext;
+
+            if (btn.variant === "elevated")
+                return btn.checked ? Theme.fgSecondaryContainer : Theme.primary;
+
+            if (btn.variant === "text")
+                return btn.checked ? Theme.fgSecondaryContainer : Theme.primary;
 
         }
         switch (btn.variant) {

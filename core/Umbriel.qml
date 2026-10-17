@@ -16,6 +16,39 @@ Singleton {
     // Берём из события `workspaces`: оно приходит на любое переключение, в том
     // числе на пустой воркспейс, где `windows` может опоздать/не измениться.
     property var activeWorkspaces: ({})
+    property string layoutMode: "dwindle"
+    readonly property string layoutLabel: root.layoutMode === "scrolling" ? "Scrolling"
+        : (root.layoutMode === "master" ? "Master" : "Dwindle")
+
+    FileView {
+        id: appearanceFile
+        path: Quickshell.env("HOME") + "/.config/umbriel/src/appearance.toml"
+        watchChanges: true
+        onFileChanged: reload()
+        onLoadedChanged: {
+            if (!appearanceFile.loaded)
+                return;
+            const m = appearanceFile.text().match(/^\s*mode\s*=\s*"(scrolling|dwindle|master)"/m);
+            if (m)
+                root.layoutMode = m[1];
+        }
+    }
+
+    function refreshLayout() {
+        appearanceFile.reload();
+    }
+
+    function cycleLayout() {
+        const order = ["scrolling", "dwindle", "master"];
+        const idx = order.indexOf(root.layoutMode);
+        const next = order[(idx + 1) % order.length];
+        root.layoutMode = next;
+        Quickshell.execDetached([
+            "python3",
+            Quickshell.env("HOME") + "/oberon/scripts/umbriel-settings.py",
+            "set", "src/appearance.toml", "layout", "mode", "\"" + next + "\""
+        ]);
+    }
 
     readonly property string activeOutput: {
         const list = Array.isArray(root.outputData) ? root.outputData : [];
@@ -35,31 +68,6 @@ Singleton {
         if (s.indexOf("Russian") === 0)
             return "RU";
         return s.length >= 2 ? s.slice(0, 2).toUpperCase() : s.toUpperCase();
-    }
-
-    function _layout(line) {
-        try {
-            const m = JSON.parse(line);
-            if (m.event === "keyboard_layout" && m.data && m.data.names) {
-                const i = m.data.current_index || 0;
-                root.keyboardLayout = root.shortLayout(m.data.names[i] || "");
-            }
-        } catch (e) {}
-    }
-
-    Process {
-        id: layoutProc
-        running: true
-        command: ["umbriel", "subscribe", "keyboard_layout"]
-        onExited: layoutRetry.restart()
-        stdout: SplitParser {
-            onRead: line => root._layout(line)
-        }
-    }
-    Timer {
-        id: layoutRetry
-        interval: 1500
-        onTriggered: layoutProc.running = true
     }
 
     function workspacesFor(output) {
@@ -118,73 +126,46 @@ Singleton {
         root.activeWindow = act;
     }
 
-    function _workspaces(line) {
+    function _handleEvent(line) {
         try {
-            const m = JSON.parse(line);
-            if (m.event === "workspaces" && m.data) {
-                root.workspaces = m.data;
+            const msg = JSON.parse(line);
+            if (!msg || typeof msg !== "object")
+                return;
+            if (msg.event === "keyboard_layout" && msg.data && msg.data.names) {
+                const i = msg.data.current_index || 0;
+                root.keyboardLayout = root.shortLayout(msg.data.names[i] || "");
+            } else if (msg.event === "workspaces" && Array.isArray(msg.data)) {
+                root.workspaces = msg.data;
                 const act = {};
-                for (let i = 0; i < m.data.length; i++) {
-                    const ws = m.data[i];
-                    if (ws && ws.active === true && ws.output) act[ws.output] = ws.id;
+                for (let i = 0; i < msg.data.length; i++) {
+                    const ws = msg.data[i];
+                    if (ws && ws.active === true && ws.output)
+                        act[ws.output] = ws.id;
                 }
                 root.activeWorkspaces = act;
-                // `windows` мог не прийти (пустой воркспейс) — пересчитываем сами
                 root.refreshActiveWindow();
-            }
-        } catch (e) {}
-    }
-    function _windows(line) {
-        try {
-            const m = JSON.parse(line);
-            if (m.event === "windows" && m.data) {
-                root.windows = m.data;
+            } else if (msg.event === "windows" && Array.isArray(msg.data)) {
+                root.windows = msg.data;
                 root.refreshActiveWindow();
+            } else if (msg.event === "outputs" && Array.isArray(msg.data)) {
+                root.outputData = msg.data;
             }
-        } catch (e) {}
-    }
-    function _outputs(line) {
-        try {
-            const m = JSON.parse(line);
-            if (m.event === "outputs" && Array.isArray(m.data))
-                root.outputData = m.data;
         } catch (e) {}
     }
 
     Process {
-        id: wsProc
+        id: subProc
         running: true
-        command: ["umbriel", "subscribe", "workspaces"]
-        onExited: wsRetry.restart()
-        stdout: SplitParser { onRead: line => root._workspaces(line) }
+        command: ["umbriel", "subscribe", "keyboard_layout,workspaces,windows,outputs"]
+        onExited: subRetry.restart()
+        stdout: SplitParser {
+            onRead: line => root._handleEvent(line)
+        }
     }
+
     Timer {
-        id: wsRetry
+        id: subRetry
         interval: 1500
-        onTriggered: wsProc.running = true
-    }
-    Process {
-        id: winProc
-        running: true
-        command: ["umbriel", "subscribe", "windows"]
-        onExited: winRetry.restart()
-        stdout: SplitParser { onRead: line => root._windows(line) }
-    }
-    Timer {
-        id: winRetry
-        interval: 1500
-        onTriggered: winProc.running = true
-    }
-    Process {
-        id: outputProc
-        running: true
-        command: ["umbriel", "subscribe", "outputs"]
-        onExited: outputRetry.restart()
-        stdout: SplitParser { onRead: line => root._outputs(line) }
-    }
-    Timer {
-        id: outputRetry
-        interval: 1500
-        onTriggered: outputProc.running = true
+        onTriggered: subProc.running = true
     }
 }

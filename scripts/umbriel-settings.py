@@ -360,9 +360,13 @@ def cmd_read():
         if "vrr" in cfg:
             result["output.%s.vrr" % name] = str(cfg["vrr"])
         elif "adaptive" in info:
-            result["output.%s.vrr" % name] = (
-                "off" if info["adaptive"].lower().startswith("disabled") else "on"
-            )
+            adv = info["adaptive"].lower()
+            if adv.startswith("disabled") or adv == "off":
+                result["output.%s.vrr" % name] = "disabled"
+            elif "fullscreen" in adv:
+                result["output.%s.vrr" % name] = "fullscreen"
+            else:
+                result["output.%s.vrr" % name] = "always"
 
         if "transform" in cfg:
             result["output.%s.transform" % name] = str(cfg["transform"])

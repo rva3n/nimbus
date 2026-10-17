@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
+import Quickshell.Widgets
 import "../core"
 
 // M3-строка списка на собственном контейнере (порт lucidui/ListItem.qml).
@@ -74,6 +75,7 @@ Item {
         id: box
 
         anchors.fill: parent
+        clip: true
         color: li.selected ? Theme.secondaryContainer : li.containerColor
         topLeftRadius: li._first ? li.outerRadius : li.innerRadius
         topRightRadius: li._first ? li.outerRadius : li.innerRadius
@@ -89,18 +91,28 @@ Item {
 
         }
 
-    }
+        ClippingRectangle {
+            anchors.fill: parent
+            color: "transparent"
+            topLeftRadius: box.topLeftRadius
+            topRightRadius: box.topRightRadius
+            bottomLeftRadius: box.bottomLeftRadius
+            bottomRightRadius: box.bottomRightRadius
 
-    StateLayer {
-        id: stateLayer
+            StateLayer {
+                id: stateLayer
 
-        visible: li.clickable
-        enabled: li.clickable && !li.disabled
-        radius: li.innerRadius
-        tint: li.stateTint
-        hoverOpacity: li.stateHoverOpacity
-        pressOpacity: li.statePressOpacity
-        onClicked: li.clicked()
+                visible: li.clickable
+                enabled: li.clickable && !li.disabled
+                disabled: !li.clickable || li.disabled
+                radius: li.innerRadius
+                tint: li.stateTint
+                hoverOpacity: li.stateHoverOpacity
+                pressOpacity: li.statePressOpacity
+                onClicked: li.clicked()
+            }
+        }
+
     }
 
     Item {

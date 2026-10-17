@@ -150,15 +150,15 @@ Item {
         Icon {
             anchors.centerIn: parent
             name: sl.icon
-            size: Theme.dp(18)
+            size: sl.iconSize
             fill: sl.hot ? 1 : 0
             color: sl.hot ? Theme.fgPrimary : Theme.text
         }
 
         MouseArea {
             anchors.fill: parent
-            enabled: !sl._off
-            cursorShape: Qt.PointingHandCursor
+            enabled: !sl._off && sl.iconClickable
+            cursorShape: sl.iconClickable ? Qt.PointingHandCursor : Qt.ArrowCursor
             onClicked: sl.iconClicked()
         }
 
@@ -240,7 +240,7 @@ Item {
             height: Theme.dp(4)
             radius: Theme.dp(2)
             color: sl.activeColor
-            visible: parent.width > 14
+            visible: parent.width > Theme.dp(14)
         }
 
     }
@@ -365,17 +365,6 @@ Item {
         }
         // onWheel removed: mouse wheel scrolling on sliders is annoying and
         // interferes with usage. Slider still works with click/drag.
-    }
-
-    // клик по глифу поверх трека (если бейджа нет, но iconClickable включён)
-    MouseArea {
-        visible: sl.iconClickable && !sl.hasBadge
-        x: sl.contentX - Theme.dp(8)
-        y: 0
-        width: Theme.dp(24) + Theme.dp(16)
-        height: sl.height
-        cursorShape: Qt.PointingHandCursor
-        onClicked: sl.iconClicked()
     }
 
 }

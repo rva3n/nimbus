@@ -1,4 +1,5 @@
 import QtQuick
+import Quickshell.Widgets
 import "../core"
 
 // m3 expressive connected button group (порт lucidui/ButtonGroup.qml). Участники
@@ -64,7 +65,7 @@ Item {
                 readonly property bool on: grp.current === seg.modelData.key
                 readonly property bool first: seg.index === 0
                 readonly property bool last: seg.index === rep.count - 1
-                readonly property real natural: lbl.implicitWidth + (seg.modelData.icon ? Theme.dp(26) : 0) + (grp.showCheck && seg.on ? Theme.dp(22) : 0) + Theme.dp(32)
+                readonly property real natural: lbl.implicitWidth + ((seg.modelData.icon || (grp.showCheck && seg.on)) ? Theme.dp(26) : 0) + Theme.dp(32)
                 readonly property real outer: Theme.pill(grp.h)
                 readonly property real press: area.pressed ? grp.inner * 0.6 : 0
 
@@ -75,6 +76,7 @@ Item {
                     id: box
 
                     anchors.fill: parent
+                    clip: true
                     color: seg.on ? Theme.primary : Theme.surfaceHi
                     topLeftRadius: seg.on || seg.first ? seg.outer - seg.press : grp.inner
                     bottomLeftRadius: seg.on || seg.first ? seg.outer - seg.press : grp.inner
@@ -124,14 +126,23 @@ Item {
 
                     }
 
-                }
+                    ClippingRectangle {
+                        anchors.fill: parent
+                        color: "transparent"
+                        topLeftRadius: box.topLeftRadius
+                        bottomLeftRadius: box.bottomLeftRadius
+                        topRightRadius: box.topRightRadius
+                        bottomRightRadius: box.bottomRightRadius
 
-                StateLayer {
-                    id: area
+                        StateLayer {
+                            id: area
 
-                    radius: Math.min(box.topLeftRadius, box.topRightRadius)
-                    tint: seg.on ? Theme.fgPrimary : Theme.text
-                    onClicked: grp.picked(seg.modelData.key)
+                            radius: Math.min(box.topLeftRadius, box.topRightRadius)
+                            tint: seg.on ? Theme.fgPrimary : Theme.text
+                            onClicked: grp.picked(seg.modelData.key)
+                        }
+                    }
+
                 }
 
                 Row {

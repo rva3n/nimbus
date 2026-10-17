@@ -34,8 +34,20 @@ RowLayout {
     Layout.fillWidth: true
     spacing: Theme.dp(16)
 
-    // при каждом открытии страницы — первый раздел и свежие настройки Umbriel
-    onVisibleChanged: if (visible) { page.section = 0; page.reloadUmb() }
+    // при каждом открытии страницы — выбранный раздел (или 0) и свежие настройки Umbriel
+    onVisibleChanged: if (visible) {
+        page.section = (page.win && page.win.shell && page.win.shell.settingsSection !== undefined)
+            ? page.win.shell.settingsSection : 0;
+        page.reloadUmb();
+    }
+
+    Connections {
+        target: page.win ? page.win.shell : null
+        function onSettingsSectionChanged() {
+            if (page.visible && page.win && page.win.shell)
+                page.section = page.win.shell.settingsSection;
+        }
+    }
 
     // смена раздела — подтягиваем актуальные значения из конфигов Umbriel
     onSectionChanged: page.reloadUmb()
@@ -70,7 +82,11 @@ RowLayout {
     // значение из прочитанных настроек Umbriel или запасное
     function umbVal(key, fallback) {
         const v = page.umb[key];
-        return v === undefined ? fallback : v;
+        if (v === undefined)
+            return fallback;
+        if (v === "off" && (key.indexOf("effects.") === 0 || key.endsWith(".screen_effect")))
+            return "";
+        return v;
     }
 
     // записать значение в конфиг Umbriel (file, section, key, tomlValue) и обновить
@@ -132,16 +148,17 @@ RowLayout {
     }
 
     // ── порядок чипов островка (islandOrder) ─────────────────────────
-    // Список id согласован с IdlePill/Island: kb/weather/ws/clock/tray.
+    // Список id согласован с IdlePill/Island: kb/weather/ws/clock/go/tray.
     readonly property var chipTitles: ({
         "kb": "Раскладка",
         "weather": "Погода",
         "ws": "Рабочие пространства",
         "clock": "Часы",
+        "go": "OpenCode",
         "tray": "Трей"
     })
     readonly property var chipOrder: {
-        const allowed = ["kb", "weather", "ws", "clock", "tray"];
+        const allowed = ["kb", "weather", "ws", "clock", "go", "tray"];
         const raw = Prefs.islandOrder;
         const out = [];
         if (raw && typeof raw.length === "number") {
@@ -519,6 +536,12 @@ RowLayout {
             onClicked: { if (page.win && page.win.shell) page.win.shell.setPage("games") }
         }
         NavItem {
+            icon: "bolt"
+            label: "OpenCode"
+            selected: false
+            onClicked: { if (page.win && page.win.shell) page.win.shell.setPage("opencode") }
+        }
+        NavItem {
             icon: "update"
             label: "Обновления"
             selected: false
@@ -639,6 +662,42 @@ RowLayout {
                     LText {
                         Layout.fillWidth: true
                         text: "Проигрывает alert.oga — тот же звук, что при уведомлении."
+                        role: "bodySmall"
+                        color: Theme.subtextDim
+                        wrapMode: Text.WordWrap
+                    }
+                }
+            }
+
+            Card { // виджеты рабочего стола
+                Layout.fillWidth: true
+                title: "Рабочий стол"
+
+                ToggleRow {
+                    label: "Виджеты на рабочем столе"
+                    sub: "Часы, погода, система, медиаплеер и визуализатор поверх обоев."
+                    checked: Prefs.widgetsEnabled
+                    onToggled: (v) => Prefs.set("widgetsEnabled", v)
+                }
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    Layout.topMargin: Theme.dp(6)
+                    spacing: Theme.dp(12)
+
+                    Button {
+                        text: "Настроить расположение виджетов"
+                        icon: "widgets"
+                        variant: "tonal"
+                        onClicked: {
+                            if (page.win && page.win.shell)
+                                page.win.shell.toggleWidgetsEditing();
+                        }
+                    }
+
+                    LText {
+                        Layout.fillWidth: true
+                        text: "Перетаскивайте карточки мышью; правый клик завершает режим редактирования."
                         role: "bodySmall"
                         color: Theme.subtextDim
                         wrapMode: Text.WordWrap
@@ -778,6 +837,12 @@ RowLayout {
                     checked: Prefs.islandGo
                     onToggled: (v) => Prefs.set("islandGo", v)
                 }
+                ToggleRow {
+                    label: "Островок на всех мониторах"
+                    sub: "Показывать капсулу и всплывающие тосты на всех подключённых экранах"
+                    checked: Prefs.islandAllScreens
+                    onToggled: (v) => Prefs.set("islandAllScreens", v)
+                }
             }
 
 
@@ -839,6 +904,7 @@ RowLayout {
                                     : modelData === "weather" ? "public"
                                     : modelData === "ws" ? "workspaces"
                                     : modelData === "clock" ? "schedule"
+                                    : modelData === "go" ? "bolt"
                                     : "toolbar"
                                 size: Theme.dp(17)
                                 color: Theme.subtext
@@ -1471,29 +1537,29 @@ RowLayout {
                 }
                 ChoiceRow {
                     label: "Граница"
-                    values: ["", "off", "pulse", "audio"]
-                    labels: ["Выключено", "Выключено", "Pulse", "Audio"]
+                    values: ["", "pulse", "audio"]
+                    labels: ["Выключено", "Pulse", "Audio"]
                     value: page.umbVal("effects.border", "")
                     onCommitted: (v) => page.setUmb("src/appearance.toml", "effects", "border", "\"" + v + "\"")
                 }
                 ChoiceRow {
                     label: "Окно"
-                    values: ["", "off", "scanlines"]
-                    labels: ["Выключено", "Выключено", "Сканлайны"]
+                    values: ["", "scanlines"]
+                    labels: ["Выключено", "Сканлайны"]
                     value: page.umbVal("effects.window", "")
                     onCommitted: (v) => page.setUmb("src/appearance.toml", "effects", "window", "\"" + v + "\"")
                 }
                 ChoiceRow {
                     label: "Экран"
-                    values: ["", "off", "vignette"]
-                    labels: ["Выключено", "Выключено", "Виньетка"]
+                    values: ["", "vignette"]
+                    labels: ["Выключено", "Виньетка"]
                     value: page.umbVal("effects.screen", "")
                     onCommitted: (v) => page.setUmb("src/appearance.toml", "effects", "screen", "\"" + v + "\"")
                 }
                 ChoiceRow {
                     label: "Курсор"
-                    values: ["", "off", "glow", "trail", "trail-path"]
-                    labels: ["Выключено", "Выключено", "Свечение", "Шлейф", "Шлейф-путь"]
+                    values: ["", "glow", "trail", "trail-path"]
+                    labels: ["Выключено", "Свечение", "Шлейф", "Шлейф-путь"]
                     value: page.umbVal("effects.cursor", "")
                     onCommitted: (v) => page.setUmb("src/appearance.toml", "effects", "cursor", "\"" + v + "\"")
                 }
@@ -1964,8 +2030,8 @@ RowLayout {
                 }
                 ChoiceRow {
                     label: "Экранный эффект"
-                    values: ["", "off", "vignette"]
-                    labels: ["Выключено", "Выключено", "Виньетка"]
+                    values: ["", "vignette"]
+                    labels: ["Выключено", "Виньетка"]
                     value: page.umbVal("output." + page.outputName + ".screen_effect", "")
                     onCommitted: (v) => {
                         if (page.outputName === "") return;

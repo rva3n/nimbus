@@ -24,7 +24,7 @@ Shape {
         strokeWidth: 0
 
         PathSvg {
-            path: ms.to !== "" && ms.morph > 0 ? Shapes.svg(Shapes.mix(Shapes.radii(ms.shape), Shapes.radii(ms.to), ms.morph), ms.width, ms.spin * Math.PI / 180) : Shapes.path(ms.shape, ms.width, ms.spin * Math.PI / 180)
+            path: ms.to !== "" && ms.morph > 0 ? Shapes.svg(Shapes.mix(Shapes.radii(ms.shape), Shapes.radii(ms.to), ms.morph), Math.min(ms.width, ms.height), ms.spin * Math.PI / 180) : Shapes.path(ms.shape, Math.min(ms.width, ms.height), ms.spin * Math.PI / 180)
         }
 
     }

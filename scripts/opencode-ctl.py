@@ -151,21 +151,6 @@ def parse_model_ref(ref):
     return provider, model, variant
 
 
-def frontmatter_set_model(text, ref):
-    """Заменить строку `model:` в YAML-frontmatter. Возвращает (текст, ok)."""
-    m = re.match(r"^---\s*\n(.*?)\n(---)(\s*\n)?", text, re.S)
-    if not m:
-        return None, False
-    block, closing = m.group(1), m.group(2)
-    if re.search(r"^model:\s", block, re.M):
-        new_block = re.sub(r"^model:\s*\S+.*$", f"model: {ref}", block,
-                           count=1, flags=re.M)
-    else:
-        new_block = block + f"\nmodel: {ref}\n"
-    return text[:m.start()] + "---\n" + new_block + "\n" + closing + \
-        (m.group(3) or "\n")[0] + text[m.end():], True
-
-
 def frontmatter_get_model(path):
     try:
         with open(path, encoding="utf-8") as f:
@@ -277,20 +262,6 @@ def cmd_usage(_args):
 
 
 # ── main-model ─────────────────────────────────────────────────────────────
-
-def default_model_from_server():
-    """Серверный дефолт (GET /api/model/default) → "provider/id"."""
-    resp = oc_api("GET /api/model/default")
-    if not resp:
-        return None
-    data = resp.get("data", resp)
-    loc = (resp.get("location") or {}).get("directory") if isinstance(resp, dict) else None
-    mid = data.get("modelID") or data.get("id")
-    prov = data.get("providerID")
-    if mid and prov:
-        return f"{prov}/{mid}"
-    return None
-
 
 def config_set_model(ref_or_none):
     """Правка «model» в opencode.json (+бэкап). None — удалить ключ."""

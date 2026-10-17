@@ -20,9 +20,8 @@ Rectangle {
     readonly property bool numeric: badge.count >= 0
     readonly property color _bg: badge.toneColor.a > 0 ? badge.toneColor : (badge.tone === "error" ? Theme.errorContainer : (badge.tone === "neutral" ? Theme.bgTrack : Theme.accent))
     readonly property color _fg: badge.fg.a > 0 ? badge.fg : (badge.tone === "error" ? Theme.fgErrorContainer : (badge.tone === "neutral" ? Theme.subtext : Theme.fgOnFill))
-    // метрики цифр из Theme (замеры при 100px) — приводим к размеру счётчика
+    // метрики цифр из Theme — приводим коррекцию центра к размеру счётчика
     readonly property real _numSize: Theme.fs(10.5)
-    readonly property real _k: badge._numSize / 100
 
     implicitWidth: badge.dot ? Theme.dp(6) : (badge.numeric ? Math.max(Theme.dp(16), num.implicitWidth + Theme.dp(8)) : label.implicitWidth + Theme.dp(8) * 2)
     implicitHeight: badge.dot ? Theme.dp(6) : (badge.numeric ? Theme.dp(16) : Theme.dp(20))
@@ -33,9 +32,9 @@ Rectangle {
         id: num
 
         visible: badge.numeric
-        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.centerIn: parent
         // вертикально — по центру чернил цифры, а не строчного бокса
-        y: (badge.height - Theme._digitInk.tightBoundingRect.height * badge._k) / 2 - Theme._digitInk.tightBoundingRect.y * badge._k - Theme._digitBox.ascent * badge._k
+        anchors.verticalCenterOffset: Theme.digitCenterOffset * badge._numSize
         role: "labelSmall"
         weight: 650
         size: badge._numSize

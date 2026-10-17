@@ -77,7 +77,7 @@ Item {
         }
         month.year = y;
         month.monthIndex = m;
-        slideIn.from = dir * 42;
+        slideIn.from = dir * Theme.dp(42);
         slideIn.restart();
     }
 
@@ -86,7 +86,7 @@ Item {
         const dir = (n.getFullYear() * 12 + n.getMonth()) >= (month.year * 12 + month.monthIndex) ? 1 : -1;
         month.year = n.getFullYear();
         month.monthIndex = n.getMonth();
-        slideIn.from = dir * 42;
+        slideIn.from = dir * Theme.dp(42);
         slideIn.restart();
     }
 
@@ -203,7 +203,7 @@ Item {
             x: month.slideX
             width: parent.width
             height: parent.height
-            opacity: 1 - Math.abs(month.slideX) / 60
+            opacity: 1 - Math.abs(month.slideX) / Theme.dp(60)
 
             Row {
                 id: weekRow

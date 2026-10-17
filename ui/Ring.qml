@@ -25,20 +25,21 @@ Item {
         onPaint: {
             const ctx = getContext("2d");
             ctx.clearRect(0, 0, width, height);
-            const c = width / 2;
+            const cx = width / 2;
+            const cy = height / 2;
             const r = Math.max(1, Math.min(width, height) / 2 - ring.thickness / 2);
             ctx.lineWidth = ring.thickness;
             ctx.lineCap = "round";
 
             ctx.beginPath();
-            ctx.arc(c, c, r, 0, Math.PI * 2);
+            ctx.arc(cx, cy, r, 0, Math.PI * 2);
             ctx.strokeStyle = ring.trackColor;
             ctx.stroke();
 
             const v = Math.max(0, Math.min(1, ring.value));
             if (v > 0.002) {
                 ctx.beginPath();
-                ctx.arc(c, c, r, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * v);
+                ctx.arc(cx, cy, r, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * v);
                 ctx.strokeStyle = ring.color;
                 ctx.stroke();
             }
@@ -78,22 +79,19 @@ Item {
         visible: ring.icon === "" && ring.label !== ""
         spacing: 0
 
-        Text {
+        LText {
             anchors.horizontalCenter: parent.horizontalCenter
             text: ring.label
+            role: "titleLarge"
             color: Theme.text
-            font.family: Theme.textFont
-            font.pixelSize: Theme.typeSize("titleLarge")
-            font.weight: Theme.typeWeight("titleLarge")
         }
 
-        Text {
+        LText {
             anchors.horizontalCenter: parent.horizontalCenter
             visible: ring.caption !== ""
             text: ring.caption
+            role: "labelSmall"
             color: Theme.subtext
-            font.family: Theme.textFont
-            font.pixelSize: Theme.typeSize("labelSmall")
         }
     }
 }

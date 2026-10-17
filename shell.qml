@@ -14,6 +14,8 @@ ShellRoot {
 
     property string view: "idle"   // idle | panel | launcher | taskman | tray
     property string panelPage: ""
+    property int settingsSection: 0
+    property bool widgetsEditing: false
     property string launcherTab: "apps"    // apps | clipboard | emoji | packages (вкладки лончера)
     property int taskmanTab: 0             // вкладка диспетчера (0/1/2)
     property bool locked: false
@@ -118,7 +120,7 @@ ShellRoot {
     // Виджеты на рабочем столе (Bottom-слой, под окнами) — Prefs.widgetsEnabled.
     Variants {
         model: Quickshell.screens
-        delegate: WidgetLayer { modelData: modelData }
+        delegate: WidgetLayer { modelData: modelData; shell: root }
     }
 
     Lockscreen {
@@ -186,8 +188,30 @@ ShellRoot {
     function togglePanel()    { if (root.view === "panel") { root.view = "idle"; root.panelPage = ""; } else { root.openPanel(); } }
     function toggleLauncher() { if (root.view === "launcher") { root.view = "idle"; } else { root.openLauncher(root.launcherTab); } }
     function taskman()        { if (root.view === "taskman") { root.view = "idle"; } else { root.view = "taskman"; root.panelPage = ""; } }
+    function toggleTaskman()  { root.taskman(); }
     function toggleTray()     { if (root.view === "tray") root.closeOverlays(); else { root.view = "tray"; root.panelPage = ""; } }
     function closeOverlays()  { root.view = "idle"; root.panelPage = ""; }
+    function openShotToolbar(mode) {
+        root.closeOverlays();
+        if (!shotLoader.item) return;
+        if (shotLoader.item.shown) shotLoader.item.close();
+        else shotLoader.item.open(mode || "region");
+    }
+    function openCheatsheet() {
+        root.closeOverlays();
+        if (cheatsheetLoader.item) cheatsheetLoader.item.open();
+    }
+    function openSession() {
+        root.closeOverlays();
+        if (sessionLoader.item) sessionLoader.item.open();
+    }
+    function toggleWidgetsEditing() {
+        if (!Prefs.widgetsEnabled)
+            Prefs.set("widgetsEnabled", true);
+        root.widgetsEditing = !root.widgetsEditing;
+        if (root.widgetsEditing)
+            root.closeOverlays();
+    }
     // оверлеи-фуллскрин живут вне root.view — закрываем их же методами
     function closeAllOverlays() {
         root.closeOverlays();
@@ -197,14 +221,21 @@ ShellRoot {
     }
 
     function lock()           { root.view = "idle"; root.panelPage = ""; Quickshell.execDetached(["umbriel", "msg", "dpms-on"]); root.locked = true; }
-    function setPage(p)       { root.panelPage = p; }
+    function setPage(p, sec)  {
+        if (p === "settings")
+            root.settingsSection = (sec !== undefined ? sec : 0);
+        root.view = "panel";
+        root.panelPage = p;
+    }
     // совместимость с чипами острова: weather — погода, calendar — календарь,
-    // system — диспетчер, остальное — корень панели
+    // opencode — OpenCode, system — диспетчер, остальное — корень панели
     function setTab(t) {
         if (t === "weather")
             root.togglePage("weather");
         else if (t === "calendar")
             root.togglePage("calendar");
+        else if (t === "opencode")
+            root.togglePage("opencode");
         else if (t === "system")
             root.taskman();
         else

@@ -21,14 +21,14 @@ Item {
     property real wavelength: cp.thickness * 3.75
     property real amplitude: cp.thickness * 0.4
     property alias content: center.data
-    readonly property real gapDeg: cp.value <= 0.001 || cp.value >= 0.999 ? 0 : Math.min(18, (cp.thickness * 2 + 4) / (Math.PI * Math.max(8, cp.width)) * 360)
+    readonly property real gapDeg: cp._v <= 0.001 || cp._v >= 0.999 ? 0 : Math.min(18, (cp.thickness * 2 + 4) / (Math.PI * Math.max(8, cp.width)) * 360)
     property real _v: Math.max(0, Math.min(1, cp.value))
     readonly property real _radius: (Math.min(cp.width, cp.height) - cp.thickness) / 2
     readonly property real _circumference: 2 * Math.PI * Math.max(1, cp._radius)
     // целое число волн замыкает волну на себе; зажато, чтобы широкая дуга не читалась шумом
     readonly property int waveCount: Math.max(6, Math.min(14, Math.round(cp._circumference / Math.max(1, cp.wavelength))))
     // m3 задаёт волнистый индикатор на 48dp; ниже примерно половины этого волна читается шумом
-    readonly property bool _waveOn: cp.wavy && cp.amplitude > 0.3 && Math.min(cp.width, cp.height) >= 72
+    readonly property bool _waveOn: cp.wavy && cp.amplitude > 0.3 && Math.min(cp.width, cp.height) >= Theme.dp(36)
     // волне нужна дуга, чтобы жить, поэтому она входит плавно за первые полторы длины волны
     readonly property real _ampTarget: {
         if (!cp._waveOn)

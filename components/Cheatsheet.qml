@@ -13,6 +13,8 @@ import "../ui"
 PanelWindow {
     id: sheet
 
+    signal closed()
+
     property bool shown: false
 
     property real reveal: sheet.shown ? 1 : 0

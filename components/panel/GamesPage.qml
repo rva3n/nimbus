@@ -175,8 +175,4 @@ ColumnLayout {
     function applyMangoHud() {
         Quickshell.execDetached(["sh", Quickshell.env("HOME") + "/oberon/scripts/apply-mangohud.sh"]);
     }
-
-    Component.onCompleted: {
-        gamesPage.applyMangoHud();
-    }
 }

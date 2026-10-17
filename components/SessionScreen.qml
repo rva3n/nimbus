@@ -14,6 +14,8 @@ import "../ui"
 PanelWindow {
     id: ses
 
+    signal closed()
+
     // шелл целиком (shell.qml root) — нужен для lock(): тот же путь, что у
     // IPC-функции oberon lock (root.lock устанавливает root.locked → Lockscreen)
     property var shell: null

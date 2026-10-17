@@ -30,9 +30,6 @@
 [submodule "third_party/hyprland-protocols"]
 	path = third_party/hyprland-protocols
 	url = https://github.com/rva3n/hyprland-protocols.git
-[submodule "wallpapers"]
-	path = wallpapers
-	url = https://github.com/rva3n/oberon-wallpapers.git
 [submodule "third_party/umbriel"]
 	path = third_party/umbriel
 	url = https://github.com/rva3n/umbriel.git

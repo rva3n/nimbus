@@ -21,6 +21,11 @@ PanelWindow {
     id: win
 
     required property var modelData
+    property var shell: null
+
+    function toggleEditing() {
+        board.editing = !board.editing;
+    }
 
     screen: modelData
     color: "transparent"
@@ -88,6 +93,19 @@ PanelWindow {
         // нажатый drag-гость держит позицию локально, поэтому правки store
         // (в т.ч. перечитка файла) не дёргают карточку под курсором
         property bool editing: false
+
+        onEditingChanged: {
+            if (win.shell && win.shell.widgetsEditing !== board.editing)
+                win.shell.widgetsEditing = board.editing;
+        }
+
+        Connections {
+            target: win.shell
+            function onWidgetsEditingChanged() {
+                if (win.shell && board.editing !== win.shell.widgetsEditing)
+                    board.editing = win.shell.widgetsEditing;
+            }
+        }
 
         readonly property var comps: ({
             "clock": clkComp,
@@ -231,14 +249,15 @@ PanelWindow {
                         shadowOpacity: 0.75
                     }
 
-                }
+                    Loader {
+                        id: loder
 
-                Loader {
-                    id: loder
-
-                    width: host.width
-                    height: item ? (item as Item).implicitHeight : Theme.dp(100)
-                    sourceComponent: host.def ? board.comps[host.modelData] : null
+                        x: shadowHost.padH
+                        y: shadowHost.padTop
+                        width: host.width
+                        height: item ? (item as Item).implicitHeight : Theme.dp(100)
+                        sourceComponent: host.def ? board.comps[host.modelData] : null
+                    }
                 }
 
                 // пунктирная обводка + ручка + «скрыть», только в редакторе

@@ -79,7 +79,7 @@ Singleton {
             if (!af.loaded)
                 return;
             const m = af.text().match(/^model:\s*(\S+)\s*$/m);
-            const refs = usage.agentModels;
+            const refs = Object.assign({}, usage.agentModels);
             if (m) {
                 refs[af.agentName] = m[1];
                 usage.agentModels = refs;
@@ -360,30 +360,69 @@ Singleton {
     }
 
     // Позиция чипа: auto — худшее окно самой нагруженной модели;
-    // 5h/7d/30d — худшая модель этого окна. null, если данных нет.
+    // 5h/7d/30d — худшая модель этого окна.
     function chipOut(mode) {
+        const empty = {
+            "id": "",
+            "name": "",
+            "pct": 0,
+            "pctText": "",
+            "text": "GO",
+            "warn": false,
+            "tone": "ok",
+            "p5": 0,
+            "p7": 0,
+            "p30": 0
+        };
         if (!usage.ready || usage.raw.length === 0)
-            return null;
+            return empty;
         let key = mode;
         if (key !== "5h" && key !== "7d" && key !== "30d")
             key = "worst";
         if (key === "worst") {
             const w = usage.worst;
             if (!w)
-                return null;
-            return { "id": w.id, "name": w.name, "pct": w.worstPct,
-                     "p5": w.pct5, "p7": w.pct7, "p30": w.pct30 };
+                return empty;
+            const pct = w.worstPct || 0;
+            const pctText = Math.round(pct) + "%";
+            const tone = usage.toneKey(pct);
+            return {
+                "id": w.id,
+                "name": w.name,
+                "pct": pct,
+                "pctText": pctText,
+                "text": "GO " + pctText,
+                "warn": tone !== "ok",
+                "tone": tone,
+                "p5": w.pct5,
+                "p7": w.pct7,
+                "p30": w.pct30
+            };
         }
+        const pctKey = key === "5h" ? "pct5" : (key === "7d" ? "pct7" : "pct30");
         let best = null;
         for (let i = 0; i < usage.models.length; i++) {
             const m = usage.models[i];
-            if (best === null || m["pct" + key] > best["pct" + key])
+            if (best === null || m[pctKey] > best[pctKey])
                 best = m;
         }
         if (!best)
-            return null;
-        return { "id": best.id, "name": best.name, "pct": best["pct" + key],
-                 "p5": best.pct5, "p7": best.pct7, "p30": best.pct30 };
+            return empty;
+        const pct = best[pctKey] || 0;
+        const pctText = Math.round(pct) + "%";
+        const tone = usage.toneKey(pct);
+        return {
+            "id": best.id,
+            "name": best.name,
+            "pct": pct,
+            "pctText": pctText,
+            "text": "GO " + pctText,
+            "warn": tone !== "ok",
+            "tone": tone,
+            "p5": best.pct5,
+            "p7": best.pct7,
+            "p30": best.pct30
+        };
     }
 
     // Лимит окна в $ (подписи «из $…»).

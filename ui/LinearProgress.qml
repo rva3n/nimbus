@@ -123,7 +123,7 @@ Item {
     }
 
     Rectangle {
-        visible: lp._amp < 0.05
+        visible: lp._amp < 0.05 || (lp.split > 0 && lp.split <= lp.thickness)
         anchors.verticalCenter: parent.verticalCenter
         width: lp.split
         height: lp.thickness

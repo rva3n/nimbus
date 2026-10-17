@@ -18,7 +18,7 @@ sub_list() {
 }
 
 check() {
-	br=$(git -C "$ROOT" rev-parse --abbrev-ref HEAD)
+	br=$(git -C "$ROOT" symbolic-ref -q --short HEAD || echo main)
 	git -C "$ROOT" fetch --quiet origin
 	printf 'MAIN %s %s\n' "$(git -C "$ROOT" rev-list --count "HEAD..origin/$br")" "$(git -C "$ROOT" rev-parse --short HEAD)"
 	sub_list | while read -r key branch; do
